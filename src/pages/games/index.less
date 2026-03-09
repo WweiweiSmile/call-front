@@ -1,0 +1,128 @@
+.games-page {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+  padding-bottom: 50px;
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #ffffff;
+
+    .title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333333;
+    }
+  }
+
+  .search-box {
+    padding: 12px 16px;
+    background: #ffffff;
+    margin-bottom: 8px;
+
+    .search-input {
+      height: 40px;
+      padding: 0 16px;
+      background: #f5f5f5;
+      border-radius: 20px;
+      border: none;
+      font-size: 14px;
+    }
+  }
+
+  .content {
+    flex: 1;
+    padding: 16px;
+    overflow-y: auto;
+    width: auto;
+
+    .section {
+      margin-bottom: 24px;
+
+      .section-title {
+        font-size: 16px;
+        font-weight: bold;
+        color: #333333;
+        margin-bottom: 12px;
+      }
+
+      .game-card {
+        background: #ffffff;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+
+        .game-info {
+          flex: 1;
+          min-width: 0;
+
+          .game-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333333;
+            margin-bottom: 8px;
+            display: block;
+          }
+
+          .game-creator,
+          .game-participants,
+          .game-time {
+            font-size: 14px;
+            color: #666666;
+            margin-bottom: 4px;
+            display: block;
+          }
+        }
+      }
+    }
+  }
+
+  .create-popup {
+    background: #ffffff;
+    border-radius: 12px 12px 0 0;
+    padding: 24px 16px 32px;
+
+    .popup-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #333333;
+      text-align: center;
+      margin-bottom: 24px;
+      display: block;
+    }
+
+    .form-item {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+
+    .form-input {
+      width: 100%;
+    }
+
+    .popup-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+
+      .nut-button {
+        flex: 1;
+      }
+    }
+  }
+}
