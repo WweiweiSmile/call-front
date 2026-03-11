@@ -100,15 +100,6 @@ function LoginPage() {
           {mode === 'login' ? '没有账户？去注册' : '已有账户？去登录'}
         </Text>
       </View>
-
-      {mode === 'login' && (
-        <View className="test-accounts">
-          <Text className="test-title">测试账号：</Text>
-          <Text className="test-account">testuser1 / 123456</Text>
-          <Text className="test-account">testuser2 / 123456</Text>
-          <Text className="test-account">testuser3 / 123456</Text>
-        </View>
-      )}
     </View>
   );
 }

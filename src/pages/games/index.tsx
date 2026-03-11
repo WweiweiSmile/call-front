@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Input, ScrollView } from '@tarojs/components';
-import { Button, Popup, Form, Input as NutInput } from '@nutui/nutui-react-taro';
+import { Button } from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
@@ -8,7 +8,7 @@ import './index.less';
 
 const GamesPage: React.FC = () => {
   const {
-    getOngoingGames, getPendingGames, joinGame, createGame, getCurrentUser, setCurrentGameId, loadGames } = useAppStore();
+    getOngoingGames, getPendingGames, joinGame, getCurrentUser, setCurrentGameId, loadGames } = useAppStore();
 
   // 页面加载时获取游戏列表，并定期刷新
   useEffect(() => {
@@ -20,12 +20,6 @@ const GamesPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [loadGames]);
   const [searchText, setSearchText] = useState('');
-  const [createPopupVisible, setCreatePopupVisible] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    startTime: '',
-  });
 
   const handleEnterGame = (gameId: string) => {
     setCurrentGameId(gameId);
@@ -41,29 +35,8 @@ const GamesPage: React.FC = () => {
   const filteredPendingGames = pendingGames.filter((g) =>
     g.name.includes(searchText));
 
-  const handleCreateGame = () => {
-    if (!formData.name.trim()) {
-      return;
-    }
-    createGame({
-      name: formData.name,
-      description: formData.description,
-      startTime: formData.startTime,
-      endTime: '',
-    });
-    setCreatePopupVisible(false);
-    setFormData({ name: '', description: '', startTime: '' });
-  };
-
   const handleJoinGame = (gameId: string) => {
     joinGame(gameId);
-  };
-
-  const updateFormField = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
   };
 
   return (
@@ -73,7 +46,7 @@ const GamesPage: React.FC = () => {
         <Button
           type='primary'
           size='small'
-          onClick={() => setCreatePopupVisible(true)}
+          onClick={() => Taro.navigateTo({ url: '/pages/create-game/index' })}
         >
           +创建游戏
         </Button>
@@ -150,53 +123,6 @@ const GamesPage: React.FC = () => {
         </View>
         )}
       </ScrollView>
-
-      <Popup
-        visible={createPopupVisible}
-        position='bottom'
-        onClose={() => setCreatePopupVisible(false)}
-      >
-        <View className='create-popup'>
-          <Text className='popup-title'>创建游戏</Text>
-          
-          <Form>
-            <Form.Item label='游戏名称'>
-              <NutInput
-                placeholder='请输入游戏名称'
-                value={formData.name}
-                onChange={(value) => updateFormField('name', value)}
-              />
-            </Form.Item>
-            <Form.Item label='游戏描述 (选填)'>
-              <NutInput
-                type='textarea'
-                placeholder='请输入游戏描述'
-                value={formData.description}
-                onChange={(value) => updateFormField('description', value)}
-              />
-            </Form.Item>
-            <Form.Item label='开始时间 (选填)'>
-              <NutInput
-                placeholder='请输入开始时间'
-                value={formData.startTime}
-                onChange={(value) => updateFormField('startTime', value)}
-              />
-            </Form.Item>
-          </Form>
-          
-          <View className='popup-actions'>
-            <Button
-              type='default'
-              onClick={() => setCreatePopupVisible(false)}
-            >
-              取消
-            </Button>
-            <Button type='primary' onClick={handleCreateGame}>
-              创建游戏
-            </Button>
-          </View>
-        </View>
-      </Popup>
     </View>
   );
 };

@@ -6,6 +6,7 @@ export default defineAppConfig({
     'pages/my-games/index',
     'pages/game-detail/index',
     'pages/profile/index',
+    'pages/create-game/index',
   ],
   entryPagePath: 'pages/login/index',
   window: {
