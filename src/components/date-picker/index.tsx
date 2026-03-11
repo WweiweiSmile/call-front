@@ -1,0 +1,44 @@
+import {DatePicker} from "@nutui/nutui-react-taro";
+import {View} from "@tarojs/components";
+import {useState} from "react";
+import dayjs from "dayjs";
+
+interface DatePickerProps {
+  value?: string;
+  type?: 'date' | 'datetime' | 'time';
+  onChange?: (value: Date) => void;
+  placeholder?: string;
+
+}
+
+const CustomDatePicker = (props: DatePickerProps) => {
+  const {type = 'date', onChange, placeholder = '请选择时间'} = props
+  const [show1, setShow1] = useState(false)
+  const hasValue = !!props.value
+
+  return <View>
+    <View
+      style={{
+        color: hasValue ? 'inherit' : '#969799',
+        width: '100%',
+      }}
+      onClick={() => setShow1(true)}
+    >{hasValue ? dayjs(props.value).format('YYYY-MM-DD HH:mm:ss') : placeholder}</View>
+
+    <DatePicker
+      visible={show1}
+      type={type}
+      defaultValue={new Date()}
+      onConfirm={(_selectedOptions, selectedValue) => {
+        // selectedValue 是 [year, month, day, hour, minute, second] 格式的数组
+        const [year, month, day, hour = 0, minute = 0, second = 0] = selectedValue as number[];
+        const date = new Date(year, month - 1, day, hour, minute, second);
+        onChange?.(date);
+        setShow1(false);
+      }}
+      onCancel={() => setShow1(false)}
+    />
+  </View>
+}
+
+export default CustomDatePicker
