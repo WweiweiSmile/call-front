@@ -38,6 +38,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           password: ${{ secrets.SERVER_PASSWORD }}
+          port: ${{ secrets.SERVER_PORT }}
           source: "./dist"
           target: "~/call-front"
 
@@ -48,10 +49,8 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          script: |
-            cd /usr/front/build
-            ls
-
+          port: ${{ secrets.SERVER_PORT }}
+          script: nginx -s reload
 
 
 
