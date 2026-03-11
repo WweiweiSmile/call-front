@@ -27,10 +27,10 @@ jobs:
           node-version: 22.22.0
 
       - name: 下载依赖
-        run: cd call-front && pwd && pnpm install
+        run: pnpm install
 
       - name: 构建项目
-        run: cd call-front  && pwd && pnpm run build:h5
+        run: pnpm run build:h5
 
       - name: 上传构建目录
         uses: appleboy/scp-action@v0.1.7
@@ -38,7 +38,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USERNAME }}
           password: ${{ secrets.SERVER_PASSWORD }}
-          source: "./call-front/dist"
+          source: "./dist"
           target: "~/call-front"
 
       - name: 部署
