@@ -6,7 +6,7 @@ const isTest = process.env.NODE_ENV === 'test';
 
 // 后端 API 基础地址
 // 开发/测试环境使用代理（相对路径），生产环境使用完整地址
-const BASE_URL = (isDev || isTest) ? '/api/v1' : `${process.env.VITE_API_BASE_URL || 'http://localhost:8080'}/api/v1`;
+const BASE_URL = (isDev || isTest) ? '/api/v1' : `${process.env.TARO_APP_BASE_URL}/api/v1`;
 
 // 从本地存储获取 token
 const getToken = (): string | null => {
@@ -23,7 +23,7 @@ async function request<T>(
   options: Taro.request.Option = {},
   requireAuth: boolean = true
 ): Promise<T> {
-  const { method = 'GET', data, ...restOptions } = options;
+  const {method = 'GET', data, ...restOptions} = options;
 
   const headers: any = {
     'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export const gameApi = {
   joinGame: (gameId: number) => {
     return request('/games/join', {
       method: 'POST',
-      data: { game_id: gameId },
+      data: {game_id: gameId},
     });
   },
 
@@ -226,7 +226,7 @@ export const transactionApi = {
 
 // 健康检查
 export const healthCheck = () => {
-  const healthUrl = (isDev || isTest) ? '/health' : `${process.env.VITE_API_BASE_URL || 'http://localhost:8080'}/health`;
+  const healthUrl = (isDev || isTest) ? '/health' : `${process.env.VITE_API_BASE_URL}/health`;
   return Taro.request({
     url: healthUrl,
     method: 'GET',
