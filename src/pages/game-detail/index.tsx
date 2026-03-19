@@ -41,34 +41,21 @@ const GameDetailPage: React.FC = () => {
         // 加载游戏相关数据
         loadUserBalance(gameId);
         loadGameTransactions(gameId);
+        loadGameParticipantBalances(gameId);
         setIsLoading(false);
       }
     };
     loadData();
-  }, [gameId, setCurrentGameId, loadUserBalance, loadGameTransactions, loadGames, currentUser?.id]);
+  }, [gameId, setCurrentGameId, loadUserBalance, loadGameTransactions, loadGames, loadGameParticipantBalances, currentUser?.id]);
 
-  // 单独的 useEffect 来处理创建者加载参与者余额（避免无限循环）
-  useEffect(() => {
-    if (gameId && currentUser && !isLoading) {
-      const game = state.games.find((g) => g.id === gameId);
-      if (game && game.creatorId === currentUser.id) {
-        loadGameParticipantBalances(gameId);
-      }
-    }
-  }, [gameId, state.games, currentUser?.id, isLoading]);
+
 
   if (!gameId || !currentUser) {
     Taro.navigateBack();
     return null;
   }
 
-  if (isLoading) {
-    return (
-      <View className='game-detail-page loading-page'>
-        <Text>加载中...</Text>
-      </View>
-    );
-  }
+
 
   const game = state.games.find((g) => g.id === gameId);
   const isCreator = game?.creatorId === currentUser.id;
@@ -82,6 +69,14 @@ const GameDetailPage: React.FC = () => {
   const [showWithdrawPopup, setShowWithdrawPopup] = useState(false);
   const [amount, setAmount] = useState('0');
   const [remark, setRemark] = useState('');
+
+  if (isLoading) {
+    return (
+      <View className='game-detail-page loading-page'>
+        <Text>加载中...</Text>
+      </View>
+    );
+  }
 
   if (!game) {
     return (
@@ -113,7 +108,7 @@ const GameDetailPage: React.FC = () => {
   const handleDeposit = async () => {
     const numAmount = parseInt(amount) || 0;
     if (numAmount <= 0) {
-      Toast.show('请输入有效的存分数量');
+      Toast({ content: '请输入有效的存分数量' });
       return;
     }
 
@@ -123,16 +118,16 @@ const GameDetailPage: React.FC = () => {
       setShowDepositPopup(false);
       setAmount('0');
       setRemark('');
-      Toast.show('存分成功');
+      Toast({ content: '存分成功' });
     } catch (error: any) {
-      Toast.show(error.message || '存分失败');
+      Toast({ content: error.message || '存分失败' });
     }
   };
 
   const handleWithdraw = async () => {
     const numAmount = parseInt(amount) || 0;
     if (numAmount <= 0) {
-      Toast.show('请输入有效的取分数量');
+      Toast({ content: '请输入有效的取分数量' });
       return;
     }
 
@@ -142,9 +137,9 @@ const GameDetailPage: React.FC = () => {
       setShowWithdrawPopup(false);
       setAmount('0');
       setRemark('');
-      Toast.show('取分成功');
+      Toast({ content: '取分成功' });
     } catch (error: any) {
-      Toast.show(error.message || '取分失败');
+      Toast({ content: error.message || '取分失败' });
     }
   };
 
@@ -234,38 +229,52 @@ const GameDetailPage: React.FC = () => {
       </View>
       )}
 
-      {/* 排行榜 */}
-      {leaderboard.length > 0 && (
-      <View className='leaderboard-section'>
-        <Text className='section-title'>🏆 排行榜</Text>
-        {leaderboard.map((item, index) => (
-          <View key={item.userId} className='leaderboard-card'>
-            <View className='card-left'>
-              <Text className='rank'>{index + 1}</Text>
-              <View className='user-info'>
-                <Text className='name'>{item.name}</Text>
-              </View>
-            </View>
-            <View className='card-right'>
-              <View className='stat'>
-                <Text className='stat-label'>存分</Text>
-                <Text className='stat-value'>{item.depositTotal.toLocaleString()}</Text>
-              </View>
-              <View className='stat'>
-                <Text className='stat-label'>取分</Text>
-                <Text className='stat-value'>{item.withdrawTotal.toLocaleString()}</Text>
-              </View>
-              <View className='stat'>
-                <Text className='stat-label'>净分</Text>
-                <Text className={`stat-value ${item.netScore >= 0 ? 'positive' : 'negative'}`}>
-                  {item.netScore >= 0 ? '+' : ''}{item.netScore.toLocaleString()}
-                </Text>
-              </View>
-            </View>
-          </View>
-        ))}
+      {/* 操作按钮 */}
+      {(viewMode === 'self' || (viewMode === 'manage' && selectedUserId)) && (
+      <View className='action-buttons-section'>
+        <Button
+          type='success'
+          size='large'
+          block
+          onClick={() => {
+            setAmount('0');
+            setRemark('');
+            setShowDepositPopup(true);
+          }}
+        >
+          💰 存分
+        </Button>
+        <Button
+          type='warning'
+          size='large'
+          block
+          onClick={() => {
+            setAmount('0');
+            setRemark('');
+            setShowWithdrawPopup(true);
+          }}
+        >
+          💵 取分
+        </Button>
       </View>
       )}
+
+      {/* 去排行榜按钮 */}
+      <View className='leaderboard-button-section'>
+        <Button
+          type='primary'
+          size='large'
+          block
+          onClick={() => {
+            // 跳转到排行榜页面
+            Taro.navigateTo({
+              url: `/components/leaderboard/index?gameId=${gameId}`,
+            });
+          }}
+        >
+          🏆 查看排行榜
+        </Button>
+      </View>
 
       {/* 管理参与者列表 */}
       {isCreator && viewMode === 'manage' && (
@@ -317,10 +326,10 @@ const GameDetailPage: React.FC = () => {
           onClick={async () => {
             try {
               await endGame(gameId!);
-              Toast.show('游戏已结束');
+              Toast({ content: '游戏已结束' });
               Taro.navigateBack();
             } catch (error: any) {
-              Toast.show(error.message || '结束游戏失败');
+              Toast({ content: error.message || '结束游戏失败' });
             }
           }}
         >
@@ -329,35 +338,7 @@ const GameDetailPage: React.FC = () => {
       </View>
       )}
 
-      {/* 操作按钮 */}
-      {(viewMode === 'self' || (viewMode === 'manage' && selectedUserId)) && (
-      <View className='action-buttons'>
-        <Button
-          type='success'
-          size='large'
-          className='action-button'
-          onClick={() => {
-            setAmount('0');
-            setRemark('');
-            setShowDepositPopup(true);
-          }}
-        >
-          存分
-        </Button>
-        <Button
-          type='warning'
-          size='large'
-          className='action-button'
-          onClick={() => {
-            setAmount('0');
-            setRemark('');
-            setShowWithdrawPopup(true);
-          }}
-        >
-          取分
-        </Button>
-      </View>
-      )}
+
 
       {/* 交易记录 */}
       <View className='transactions-section'>

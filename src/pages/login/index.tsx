@@ -12,24 +12,24 @@ function LoginPage() {
 
   const handleSubmit = async (values: any) => {
     if (!values.username || !values.password) {
-      Toast.show('请填写完整信息');
+      Toast({ content: '请填写完整信息' });
       return;
     }
 
     try {
       if (mode === 'login') {
         await login(values.username, values.password);
-        Toast.show('登录成功');
+        Toast({ content: '登录成功' });
       } else {
         await register(values.username, values.password, values.nickname || values.username);
-        Toast.show('注册成功');
+        Toast({ content: '注册成功' });
       }
       // 登录成功后跳转到主页
       Taro.redirectTo({
         url: '/pages/index/index',
       });
     } catch (error: any) {
-      Toast.show(error.message || '操作失败');
+      Toast({ content: error.message || '操作失败' });
     }
   };
 
