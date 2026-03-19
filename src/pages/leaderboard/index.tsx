@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import { Button } from '@nutui/nutui-react-taro';
 import Taro, { useRouter } from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import './index.less';

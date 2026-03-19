@@ -268,7 +268,7 @@ const GameDetailPage: React.FC = () => {
           onClick={() => {
             // 跳转到排行榜页面
             Taro.navigateTo({
-              url: `/components/leaderboard/index?gameId=${gameId}`,
+              url: `/pages/leaderboard/index?gameId=${gameId}`,
             });
           }}
         >
