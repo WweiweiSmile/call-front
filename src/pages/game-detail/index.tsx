@@ -108,7 +108,7 @@ const GameDetailPage: React.FC = () => {
   const handleDeposit = async () => {
     const numAmount = parseInt(amount) || 0;
     if (numAmount <= 0) {
-      Toast({ content: '请输入有效的存分数量' });
+      Toast.show('game-detail-toast', { content: '请输入有效的存分数量' });
       return;
     }
 
@@ -118,16 +118,16 @@ const GameDetailPage: React.FC = () => {
       setShowDepositPopup(false);
       setAmount('0');
       setRemark('');
-      Toast({ content: '存分成功' });
+      Toast.show('game-detail-toast', { content: '存分成功' });
     } catch (error: any) {
-      Toast({ content: error.message || '存分失败' });
+      Toast.show('game-detail-toast', { content: error.message || '存分失败' });
     }
   };
 
   const handleWithdraw = async () => {
     const numAmount = parseInt(amount) || 0;
     if (numAmount <= 0) {
-      Toast({ content: '请输入有效的取分数量' });
+      Toast.show('game-detail-toast', { content: '请输入有效的取分数量' });
       return;
     }
 
@@ -137,9 +137,9 @@ const GameDetailPage: React.FC = () => {
       setShowWithdrawPopup(false);
       setAmount('0');
       setRemark('');
-      Toast({ content: '取分成功' });
+      Toast.show('game-detail-toast', { content: '取分成功' });
     } catch (error: any) {
-      Toast({ content: error.message || '取分失败' });
+      Toast.show('game-detail-toast', { content: error.message || '取分失败' });
     }
   };
 
@@ -165,6 +165,7 @@ const GameDetailPage: React.FC = () => {
 
   return (
     <View className='game-detail-page'>
+      <Toast id="game-detail-toast" />
       <View className='header'>
         <View className='header-left' onClick={() => Taro.navigateBack()}>
           <Text className='back-icon'>←</Text>
@@ -326,10 +327,10 @@ const GameDetailPage: React.FC = () => {
           onClick={async () => {
             try {
               await endGame(gameId!);
-              Toast({ content: '游戏已结束' });
+              Toast.show('game-detail-toast', { content: '游戏已结束' });
               Taro.navigateBack();
             } catch (error: any) {
-              Toast({ content: error.message || '结束游戏失败' });
+              Toast.show('game-detail-toast', { content: error.message || '结束游戏失败' });
             }
           }}
         >

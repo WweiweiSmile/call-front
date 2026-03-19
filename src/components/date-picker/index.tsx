@@ -3,6 +3,8 @@ import {View} from "@tarojs/components";
 import {useState} from "react";
 import dayjs from "dayjs";
 
+// TODO: onChange 事件给的Date类型的值，传入的是 string 类型的值，应该需要统一，时间的颗粒到什么地步
+
 interface DatePickerProps {
   value?: string;
   type?: 'date' | 'datetime' | 'time';
