@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from '@tarojs/components';
+import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { Cell, Button, Dialog } from '@nutui/nutui-react-taro';
 import { useAppStore } from '../../store';
@@ -50,68 +50,67 @@ const ProfilePage: React.FC = () => {
         <Text className='title'>个人中心</Text>
       </View>
 
-      <View className='user-info-card'>
-        <View className='avatar'>{currentUser.avatar || '👤'}</View>
-        <View className='user-details'>
-          <Text className='username'>{currentUser.nickname || currentUser.username}</Text>
-          <Text className='user-id'>ID: {currentUser.id}</Text>
-        </View>
-      </View>
-
-      <View className='stats-card'>
-        <Text className='stats-title'>📊 我的统计</Text>
-        <View className='stats-grid'>
-          <View className='stat-item'>
-            <Text className='stat-value'>{userGames.length}</Text>
-            <Text className='stat-label'>参与场次</Text>
-          </View>
-          <View className='stat-item'>
-            <Text className='stat-value'>{userCreatedGames.length}</Text>
-            <Text className='stat-label'>创建游戏</Text>
-          </View>
-          <View className='stat-item'>
-            <Text className='stat-value'>{balancedCount}</Text>
-            <Text className='stat-label'>平衡场次</Text>
-          </View>
-          <View className='stat-item'>
-            <Text className='stat-value'>{selfTransactions.length}</Text>
-            <Text className='stat-label'>自主操作</Text>
-          </View>
-          <View className='stat-item'>
-            <Text className='stat-value'>{proxyTransactions.length}</Text>
-            <Text className='stat-label'>被代理操作</Text>
+      <ScrollView className='content-wrapper' scrollY>
+        <View className='user-info-card'>
+          <View className='avatar'>{currentUser.avatar || '👤'}</View>
+          <View className='user-details'>
+            <Text className='username'>{currentUser.nickname || currentUser.username}</Text>
+            <Text className='user-id'>ID: {currentUser.id}</Text>
           </View>
         </View>
-      </View>
 
-      <View className='menu-section'>
-        <Cell
-          title='⚙️ 设置'
-          isLink
-          onClick={() => {}}
-        />
-        <Cell
-          title='📖 帮助中心'
-          isLink
-          onClick={() => {}}
-        />
-        <Cell
-          title='📞 联系客服'
-          isLink
-          onClick={() => {}}
-        />
-      </View>
+        <View className='stats-card'>
+          <Text className='stats-title'>📊 我的统计</Text>
+          <View className='stats-grid'>
+            <View className='stat-item'>
+              <Text className='stat-value'>{userGames.length}</Text>
+              <Text className='stat-label'>参与场次</Text>
+            </View>
+            <View className='stat-item'>
+              <Text className='stat-value'>{userCreatedGames.length}</Text>
+              <Text className='stat-label'>创建游戏</Text>
+            </View>
+            <View className='stat-item'>
+              <Text className='stat-value'>{balancedCount}</Text>
+              <Text className='stat-label'>平衡场次</Text>
+            </View>
+            <View className='stat-item'>
+              <Text className='stat-value'>{selfTransactions.length}</Text>
+              <Text className='stat-label'>自主操作</Text>
+            </View>
+            <View className='stat-item'>
+              <Text className='stat-value'>{proxyTransactions.length}</Text>
+              <Text className='stat-label'>被代理操作</Text>
+            </View>
+          </View>
+        </View>
 
-      <View className='logout-section'>
-        <Button
-          type='danger'
-          size='large'
-          block
-          onClick={handleLogout}
-        >
-          退出登录
-        </Button>
-      </View>
+        <View className='menu-section'>
+          <Cell
+            title='⚙️ 设置'
+            onClick={() => {}}
+          />
+          <Cell
+            title='📖 帮助中心'
+            onClick={() => {}}
+          />
+          <Cell
+            title='📞 联系客服'
+            onClick={() => {}}
+          />
+        </View>
+
+        <View className='logout-section'>
+          <Button
+            type='danger'
+            size='large'
+            block
+            onClick={handleLogout}
+          >
+            退出登录
+          </Button>
+        </View>
+      </ScrollView>
     </View>
   );
 };
