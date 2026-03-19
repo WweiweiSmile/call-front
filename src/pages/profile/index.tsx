@@ -18,8 +18,8 @@ const ProfilePage: React.FC = () => {
   const [visible, setVisible] = useState(false);
 
   const currentUser = authState.user;
-  const userGames = getUserGames();
-  const userCreatedGames = getUserCreatedGames();
+  const userGames = currentUser ? getUserGames(currentUser.id) : [];
+  const userCreatedGames = currentUser ? getUserCreatedGames(currentUser.id) : [];
 
   // 计算统计数据
   const userBalances = currentUser ? state.userGameBalances.filter((b) => b.userId === currentUser.id) : [];

@@ -3,17 +3,21 @@ import {Text, View} from '@tarojs/components';
 import {Button, Form, Input as NutInput, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import {useAppStore} from '../../store';
+import {useAuthStore} from '../../store/auth';
 import type {FormInstance} from '@nutui/nutui-react-taro/dist/types/packages/form/types';
 import './index.less';
 import CustomDatePicker from "../../components/date-picker";
 
 const CreateGamePage: React.FC = () => {
   const {createGame} = useAppStore();
+  const {state: authState} = useAuthStore();
   const [form] = Form.useForm() as [FormInstance];
 
   const handleSubmit = async (values: any) => {
-    if (!values.name?.trim()) {
-      Toast.show('create-game-toast', {content: '请输入游戏名称'});
+    if (!values.name?.trim() || !authState.user) {
+      if (!values.name?.trim()) {
+        Toast.show('create-game-toast', {content: '请输入游戏名称'});
+      }
       return;
     }
 
@@ -23,13 +27,17 @@ const CreateGamePage: React.FC = () => {
         description: values.description || '',
         startTime: values.startTime ? values.startTime.toISOString() : '',
         endTime: '',
-      });
+      }, authState.user);
       Toast.show('create-game-toast', {content: '创建成功'});
       await Taro.navigateBack();
     } catch (error: any) {
       Toast.show('create-game-toast', {content: error.message || '创建失败'});
     }
   };
+
+  if (!authState.user) {
+    return null;
+  }
 
   return (
     <View className='create-game-page'>
@@ -72,14 +80,6 @@ const CreateGamePage: React.FC = () => {
           </Form.Item>
         </Form>
       </View>
-
-      {/*<DatePicker*/}
-      {/*  visible={showTimePicker}*/}
-      {/*  type='datetime'*/}
-      {/*  defaultValue={new Date()}*/}
-      {/*  onConfirm={handleTimeConfirm}*/}
-      {/*  onCancel={() => setShowTimePicker(false)}*/}
-      {/*/>*/}
     </View>
   );
 };

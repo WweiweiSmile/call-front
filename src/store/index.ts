@@ -1,13 +1,6 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { gameApi, transactionApi } from '../services/api';
-import {
-  Game,
-  UserGameBalance,
-  Transaction,
-  User,
-  currentUser,
-  mockGameParticipants,
-} from './mockData';
+import {useCallback, useEffect, useState} from 'react';
+import {gameApi, transactionApi} from '../services/api';
+import {Game, Transaction, User, UserGameBalance,} from './mockData';
 
 // 全局状态类型
 interface AppState {
@@ -26,7 +19,7 @@ const initialState: AppState = {
   games: [],
   userGameBalances: [],
   transactions: [],
-  gameParticipants: mockGameParticipants,
+  gameParticipants: {},
   currentGameId: null,
   currentTab: 'games',
   isLoading: false,
@@ -40,18 +33,15 @@ export function useAppStore() {
   // 定期更新当前时间（每分钟）
   useEffect(() => {
     const interval = setInterval(() => {
-      setState(prev => ({ ...prev, currentTime: new Date() }));
+      setState(prev => ({...prev, currentTime: new Date()}));
     }, 60000);
     return () => clearInterval(interval);
   }, []);
 
   // 设置加载状态
   const setLoading = useCallback((loading: boolean) => {
-    setState((prev) => ({ ...prev, isLoading: loading }));
+    setState((prev) => ({...prev, isLoading: loading}));
   }, []);
-
-  // 获取当前用户
-  const getCurrentUser = useCallback(() => currentUser, []);
 
   // 从后端加载游戏列表
   const loadGames = useCallback(async () => {
@@ -68,8 +58,9 @@ export function useAppStore() {
         description: g.description,
         startTime: g.start_time,
         endTime: g.end_time,
+        isJoined: g.is_joined,
       }));
-      setState((prev) => ({ ...prev, games }));
+      setState((prev) => ({...prev, games}));
     } catch (error) {
       console.error('加载游戏列表失败:', error);
     } finally {
@@ -92,8 +83,9 @@ export function useAppStore() {
         description: g.description,
         startTime: g.start_time,
         endTime: g.end_time,
+        isJoined: g.is_joined,
       }));
-      setState((prev) => ({ ...prev, games }));
+      setState((prev) => ({...prev, games}));
     } catch (error) {
       console.error('加载我的游戏失败:', error);
     } finally {
@@ -142,15 +134,15 @@ export function useAppStore() {
   }, [state.games, state.currentTime]);
 
   // 获取用户参与的游戏
-  const getUserGames = useCallback(() => {
+  const getUserGames = useCallback((currentUserId: string) => {
     return state.games.filter((g) => {
-      return g.status === 'ongoing' || g.creatorId === currentUser.id;
+      return g.status === 'ongoing' || g.creatorId === currentUserId;
     });
   }, [state.games]);
 
   // 获取用户创建的游戏
-  const getUserCreatedGames = useCallback(() => {
-    return state.games.filter((g) => g.creatorId === currentUser.id);
+  const getUserCreatedGames = useCallback((currentUserId: string) => {
+    return state.games.filter((g) => g.creatorId === currentUserId);
   }, [state.games]);
 
   // 加载用户余额
@@ -167,7 +159,7 @@ export function useAppStore() {
         isBalanced: balance.balance_status === 'balanced',
         lastTransactionTime: new Date().toISOString(),
       };
-      
+
       setState((prev) => {
         const newBalances = prev.userGameBalances.filter(
           (b) => !(b.gameId === gameId && b.userId === String(balance.user_id))
@@ -182,9 +174,23 @@ export function useAppStore() {
     }
   }, []);
 
+  // 判断用户是否已加入某游戏
+  const isUserJoinedGame = useCallback(
+    (gameId: string, userId: string) => {
+      // 如果是创建者，默认已加入
+      const game = state.games.find((g) => g.id === gameId);
+      if (game?.creatorId === userId) return true;
+      // 检查是否有余额记录
+      return state.userGameBalances.some(
+        (b) => b.gameId === gameId && b.userId === userId
+      );
+    },
+    [state.userGameBalances, state.games]
+  );
+
   // 获取用户在某游戏中的余额
   const getUserBalance = useCallback(
-    (gameId: string, userId: string = currentUser.id) => {
+    (gameId: string, userId: string) => {
       return state.userGameBalances.find(
         (b) => b.gameId === gameId && b.userId === userId
       );
@@ -206,19 +212,19 @@ export function useAppStore() {
         isBalanced: p.balance_status === 'balanced',
         lastTransactionTime: new Date().toISOString(),
       }));
-      
+
       // 同时更新参与者信息
       const gameParticipants: User[] = participants.map((p: any) => ({
         id: String(p.user_id),
         name: p.user_name || '未知用户',
         avatar: '👤',
       }));
-      
+
       setState((prev) => {
         const newBalances = prev.userGameBalances.filter((b) => b.gameId !== gameId);
-        const newGameParticipants = { ...prev.gameParticipants };
+        const newGameParticipants = {...prev.gameParticipants};
         newGameParticipants[gameId] = gameParticipants;
-        
+
         return {
           ...prev,
           userGameBalances: [...newBalances, ...balances],
@@ -249,7 +255,7 @@ export function useAppStore() {
   // 加载交易记录
   const loadGameTransactions = useCallback(async (gameId: string, userId?: string) => {
     try {
-      const response: any = await transactionApi.getGameTransactions(gameId, { userId });
+      const response: any = await transactionApi.getGameTransactions(gameId, {userId});
       const transactions: Transaction[] = response.list.map((t: any) => ({
         id: String(t.id),
         userId: String(t.user_id),
@@ -264,7 +270,7 @@ export function useAppStore() {
         remark: t.remark,
         createdAt: t.created_at,
       }));
-      
+
       setState((prev) => {
         const newTransactions = prev.transactions.filter((t) => t.gameId !== gameId);
         return {
@@ -291,7 +297,7 @@ export function useAppStore() {
 
   // 创建游戏
   const createGame = useCallback(
-    async (game: Omit<Game, 'id' | 'creatorId' | 'creatorName' | 'status' | 'participantCount'>) => {
+    async (game: Omit<Game, 'id' | 'creatorId' | 'creatorName' | 'status' | 'participantCount'>, currentUser: { id: string; name: string }) => {
       setLoading(true);
       try {
         const newGame: any = await gameApi.createGame({
@@ -300,7 +306,7 @@ export function useAppStore() {
           startTime: game.startTime,
           endTime: game.endTime,
         });
-        
+
         const gameData: Game = {
           id: String(newGame.id),
           name: newGame.name,
@@ -312,12 +318,12 @@ export function useAppStore() {
           startTime: newGame.start_time,
           endTime: newGame.end_time,
         };
-        
+
         setState((prev) => ({
           ...prev,
           games: [gameData, ...prev.games],
         }));
-        
+
         return gameData;
       } catch (error) {
         console.error('创建游戏失败:', error);
@@ -331,23 +337,23 @@ export function useAppStore() {
 
   // 加入游戏
   const joinGame = useCallback(
-    async (gameId: string) => {
+    async (gameId: string, currentUserId: string) => {
       setLoading(true);
       try {
         await gameApi.joinGame(parseInt(gameId));
-        
+
         setState((prev) => ({
           ...prev,
           games: prev.games.map((g) =>
             g.id === gameId
-              ? { ...g, participantCount: g.participantCount + 1, status: 'ongoing' as const }
+              ? {...g, participantCount: g.participantCount + 1, status: 'ongoing' as const, isJoined: true}
               : g
           ),
         }));
-        
+
         // 初始化用户余额
         const newBalance: UserGameBalance = {
-          userId: currentUser.id,
+          userId: currentUserId,
           gameId,
           depositTotal: 0,
           withdrawTotal: 0,
@@ -355,7 +361,7 @@ export function useAppStore() {
           isBalanced: true,
           lastTransactionTime: new Date().toISOString(),
         };
-        
+
         setState((prev) => ({
           ...prev,
           userGameBalances: [...prev.userGameBalances, newBalance],
@@ -376,7 +382,7 @@ export function useAppStore() {
       setLoading(true);
       try {
         await gameApi.endGame(gameId);
-        
+
         setState((prev) => ({
           ...prev,
           games: prev.games.filter((g) => g.id !== gameId),
@@ -393,23 +399,23 @@ export function useAppStore() {
 
   // 存分操作
   const deposit = useCallback(
-    async (gameId: string, amount: number, targetUserId?: string, remark?: string) => {
+    async (gameId: string, amount: number, currentUserId: string, targetUserId?: string, remark?: string) => {
       setLoading(true);
       try {
-        const userId = targetUserId || currentUser.id;
+        const userId = targetUserId || currentUserId;
         const targetUserIdNum = targetUserId ? parseInt(targetUserId) : undefined;
-        
+
         await transactionApi.deposit({
           gameId: parseInt(gameId),
           targetUserId: targetUserIdNum,
           amount,
           remark,
         });
-        
+
         // 重新加载余额和交易记录
         await loadUserBalance(gameId);
         await loadGameTransactions(gameId, userId);
-        
+
         if (targetUserId) {
           await loadGameParticipantBalances(gameId);
         }
@@ -425,23 +431,23 @@ export function useAppStore() {
 
   // 取分操作
   const withdraw = useCallback(
-    async (gameId: string, amount: number, targetUserId?: string, remark?: string) => {
+    async (gameId: string, amount: number, currentUserId: string, targetUserId?: string, remark?: string) => {
       setLoading(true);
       try {
-        const userId = targetUserId || currentUser.id;
+        const userId = targetUserId || currentUserId;
         const targetUserIdNum = targetUserId ? parseInt(targetUserId) : undefined;
-        
+
         await transactionApi.withdraw({
           gameId: parseInt(gameId),
           targetUserId: targetUserIdNum,
           amount,
           remark,
         });
-        
+
         // 重新加载余额和交易记录
         await loadUserBalance(gameId);
         await loadGameTransactions(gameId, userId);
-        
+
         if (targetUserId) {
           await loadGameParticipantBalances(gameId);
         }
@@ -457,23 +463,23 @@ export function useAppStore() {
 
   // 设置当前 Tab
   const setCurrentTab = useCallback((tab: 'games' | 'my' | 'profile') => {
-    setState((prev) => ({ ...prev, currentTab: tab }));
+    setState((prev) => ({...prev, currentTab: tab}));
   }, []);
 
   // 设置当前游戏
   const setCurrentGameId = useCallback((gameId: string | null) => {
-    setState((prev) => ({ ...prev, currentGameId: gameId }));
+    setState((prev) => ({...prev, currentGameId: gameId}));
   }, []);
 
   return {
     state,
-    getCurrentUser,
     getGames,
     getOngoingGames,
     getPendingGames,
     getUserGames,
     getUserCreatedGames,
     getUserBalance,
+    isUserJoinedGame,
     getGameParticipantBalances,
     getGameParticipants,
     getGameTransactions,

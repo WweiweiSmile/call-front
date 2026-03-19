@@ -35,7 +35,7 @@ function LoginPage() {
 
   return (
     <View className="login-page">
-      <Toast id="login-toast" />
+      <Toast id="login-toast"/>
       <View className="login-header">
         <Text className="login-title">Call 游戏管理</Text>
         <Text className="login-subtitle">

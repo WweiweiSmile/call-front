@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
-import { Button, Popup, Input as NutInput, Toast } from '@nutui/nutui-react-taro';
-import Taro, { useRouter } from '@tarojs/taro';
-import { useAppStore } from '../../store';
-import { useAuthStore } from '../../store/auth';
+import React, {useEffect, useState} from 'react';
+import {ScrollView, Text, View} from '@tarojs/components';
+import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
+import Taro, {useRouter} from '@tarojs/taro';
+import {useAppStore} from '../../store';
+import {useAuthStore} from '../../store/auth';
 import './index.less';
 
 type ViewMode = 'self' | 'manage';
@@ -13,7 +13,6 @@ const GameDetailPage: React.FC = () => {
   const {
     state,
     getUserBalance,
-    getGameParticipantBalances,
     getGameParticipants,
     getGameTransactions,
     deposit,
@@ -25,40 +24,12 @@ const GameDetailPage: React.FC = () => {
     loadGameTransactions,
     loadGames,
   } = useAppStore();
-  const { state: authState } = useAuthStore();
+  const {state: authState} = useAuthStore();
 
   // 从 URL 参数获取 gameId
   const gameIdFromUrl = router.params?.gameId as string;
   const gameId = gameIdFromUrl || state.currentGameId;
   const currentUser = authState.user;
-
-  useEffect(() => {
-    const loadData = async () => {
-      if (gameId && currentUser) {
-        setCurrentGameId(gameId);
-        // 先加载游戏列表
-        await loadGames();
-        // 加载游戏相关数据
-        loadUserBalance(gameId);
-        loadGameTransactions(gameId);
-        loadGameParticipantBalances(gameId);
-        setIsLoading(false);
-      }
-    };
-    loadData();
-  }, [gameId, setCurrentGameId, loadUserBalance, loadGameTransactions, loadGames, loadGameParticipantBalances, currentUser?.id]);
-
-
-
-  if (!gameId || !currentUser) {
-    Taro.navigateBack();
-    return null;
-  }
-
-
-
-  const game = state.games.find((g) => g.id === gameId);
-  const isCreator = game?.creatorId === currentUser.id;
 
   const [viewMode, setViewMode] = useState<ViewMode>('self');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
@@ -70,6 +41,26 @@ const GameDetailPage: React.FC = () => {
   const [amount, setAmount] = useState('0');
   const [remark, setRemark] = useState('');
 
+  useEffect(() => {
+    const loadData = async () => {
+      if (gameId && currentUser) {
+        setCurrentGameId(gameId);
+        // 先加载游戏列表
+        await loadGames();
+        // 加载游戏相关数据
+        await loadUserBalance(gameId);
+        await loadGameTransactions(gameId);
+        await loadGameParticipantBalances(gameId);
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [gameId, currentUser?.id]);
+
+  if (!gameId || !currentUser) {
+    return null;
+  }
+
   if (isLoading) {
     return (
       <View className='game-detail-page loading-page'>
@@ -78,6 +69,10 @@ const GameDetailPage: React.FC = () => {
     );
   }
 
+  const game = state.games.find((g) => g.id === gameId);
+  const isCreator = game?.creatorId === currentUser.id;
+  const hasJoined = game?.isJoined || isCreator;
+
   if (!game) {
     return (
       <View className='game-detail-page error-page'>
@@ -85,6 +80,19 @@ const GameDetailPage: React.FC = () => {
         <Button onClick={() => Taro.navigateBack()}>返回</Button>
       </View>
     );
+  }
+
+  // 检查权限：只有创建者或已加入的用户才能访问
+  if (!isCreator && !hasJoined) {
+    Taro.showToast({
+      title: '请先加入游戏',
+      icon: 'none',
+      duration: 2000,
+    });
+    setTimeout(() => {
+      Taro.navigateBack();
+    }, 2000);
+    return null;
   }
 
   const getDisplayUser = () => {
@@ -100,7 +108,6 @@ const GameDetailPage: React.FC = () => {
   const displayUser = getDisplayUser();
   const balance = displayUser ? getUserBalance(gameId, displayUser.id) : null;
   const transactions = displayUser ? getGameTransactions(gameId, displayUser.id) : getGameTransactions(gameId);
-  const participantBalances = getGameParticipantBalances(gameId);
   const participants = getGameParticipants(gameId);
 
   const quickAmounts = [100, 500, 1000, 5000];
@@ -108,66 +115,52 @@ const GameDetailPage: React.FC = () => {
   const handleDeposit = async () => {
     const numAmount = parseInt(amount) || 0;
     if (numAmount <= 0) {
-      Toast.show('game-detail-toast', { content: '请输入有效的存分数量' });
+      Toast.show('game-detail-toast', {content: '请输入有效的存分数量'});
       return;
     }
 
     try {
       const targetUserId = viewMode === 'manage' && selectedUserId ? selectedUserId : undefined;
-      await deposit(gameId, numAmount, targetUserId, remark);
+      await deposit(gameId, numAmount, currentUser.id, targetUserId, remark);
       setShowDepositPopup(false);
       setAmount('0');
       setRemark('');
-      Toast.show('game-detail-toast', { content: '存分成功' });
+      Toast.show('game-detail-toast', {content: '存分成功'});
     } catch (error: any) {
-      Toast.show('game-detail-toast', { content: error.message || '存分失败' });
+      Toast.show('game-detail-toast', {content: error.message || '存分失败'});
     }
   };
 
   const handleWithdraw = async () => {
     const numAmount = parseInt(amount) || 0;
     if (numAmount <= 0) {
-      Toast.show('game-detail-toast', { content: '请输入有效的取分数量' });
+      Toast.show('game-detail-toast', {content: '请输入有效的取分数量'});
       return;
     }
 
     try {
       const targetUserId = viewMode === 'manage' && selectedUserId ? selectedUserId : undefined;
-      await withdraw(gameId, numAmount, targetUserId, remark);
+      await withdraw(gameId, numAmount, currentUser.id, targetUserId, remark);
       setShowWithdrawPopup(false);
       setAmount('0');
       setRemark('');
-      Toast.show('game-detail-toast', { content: '取分成功' });
+      Toast.show('game-detail-toast', {content: '取分成功'});
     } catch (error: any) {
-      Toast.show('game-detail-toast', { content: error.message || '取分失败' });
+      Toast.show('game-detail-toast', {content: error.message || '取分失败'});
     }
   };
 
   const newBalanceAfterDeposit = balance ? balance.currentBalance + (parseInt(amount) || 0) : 0;
   const newBalanceAfterWithdraw = balance ? balance.currentBalance - (parseInt(amount) || 0) : 0;
 
-  // 计算排行榜数据
-  const leaderboard = participantBalances
-    .map((pb) => {
-      const participant = participants.find((p) => p.id === pb.userId);
-      const netScore = pb.depositTotal - pb.withdrawTotal;
-      // 先尝试从参与者对象获取姓名，如果没有则使用 pb 中可能存在的 userName（需要在 store 中保存）
-      const userName = (pb as any)?.userName || participant?.name || '未知用户';
-      return {
-        userId: pb.userId,
-        name: userName,
-        depositTotal: pb.depositTotal,
-        withdrawTotal: pb.withdrawTotal,
-        netScore,
-      };
-    })
-    .sort((a, b) => a.netScore - b.netScore); // 按净分从小到大排序
-
   return (
     <View className='game-detail-page'>
-      <Toast id="game-detail-toast" />
+      <Toast id="game-detail-toast"/>
       <View className='header'>
-        <View className='header-left' onClick={() => Taro.navigateBack()}>
+        <View className='header-left' onClick={(e) => {
+          e.stopPropagation();
+          Taro.navigateBack();
+        }}>
           <Text className='back-icon'>←</Text>
         </View>
         <View className='header-center'>
@@ -182,82 +175,82 @@ const GameDetailPage: React.FC = () => {
       </View>
 
       {isCreator && (
-      <View className='mode-switch'>
-        <View
-          className={`mode-item ${viewMode === 'self' ? 'active' : ''}`}
-          onClick={() => {
-            setViewMode('self');
-            setSelectedUserId(null);
-          }}
-        >
-          查看自己
+        <View className='mode-switch'>
+          <View
+            className={`mode-item ${viewMode === 'self' ? 'active' : ''}`}
+            onClick={() => {
+              setViewMode('self');
+              setSelectedUserId(null);
+            }}
+          >
+            查看自己
+          </View>
+          <View
+            className={`mode-item ${viewMode === 'manage' ? 'active' : ''}`}
+            onClick={() => setViewMode('manage')}
+          >
+            管理参与者
+          </View>
         </View>
-        <View
-          className={`mode-item ${viewMode === 'manage' ? 'active' : ''}`}
-          onClick={() => setViewMode('manage')}
-        >
-          管理参与者
-        </View>
-      </View>
       )}
 
       {/* 余额卡片 */}
       {balance && (
-      <View className='balance-card'>
-        <Text className='card-title'>场次积分状态</Text>
-        <View className='balance-stats'>
-          <View className='stat-item'>
-            <Text className='stat-label'>存分总量</Text>
-            <Text className='stat-value'>{balance.depositTotal.toLocaleString()}</Text>
+        <View className='balance-card'>
+          <Text className='card-title'>场次积分状态</Text>
+          <View className='balance-stats'>
+            <View className='stat-item'>
+              <Text className='stat-label'>存分总量</Text>
+              <Text className='stat-value'>{balance.depositTotal.toLocaleString()}</Text>
+            </View>
+            <View className='stat-item'>
+              <Text className='stat-label'>取分总量</Text>
+              <Text className='stat-value'>{balance.withdrawTotal.toLocaleString()}</Text>
+            </View>
           </View>
-          <View className='stat-item'>
-            <Text className='stat-label'>取分总量</Text>
-            <Text className='stat-value'>{balance.withdrawTotal.toLocaleString()}</Text>
+          <View className='current-balance'>
+            <Text className='balance-label'>当前余额</Text>
+            <Text className='balance-value'>{balance.currentBalance.toLocaleString()}</Text>
+          </View>
+          <View
+            className={`balance-status ${balance.isBalanced ? 'balanced' : 'unbalanced'}`}
+          >
+            {balance.isBalanced ? '✓ 平衡' : '⚠ 不平衡'}
+            <Text className='balance-desc'>
+              ({balance.isBalanced ? '存分 - 取分 = 0' : '存分 - 取分 ≠ 0'})
+            </Text>
           </View>
         </View>
-        <View className='current-balance'>
-          <Text className='balance-label'>当前余额</Text>
-          <Text className='balance-value'>{balance.currentBalance.toLocaleString()}</Text>
-        </View>
-        <View
-          className={`balance-status ${balance.isBalanced ? 'balanced' : 'unbalanced'}`}
-        >
-          {balance.isBalanced ? '✓ 平衡' : '⚠ 不平衡'}
-          <Text className='balance-desc'>
-            ({balance.isBalanced ? '存分 - 取分 = 0' : '存分 - 取分 ≠ 0'})
-          </Text>
-        </View>
-      </View>
       )}
 
       {/* 操作按钮 */}
       {(viewMode === 'self' || (viewMode === 'manage' && selectedUserId)) && (
-      <View className='action-buttons-section'>
-        <Button
-          type='success'
-          size='large'
-          block
-          onClick={() => {
-            setAmount('0');
-            setRemark('');
-            setShowDepositPopup(true);
-          }}
-        >
-          💰 存分
-        </Button>
-        <Button
-          type='warning'
-          size='large'
-          block
-          onClick={() => {
-            setAmount('0');
-            setRemark('');
-            setShowWithdrawPopup(true);
-          }}
-        >
-          💵 取分
-        </Button>
-      </View>
+        <View className='action-buttons-section'>
+          <Button
+            type='success'
+            size='large'
+            block
+            onClick={() => {
+              setAmount('0');
+              setRemark('');
+              setShowDepositPopup(true);
+            }}
+          >
+            💰 存分
+          </Button>
+          <Button
+            type='warning'
+            size='large'
+            block
+            onClick={() => {
+              setAmount('0');
+              setRemark('');
+              setShowWithdrawPopup(true);
+            }}
+          >
+            💵 取分
+          </Button>
+        </View>
       )}
 
       {/* 去排行榜按钮 */}
@@ -279,66 +272,65 @@ const GameDetailPage: React.FC = () => {
 
       {/* 管理参与者列表 */}
       {isCreator && viewMode === 'manage' && (
-      <View className='participants-section'>
-        <Text className='section-title'>参与者列表</Text>
-        {participants.map((participant) => {
-          const pBalance = getUserBalance(gameId, participant.id);
-          return (
-            <View
-              key={participant.id}
-              className={`participant-card ${selectedUserId === participant.id ? 'selected' : ''}`}
-            >
-              <View className='participant-info'>
-                <Text className='participant-name'>👤 {participant.name}</Text>
-                {pBalance && (
-                <View className='participant-balance'>
-                  <Text>余额: {pBalance.currentBalance.toLocaleString()}</Text>
-                  <View
-                    className={`balance-status-small ${pBalance.isBalanced ? 'balanced' : 'unbalanced'}`}
-                  >
-                    {pBalance.isBalanced ? '平衡' : '不平衡'}
-                  </View>
-                </View>
-                )}
-              </View>
-              <Button
-                type='primary'
-                size='small'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedUserId(participant.id);
-                }}
+        <View className='participants-section'>
+          <Text className='section-title'>参与者列表</Text>
+          {participants.map((participant) => {
+            const pBalance = getUserBalance(gameId, participant.id);
+            return (
+              <View
+                key={participant.id}
+                className={`participant-card ${selectedUserId === participant.id ? 'selected' : ''}`}
               >
-                代理操作
-              </Button>
-            </View>
-          );
-        })}
-      </View>
+                <View className='participant-info'>
+                  <Text className='participant-name'>👤 {participant.name}</Text>
+                  {pBalance && (
+                    <View className='participant-balance'>
+                      <Text>余额: {pBalance.currentBalance.toLocaleString()}</Text>
+                      <View
+                        className={`balance-status-small ${pBalance.isBalanced ? 'balanced' : 'unbalanced'}`}
+                      >
+                        {pBalance.isBalanced ? '平衡' : '不平衡'}
+                      </View>
+                    </View>
+                  )}
+                </View>
+                <Button
+                  type='primary'
+                  size='small'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedUserId(participant.id);
+                  }}
+                >
+                  代理操作
+                </Button>
+              </View>
+            );
+          })}
+        </View>
       )}
 
       {/* 结束游戏按钮（仅创建者可见） */}
       {isCreator && game?.status !== 'ended' && (
-      <View className='end-game-section'>
-        <Button
-          type='danger'
-          size='large'
-          block
-          onClick={async () => {
-            try {
-              await endGame(gameId!);
-              Toast.show('game-detail-toast', { content: '游戏已结束' });
-              Taro.navigateBack();
-            } catch (error: any) {
-              Toast.show('game-detail-toast', { content: error.message || '结束游戏失败' });
-            }
-          }}
-        >
-          结束游戏
-        </Button>
-      </View>
+        <View className='end-game-section'>
+          <Button
+            type='danger'
+            size='large'
+            block
+            onClick={async () => {
+              try {
+                await endGame(gameId!);
+                Toast.show('game-detail-toast', {content: '游戏已结束'});
+                Taro.navigateBack();
+              } catch (error: any) {
+                Toast.show('game-detail-toast', {content: error.message || '结束游戏失败'});
+              }
+            }}
+          >
+            结束游戏
+          </Button>
+        </View>
       )}
-
 
 
       {/* 交易记录 */}
@@ -355,7 +347,7 @@ const GameDetailPage: React.FC = () => {
                   {tx.isProxy && ` (${viewMode === 'self' ? '代理' : tx.userName})`}
                 </Text>
                 {tx.isProxy && viewMode === 'self' && (
-                <Text className='tx-operator'>{tx.operatorName}操作</Text>
+                  <Text className='tx-operator'>{tx.operatorName}操作</Text>
                 )}
                 <Text className='tx-balance'>余额: {tx.balanceAfter.toLocaleString()}</Text>
               </View>
@@ -381,7 +373,7 @@ const GameDetailPage: React.FC = () => {
               操作: {viewMode === 'manage' ? '代理操作' : '自主操作'}
             </Text>
             {viewMode === 'manage' && displayUser && (
-            <Text className='info-row'>用户: {displayUser.name}</Text>
+              <Text className='info-row'>用户: {displayUser.name}</Text>
             )}
           </View>
 
@@ -411,10 +403,10 @@ const GameDetailPage: React.FC = () => {
           </View>
 
           {balance && (
-          <View className='balance-preview'>
-            <Text>当前余额: {balance.currentBalance.toLocaleString()}</Text>
-            <Text>存分后余额: {newBalanceAfterDeposit.toLocaleString()}</Text>
-          </View>
+            <View className='balance-preview'>
+              <Text>当前余额: {balance.currentBalance.toLocaleString()}</Text>
+              <Text>存分后余额: {newBalanceAfterDeposit.toLocaleString()}</Text>
+            </View>
           )}
 
           <View className='remark-section'>
@@ -453,7 +445,7 @@ const GameDetailPage: React.FC = () => {
               操作: {viewMode === 'manage' ? '代理操作' : '自主操作'}
             </Text>
             {viewMode === 'manage' && displayUser && (
-            <Text className='info-row'>用户: {displayUser.name}</Text>
+              <Text className='info-row'>用户: {displayUser.name}</Text>
             )}
           </View>
 
@@ -483,10 +475,10 @@ const GameDetailPage: React.FC = () => {
           </View>
 
           {balance && (
-          <View className='balance-preview'>
-            <Text>当前余额: {balance.currentBalance.toLocaleString()}</Text>
-            <Text>取分后余额: {newBalanceAfterWithdraw.toLocaleString()}</Text>
-          </View>
+            <View className='balance-preview'>
+              <Text>当前余额: {balance.currentBalance.toLocaleString()}</Text>
+              <Text>取分后余额: {newBalanceAfterWithdraw.toLocaleString()}</Text>
+            </View>
           )}
 
           <View className='remark-section'>

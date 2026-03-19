@@ -3,6 +3,7 @@ import { View, Text, ScrollView } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import { useAppStore } from '../../store';
+import { useAuthStore } from '../../store/auth';
 import './index.less';
 
 const MyGamesPage: React.FC = () => {
@@ -10,19 +11,24 @@ const MyGamesPage: React.FC = () => {
     getUserGames,
     getUserCreatedGames,
     getUserBalance,
-    getCurrentUser,
     setCurrentGameId,
     loadMyGames,
   } = useAppStore();
+  const {state: authState} = useAuthStore();
 
   // 页面加载时获取我的游戏列表
   useEffect(() => {
     loadMyGames();
   }, [loadMyGames]);
 
-  const userGames = getUserGames();
-  const userCreatedGames = getUserCreatedGames();
-  const currentUser = getCurrentUser();
+  const currentUser = authState.user;
+
+  if (!currentUser) {
+    return null;
+  }
+
+  const userGames = getUserGames(currentUser.id);
+  const userCreatedGames = getUserCreatedGames(currentUser.id);
 
   const handleEnterGame = (gameId: string) => {
     setCurrentGameId(gameId);
@@ -30,7 +36,7 @@ const MyGamesPage: React.FC = () => {
   };
 
   const renderGameCard = (game: any) => {
-    const balance = getUserBalance(game.id);
+    const balance = getUserBalance(game.id, currentUser.id);
     const isCreator = game.creatorId === currentUser.id;
 
     return (
