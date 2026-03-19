@@ -1,35 +1,35 @@
-import React, { useState } from 'react';
-import { View, Text } from '@tarojs/components';
+import {useState} from 'react';
+import {Text, View} from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { Button, Form, Input, Toast } from '@nutui/nutui-react-taro';
-import { useAuthStore } from '../../store/auth';
+import {Button, Form, Input} from '@nutui/nutui-react-taro';
+import {useAuthStore} from '../../store/auth';
 import './index.less';
 
 function LoginPage() {
-  const { login, register, state } = useAuthStore();
+  const {login, register, state} = useAuthStore();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [form] = Form.useForm();
 
   const handleSubmit = async (values: any) => {
     if (!values.username || !values.password) {
-      Toast({ content: '请填写完整信息' });
+      // Toast({content: '请填写完整信息'});
       return;
     }
 
     try {
       if (mode === 'login') {
         await login(values.username, values.password);
-        Toast({ content: '登录成功' });
+        // Toast({content: '登录成功'});
       } else {
         await register(values.username, values.password, values.nickname || values.username);
-        Toast({ content: '注册成功' });
+        // Toast({content: '注册成功'});
       }
       // 登录成功后跳转到主页
       Taro.redirectTo({
         url: '/pages/index/index',
       });
     } catch (error: any) {
-      Toast({ content: error.message || '操作失败' });
+      // Toast({content: error.message || '操作失败'});
     }
   };
 
@@ -79,8 +79,8 @@ function LoginPage() {
             <Button
               type="primary"
               size="large"
-              block
               loading={state.isLoading}
+              block
               htmlType="submit"
             >
               {mode === 'login' ? '登录' : '注册'}
