@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { Cell, Button, Dialog } from '@nutui/nutui-react-taro';
@@ -15,6 +15,8 @@ const ProfilePage: React.FC = () => {
   } = useAppStore();
   const { state: authState, logout } = useAuthStore();
 
+  const [visible, setVisible] = useState(false);
+
   const currentUser = authState.user;
   const userGames = getUserGames();
   const userCreatedGames = getUserCreatedGames();
@@ -26,17 +28,15 @@ const ProfilePage: React.FC = () => {
   const proxyTransactions = currentUser ? getGameTransactions('').filter((t) => t.isProxy && t.userId === currentUser.id) : [];
 
   const handleLogout = () => {
-    Dialog.show({
-      title: '确认登出',
-      content: '确定要退出登录吗？',
-      onConfirm: () => {
-        logout();
-        Dialog.close();
-        // 跳转到登录页面
-        Taro.redirectTo({
-          url: '/pages/login/index',
-        });
-      },
+    setVisible(true);
+  };
+
+  const handleConfirmLogout = () => {
+    setVisible(false);
+    logout();
+    // 跳转到登录页面
+    Taro.redirectTo({
+      url: '/pages/login/index',
     });
   };
 
@@ -111,6 +111,14 @@ const ProfilePage: React.FC = () => {
           </Button>
         </View>
       </ScrollView>
+
+      <Dialog
+        visible={visible}
+        title="确认登出"
+        content="确定要退出登录吗？"
+        onCancel={() => setVisible(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </View>
   );
 };
