@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
-import Taro, { useRouter } from '@tarojs/taro';
-import { useAppStore } from '../../store';
+import React, {useEffect, useState} from 'react';
+import {ScrollView, Text, View} from '@tarojs/components';
+import Taro, {useRouter} from '@tarojs/taro';
+import {useAppStore} from '../../store';
+import {useAuthStore} from '../../store/auth';
 import './index.less';
 
 interface LeaderboardItem {
@@ -14,17 +15,36 @@ interface LeaderboardItem {
 
 const LeaderboardPage: React.FC = () => {
   const router = useRouter();
-  const { getGameParticipantBalances, getGameParticipants } = useAppStore();
-  
+  const {
+    getGameParticipantBalances,
+    getGameParticipants,
+    loadGameParticipantBalances,
+  } = useAppStore();
+  const {state: authState} = useAuthStore();
+
   const gameId = router.params?.gameId as string;
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const handleBack = () => {
+    Taro.navigateBack();
+  };
 
   useEffect(() => {
-    if (gameId) {
-      // 计算排行榜数据
+    const loadData = async () => {
+      if (gameId && authState.user) {
+        await loadGameParticipantBalances(gameId);
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, [gameId, authState.user?.id, loadGameParticipantBalances]);
+
+  useEffect(() => {
+    if (gameId && !isLoading) {
       const participantBalances = getGameParticipantBalances(gameId);
       const participants = getGameParticipants(gameId);
-      
+
       const leaderboardData = participantBalances
         .map((pb) => {
           const participant = participants.find((p) => p.id === pb.userId);
@@ -38,15 +58,19 @@ const LeaderboardPage: React.FC = () => {
             netScore,
           };
         })
-        .sort((a, b) => a.netScore - b.netScore); // 按净分从小到大排序
-      
+        .sort((a, b) => a.netScore - b.netScore);
+
       setLeaderboard(leaderboardData);
     }
-  }, [gameId, getGameParticipantBalances, getGameParticipants]);
+  }, [gameId, isLoading, getGameParticipantBalances, getGameParticipants]);
 
-  const handleBack = () => {
-    Taro.navigateBack();
-  };
+  if (isLoading) {
+    return (
+      <View className='leaderboard-page loading-page'>
+        <Text>加载中...</Text>
+      </View>
+    );
+  }
 
   return (
     <View className='leaderboard-page'>
@@ -59,13 +83,12 @@ const LeaderboardPage: React.FC = () => {
         </View>
         <View className='header-right' />
       </View>
-
       <ScrollView className='content' scrollY>
         {leaderboard.length > 0 ? (
           leaderboard.map((item, index) => (
-            <View key={item.userId} className='leaderboard-card'>
+            <View key={item.userId} className={`leaderboard-card top-${index + 1}`}>
               <View className='card-left'>
-                <Text className='rank'>{index + 1}</Text>
+                <Text className={`rank rank-${index + 1}`}>{index + 1}</Text>
                 <View className='user-info'>
                   <Text className='name'>{item.name}</Text>
                 </View>
