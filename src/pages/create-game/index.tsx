@@ -16,7 +16,7 @@ const CreateGamePage: React.FC = () => {
 
   const handleSubmit = async (values: any) => {
     if (!values.name?.trim()) {
-      (Toast.show as any)('请输入游戏名称');
+      Toast({ content: '请输入游戏名称' });
       return;
     }
 
@@ -27,10 +27,10 @@ const CreateGamePage: React.FC = () => {
         startTime: startTime ? startTime.toISOString() : '',
         endTime: '',
       });
-      (Toast.show as any)('创建成功');
+      Toast({ content: '创建成功' });
       Taro.navigateBack();
     } catch (error: any) {
-      (Toast.show as any)(error.message || '创建失败');
+      Toast({ content: error.message || '创建失败' });
     }
   };
 
