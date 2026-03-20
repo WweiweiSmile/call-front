@@ -15,19 +15,19 @@ export function useBalanceStore({state, setState, setLoading}: UseBalanceStoreOp
     try {
       const balance: any = await transactionApi.getUserBalance(gameId);
       const userBalance: UserGameBalance = {
-        userId: String(balance.user_id),
-        gameId: String(balance.game_id),
-        userName: balance.user_name,
-        depositTotal: balance.total_deposit,
-        withdrawTotal: balance.total_withdraw,
-        currentBalance: balance.current_balance,
-        isBalanced: balance.balance_status === 'balanced',
+        userId: String(balance.userId),
+        gameId: String(balance.gameId),
+        userName: balance.userName,
+        depositTotal: balance.totalDeposit,
+        withdrawTotal: balance.totalWithdraw,
+        currentBalance: balance.currentBalance,
+        isBalanced: balance.balanceStatus === 'balanced',
         lastTransactionTime: new Date().toISOString(),
       };
 
       setState((prev) => {
         const newBalances = prev.userGameBalances.filter(
-          (b) => !(b.gameId === gameId && b.userId === String(balance.user_id))
+          (b) => !(b.gameId === gameId && b.userId === String(balance.userId))
         );
         return {
           ...prev,
@@ -68,20 +68,20 @@ export function useBalanceStore({state, setState, setLoading}: UseBalanceStoreOp
     try {
       const participants: any[] = await transactionApi.getGameParticipants(gameId);
       const balances: UserGameBalance[] = participants.map((p: any) => ({
-        userId: String(p.user_id),
-        gameId: String(p.game_id),
-        userName: p.user_name,
-        depositTotal: p.total_deposit,
-        withdrawTotal: p.total_withdraw,
-        currentBalance: p.current_balance,
-        isBalanced: p.balance_status === 'balanced',
+        userId: String(p.userId),
+        gameId: String(p.gameId),
+        userName: p.userName,
+        depositTotal: p.totalDeposit,
+        withdrawTotal: p.totalWithdraw,
+        currentBalance: p.currentBalance,
+        isBalanced: p.balanceStatus === 'balanced',
         lastTransactionTime: new Date().toISOString(),
       }));
 
       // 同时更新参与者信息
       const gameParticipants: User[] = participants.map((p: any) => ({
-        id: String(p.user_id),
-        name: p.user_name || '未知用户',
+        id: String(p.userId),
+        name: p.userName || '未知用户',
         avatar: '👤',
       }));
 

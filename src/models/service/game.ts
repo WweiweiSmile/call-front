@@ -9,13 +9,13 @@ import type { ListResponse } from './common';
 export interface CreateGameRequest {
   name: string;
   description?: string;
-  start_time?: string;
-  end_time?: string;
+  startTime?: string;
+  endTime?: string;
 }
 
 // 加入游戏请求
 export interface JoinGameRequest {
-  game_id: number;
+  gameId: number;
 }
 
 // 游戏响应
@@ -23,15 +23,15 @@ export interface GameResponse {
   id: number;
   name: string;
   description: string;
-  creator_id: number;
-  creator_name?: string;
+  creatorId: number;
+  creatorName?: string;
   status: string;
-  start_time: string | null;
-  end_time: string | null;
-  player_count: number;
-  created_at: string;
-  is_creator?: boolean;
-  is_joined?: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  playerCount: number;
+  createdAt: string;
+  isCreator?: boolean;
+  isJoined?: boolean;
 }
 
 // 游戏列表响应

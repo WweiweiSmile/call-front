@@ -26,14 +26,14 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
       const games: Game[] = response.list.map((g: any) => ({
         id: String(g.id),
         name: g.name,
-        creatorId: String(g.creator_id),
-        creatorName: g.creator_name || '创建者',
+        creatorId: String(g.creatorId),
+        creatorName: g.creatorName || '创建者',
         status: g.status as 'pending' | 'ongoing' | 'ended',
-        participantCount: g.player_count,
+        participantCount: g.playerCount,
         description: g.description,
-        startTime: g.start_time,
-        endTime: g.end_time,
-        isJoined: g.is_joined,
+        startTime: g.startTime,
+        endTime: g.endTime,
+        isJoined: g.isJoined,
       }));
       setState((prev) => ({...prev, games}));
     } catch (error) {
@@ -51,14 +51,14 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
       const games: Game[] = response.list.map((g: any) => ({
         id: String(g.id),
         name: g.name,
-        creatorId: String(g.creator_id),
-        creatorName: g.creator_name || '创建者',
+        creatorId: String(g.creatorId),
+        creatorName: g.creatorName || '创建者',
         status: g.status as 'pending' | 'ongoing' | 'ended',
-        participantCount: g.player_count,
+        participantCount: g.playerCount,
         description: g.description,
-        startTime: g.start_time,
-        endTime: g.end_time,
-        isJoined: g.is_joined,
+        startTime: g.startTime,
+        endTime: g.endTime,
+        isJoined: g.isJoined,
       }));
       setState((prev) => ({...prev, games}));
     } catch (error) {
@@ -135,13 +135,13 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
         const gameData: Game = {
           id: String(newGame.id),
           name: newGame.name,
-          creatorId: String(newGame.creator_id),
+          creatorId: String(newGame.creatorId),
           creatorName: currentUser.name,
           status: newGame.status as 'pending' | 'ongoing' | 'ended',
-          participantCount: newGame.player_count || 0,
+          participantCount: newGame.playerCount || 0,
           description: newGame.description,
-          startTime: newGame.start_time,
-          endTime: newGame.end_time,
+          startTime: newGame.startTime,
+          endTime: newGame.endTime,
         };
 
         setState((prev) => ({

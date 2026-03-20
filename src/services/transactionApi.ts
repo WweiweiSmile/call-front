@@ -19,8 +19,8 @@ export const transactionApi = {
     return request<void>('/transactions/deposit', {
       method: 'POST',
       data: {
-        game_id: data.gameId,
-        target_user_id: data.targetUserId,
+        gameId: data.gameId,
+        targetUserId: data.targetUserId,
         amount: data.amount,
         remark: data.remark,
       } as DepositRequest,
@@ -37,8 +37,8 @@ export const transactionApi = {
     return request<void>('/transactions/withdraw', {
       method: 'POST',
       data: {
-        game_id: data.gameId,
-        target_user_id: data.targetUserId,
+        gameId: data.gameId,
+        targetUserId: data.targetUserId,
         amount: data.amount,
         remark: data.remark,
       } as WithdrawRequest,

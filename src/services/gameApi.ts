@@ -55,7 +55,7 @@ export const gameApi = {
   joinGame: (gameId: number) => {
     return request<void>('/games/join', {
       method: 'POST',
-      data: { game_id: gameId } as JoinGameRequest,
+      data: { gameId } as JoinGameRequest,
     });
   },
 

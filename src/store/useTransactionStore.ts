@@ -24,17 +24,17 @@ export function useTransactionStore({
       const response: any = await transactionApi.getGameTransactions(gameId, {userId});
       const transactions: Transaction[] = response.list.map((t: any) => ({
         id: String(t.id),
-        userId: String(t.user_id),
-        userName: t.user_name || '用户',
-        gameId: String(t.game_id),
-        operatorId: String(t.operator_id),
-        operatorName: t.operator_name || '操作人',
-        isProxy: t.operator_type === 'proxy',
-        type: t.trans_type as 'deposit' | 'withdraw',
+        userId: String(t.userId),
+        userName: t.userName || '用户',
+        gameId: String(t.gameId),
+        operatorId: String(t.operatorId),
+        operatorName: t.operatorName || '操作人',
+        isProxy: t.operatorType === 'proxy',
+        type: t.transType as 'deposit' | 'withdraw',
         amount: t.amount,
-        balanceAfter: t.balance_after,
+        balanceAfter: t.balanceAfter,
         remark: t.remark,
-        createdAt: t.created_at,
+        createdAt: t.createdAt,
       }));
 
       setState((prev) => {
