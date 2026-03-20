@@ -359,6 +359,69 @@
         }
       }
     }
+
+    .overall-balance-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 12px;
+      color: #ffffff;
+
+      .overall-balance-title {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 16px;
+        display: block;
+      }
+
+      .overall-balance-stats {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 16px;
+
+        .overall-stat-item {
+          text-align: center;
+
+          .overall-stat-label {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.9);
+            display: block;
+            margin-bottom: 6px;
+          }
+
+          .overall-stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+          }
+        }
+      }
+
+      .overall-balance-status {
+        text-align: center;
+        padding: 10px;
+        border-radius: 6px;
+        font-size: 15px;
+        background: rgba(255, 255, 255, 0.2);
+
+        &.balanced {
+          background: rgba(82, 196, 26, 0.3);
+          color: #f6ffed;
+        }
+
+        &.unbalanced {
+          background: rgba(250, 173, 20, 0.3);
+          color: #fff7e6;
+        }
+
+        .overall-balance-desc {
+          font-size: 12px;
+          margin-left: 8px;
+          color: rgba(255, 255, 255, 0.9);
+        }
+      }
+    }
   }
 
   .end-game-section {
