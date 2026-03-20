@@ -14,6 +14,7 @@ const GameDetailPage: React.FC = () => {
     state,
     getUserBalance,
     getGameParticipants,
+    getGameParticipantBalances,
     getGameTransactions,
     deposit,
     withdraw,
@@ -109,6 +110,26 @@ const GameDetailPage: React.FC = () => {
   const balance = displayUser ? getUserBalance(gameId, displayUser.id) : null;
   const transactions = displayUser ? getGameTransactions(gameId, displayUser.id) : getGameTransactions(gameId);
   const participants = getGameParticipants(gameId);
+
+  // 计算所有参与者的整体平衡状态
+  const getOverallBalance = () => {
+    const participantBalances = getGameParticipantBalances(gameId);
+    if (participantBalances.length === 0) return null;
+    
+    const totalDeposit = participantBalances.reduce((sum, b) => sum + b.depositTotal, 0);
+    const totalWithdraw = participantBalances.reduce((sum, b) => sum + b.withdrawTotal, 0);
+    // 判断总存分 - 总取分是否等于 0
+    const isBalanced = totalDeposit === totalWithdraw;
+    
+    return {
+      totalDeposit,
+      totalWithdraw,
+      isBalanced,
+      participantCount: participantBalances.length,
+    };
+  };
+
+  const overallBalance = getOverallBalance();
 
   const quickAmounts = [100, 500, 1000, 5000];
 
@@ -285,7 +306,7 @@ const GameDetailPage: React.FC = () => {
                   <Text className='participant-name'>👤 {participant.name}</Text>
                   {pBalance && (
                     <View className='participant-balance'>
-                      <Text>余额: {pBalance.currentBalance.toLocaleString()}</Text>
+                      <Text>余额：{pBalance.currentBalance.toLocaleString()}</Text>
                       <View
                         className={`balance-status-small ${pBalance.isBalanced ? 'balanced' : 'unbalanced'}`}
                       >
@@ -307,6 +328,35 @@ const GameDetailPage: React.FC = () => {
               </View>
             );
           })}
+                
+          {/* 整体平衡状态显示 */}
+          {overallBalance && (
+            <View className='overall-balance-card'>
+              <Text className='overall-balance-title'>整体平衡状态</Text>
+              <View className='overall-balance-stats'>
+                <View className='overall-stat-item'>
+                  <Text className='overall-stat-label'>总存分</Text>
+                  <Text className='overall-stat-value'>{overallBalance.totalDeposit.toLocaleString()}</Text>
+                </View>
+                <View className='overall-stat-item'>
+                  <Text className='overall-stat-label'>总取分</Text>
+                  <Text className='overall-stat-value'>{overallBalance.totalWithdraw.toLocaleString()}</Text>
+                </View>
+                <View className='overall-stat-item'>
+                  <Text className='overall-stat-label'>平衡人数</Text>
+                  <Text className='overall-stat-value'>{overallBalance.participantCount}人</Text>
+                </View>
+              </View>
+              <View
+                className={`overall-balance-status ${overallBalance.allBalanced ? 'balanced' : 'unbalanced'}`}
+              >
+                {overallBalance.allBalanced ? '✓ 所有人平衡' : '⚠ 有人不平衡'}
+                <Text className='overall-balance-desc'>
+                  ({overallBalance.allBalanced ? '总存分 - 总取分 = 0' : '总存分 - 总取分 ≠ 0'})
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
       )}
 
