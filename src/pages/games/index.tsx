@@ -82,7 +82,7 @@ const GamesPage: React.FC = () => {
           <View className='section'>
             <Text className='section-title'>🔥 进行中的游戏</Text>
             {filteredOngoingGames.map((game) => {
-              const hasJoined = game.isJoined || game.creatorId === currentUser.id;
+              const hasJoined = game.isJoined;
               const isCreator = game.creatorId === currentUser.id;
 
               return (
@@ -100,17 +100,19 @@ const GamesPage: React.FC = () => {
                     </Text>
                   </View>
                   <Button
-                    type={hasJoined || isCreator ? 'primary' : 'success'}
+                    type={hasJoined ? 'primary' : 'success'}
                     size='small'
                     onClick={() => {
-                      if (hasJoined || isCreator) {
+                      if (hasJoined) {
                         handleEnterGame(game.id);
                       } else {
                         handleJoinGame(game.id);
                       }
                     }}
                   >
-                    {isCreator ? '管理 →' : (hasJoined ? '进入 →' : '立即加入 →')}
+                    {isCreator
+                      ? (hasJoined ? '管理 →' : '加入游戏 →')
+                      : (hasJoined ? '进入 →' : '立即加入 →')}
                   </Button>
                 </View>
               );
