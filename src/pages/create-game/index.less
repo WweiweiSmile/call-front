@@ -1,15 +1,22 @@
+// ============================================
+// 创建游戏页面 - 深色主题样式
+// ============================================
+
+@import '../../styles/theme.less';
+
 .create-game-page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
+  background: @bg-primary;
 
   .header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 16px;
-    background: #ffffff;
+    background: @bg-secondary;
+    border-bottom: 1px solid @border-color;
 
     .header-left,
     .header-right {
@@ -21,8 +28,12 @@
     .header-left {
       .back-icon {
         font-size: 24px;
-        color: #333333;
+        color: @text-primary;
         cursor: pointer;
+
+        &:active {
+          opacity: 0.6;
+        }
       }
     }
 
@@ -32,8 +43,8 @@
 
       .title {
         font-size: 18px;
-        font-weight: bold;
-        color: #333333;
+        font-weight: 600;
+        color: @text-primary;
       }
     }
   }
@@ -45,12 +56,61 @@
   }
 
   .create-form {
-    background: #ffffff;
-    border-radius: 12px;
+    background: @bg-secondary;
+    border-radius: @radius-xl;
     padding: 20px 16px;
+    border: 1px solid @border-color;
+    box-shadow: @shadow-sm;
   }
 
   .submit-section {
     margin-top: 24px;
+  }
+}
+
+// NutUI 表单组件深色主题覆盖
+.create-game-page {
+  :global {
+    .nut-form-item {
+      .nut-form-item__label {
+        color: @text-primary;
+      }
+    }
+
+    .nut-input {
+      background: @bg-tertiary;
+      border-radius: @radius-md;
+      border: 1px solid @border-color;
+      color: @text-primary;
+
+      .nut-input__value {
+        color: @text-primary;
+      }
+
+      .nut-input__placeholder {
+        color: @text-tertiary;
+      }
+
+      &.nut-input--focus {
+        border-color: @primary;
+        box-shadow: 0 0 0 2px fade(@primary, 30%);
+      }
+    }
+
+    .nut-textarea {
+      background: @bg-tertiary;
+      border-radius: @radius-md;
+      border: 1px solid @border-color;
+      color: @text-primary;
+
+      .nut-textarea__inner {
+        color: @text-primary;
+        background: transparent;
+      }
+
+      .nut-textarea__placeholder {
+        color: @text-tertiary;
+      }
+    }
   }
 }

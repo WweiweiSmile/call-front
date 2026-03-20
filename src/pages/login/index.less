@@ -1,11 +1,19 @@
+// ============================================
+// 登录/注册页面 - 深色主题样式
+// ============================================
+
+@import '../../styles/theme.less';
+
 .login-page {
-  height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  background: @bg-primary;
   padding: 40px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
 }
 
 .login-header {
@@ -13,44 +21,132 @@
   margin-bottom: 40px;
 }
 
-.login-title {
-  font-size: 32px;
-  font-weight: bold;
-  color: white;
+.logo-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
   display: block;
-  margin-bottom: 10px;
+}
+
+.login-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: @text-primary;
+  display: block;
+  margin-bottom: 8px;
+  background: @gradient-primary;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .login-subtitle {
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.8);
+  color: @text-secondary;
   display: block;
 }
 
 .login-form {
   width: calc(100% - 40px);
   max-width: 400px;
-  background: white;
-  border-radius: 16px;
-  padding: 30px 20px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  background: @bg-secondary;
+  border-radius: @radius-xl;
+  padding: 24px;
+  box-shadow: @shadow-lg;
+  border: 1px solid @border-color;
   margin: 0 20px;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: @gradient-primary;
+    border-radius: @radius-xl @radius-xl 0 0;
+  }
 }
 
-.form-item {
-  margin-bottom: 20px;
+// Tab 切换
+.form-tabs {
+  display: flex;
+  position: relative;
+  margin-bottom: 24px;
+  background: @bg-tertiary;
+  border-radius: @radius-lg;
+  padding: 4px;
 }
 
-.form-label {
-  display: block;
-  font-size: 14px;
-  color: #333;
-  margin-bottom: 8px;
+.tab-item {
+  flex: 1;
+  text-align: center;
+  padding: 12px 16px;
+  font-size: @font-size-md;
   font-weight: 500;
+  color: @text-secondary;
+  cursor: pointer;
+  border-radius: @radius-md;
+  transition: all @duration-normal ease;
+  position: relative;
+  z-index: 2;
+
+  &.active {
+    color: @text-primary;
+    font-weight: 600;
+  }
+
+  &:active {
+    opacity: 0.8;
+  }
 }
 
-.form-input {
-  width: 100%;
+.tab-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 6px);
+  background: @bg-secondary;
+  border-radius: @radius-md;
+  box-shadow: @shadow-sm;
+  transition: transform @duration-normal ease;
+  z-index: 1;
+
+  &.right {
+    transform: translateX(100%);
+  }
+}
+
+// NutUI 表单组件覆盖
+.login-form {
+  :global {
+    .nut-form-item {
+      .nut-form-item__label {
+        color: @text-primary;
+      }
+    }
+
+    .nut-input {
+      background: @bg-tertiary;
+      border-radius: @radius-md;
+      border: 1px solid @border-color;
+      color: @text-primary;
+
+      .nut-input__value {
+        color: @text-primary;
+      }
+
+      .nut-input__placeholder {
+        color: @text-tertiary;
+      }
+
+      &.nut-input--focus {
+        border-color: @primary;
+        box-shadow: 0 0 0 2px fade(@primary, 30%);
+      }
+    }
+  }
 }
 
 .login-footer {
@@ -59,32 +155,7 @@
 }
 
 .switch-mode {
-  color: white;
+  color: @text-secondary;
   font-size: 14px;
-  text-decoration: underline;
   cursor: pointer;
-}
-
-.test-accounts {
-  margin-top: 40px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-}
-
-.test-title {
-  color: white;
-  font-size: 14px;
-  font-weight: bold;
-  display: block;
-  margin-bottom: 10px;
-}
-
-.test-account {
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 13px;
-  display: block;
-  margin-bottom: 5px;
 }

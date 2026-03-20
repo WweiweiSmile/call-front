@@ -1,0 +1,380 @@
+// ============================================
+// NutUI 组件浅色主题覆盖样式
+// ============================================
+
+@import './theme.less';
+
+// -------------------------------------------
+// NutUI 全局变量覆盖
+// -------------------------------------------
+
+:root {
+  --nutui-color-primary: @primary;
+  --nutui-color-primary-stop-1: @primary-light;
+  --nutui-color-primary-stop-2: @primary-dark;
+  --nutui-color-success: @success;
+  --nutui-color-warning: @warning;
+  --nutui-color-danger: @danger;
+  --nutui-color-text: @text-primary;
+  --nutui-color-text-second: @text-secondary;
+  --nutui-color-text-third: @text-tertiary;
+  --nutui-color-background: @bg-primary;
+  --nutui-color-background-2: @bg-secondary;
+  --nutui-border-radius: @radius-md;
+}
+
+// -------------------------------------------
+// Button 按钮
+// -------------------------------------------
+
+.nut-button {
+  border-radius: @radius-lg;
+  font-weight: 600;
+  transition: all @duration-fast ease;
+
+  &--primary {
+    background: @gradient-primary;
+    border: none;
+    box-shadow: @shadow-md;
+
+    &:active {
+      transform: scale(0.95);
+      opacity: 0.9;
+    }
+  }
+
+  &--success {
+    background: @gradient-success;
+    border: none;
+    box-shadow: @shadow-md;
+
+    &:active {
+      transform: scale(0.95);
+      opacity: 0.9;
+    }
+  }
+
+  &--warning {
+    background: @gradient-warning;
+    border: none;
+    box-shadow: @shadow-md;
+
+    &:active {
+      transform: scale(0.95);
+      opacity: 0.9;
+    }
+  }
+
+  &--danger {
+    background: linear-gradient(135deg, @danger 0%, @danger-light 100%);
+    border: none;
+    box-shadow: @shadow-md;
+
+    &:active {
+      transform: scale(0.95);
+      opacity: 0.9;
+    }
+  }
+
+  &--default {
+    background: @bg-tertiary;
+    border-color: @border-color;
+    color: @text-primary;
+
+    &:active {
+      background: @border-color;
+    }
+  }
+
+  &--large {
+    height: 50px;
+    font-size: @font-size-md;
+  }
+
+  &--small {
+    height: 36px;
+    font-size: @font-size-sm;
+    padding: 0 @spacing-sm;
+  }
+}
+
+// -------------------------------------------
+// Input 输入框
+// -------------------------------------------
+
+.nut-input {
+  background: @bg-tertiary;
+  border-radius: @radius-md;
+  border: 1px solid @border-color;
+  color: @text-primary;
+  transition: all @duration-fast ease;
+
+  .nut-input__value {
+    color: @text-primary;
+  }
+
+  .nut-input__placeholder {
+    color: @text-tertiary;
+  }
+
+  &.nut-input--focus {
+    border-color: @primary;
+    box-shadow: 0 0 0 2px fade(@primary, 30%);
+  }
+
+  &.nut-input--error {
+    border-color: @danger;
+    box-shadow: 0 0 0 2px fade(@danger, 30%);
+  }
+}
+
+// -------------------------------------------
+// Form 表单
+// -------------------------------------------
+
+.nut-form {
+  .nut-form-item {
+    .nut-form-item__label {
+      color: @text-primary;
+    }
+
+    .nut-form-item__tips {
+      color: @text-secondary;
+    }
+
+    .nut-form-item__tips--error {
+      color: @danger;
+    }
+  }
+}
+
+// -------------------------------------------
+// Toast 提示
+// -------------------------------------------
+
+.nut-toast {
+  background: @bg-secondary;
+  border: 1px solid @border-color;
+  box-shadow: @shadow-lg;
+  border-radius: @radius-md;
+  color: @text-primary;
+
+  .nut-toast__icon {
+    &--success {
+      color: @success;
+    }
+
+    &--fail {
+      color: @danger;
+    }
+
+    &--warning {
+      color: @warning;
+    }
+
+    &--loading {
+      color: @primary;
+    }
+  }
+
+  .nut-toast__text {
+    color: @text-primary;
+  }
+}
+
+// -------------------------------------------
+// Popup 弹出层
+// -------------------------------------------
+
+.nut-popup {
+  &--bottom,
+  &--top,
+  &--center {
+    .nut-popup__content {
+      background: @bg-secondary;
+      border-radius: @radius-xl @radius-xl 0 0;
+      color: @text-primary;
+    }
+  }
+
+  &--center {
+    .nut-popup__content {
+      border-radius: @radius-lg;
+    }
+  }
+}
+
+// -------------------------------------------
+// Dialog 对话框
+// -------------------------------------------
+
+.nut-dialog {
+  .nut-dialog__header {
+    color: @text-primary;
+  }
+
+  .nut-dialog__content {
+    color: @text-secondary;
+  }
+
+  .nut-dialog__footer {
+    .nut-button {
+      &--default {
+        background: @bg-tertiary;
+        color: @text-secondary;
+        border-color: @border-color;
+      }
+    }
+  }
+}
+
+// -------------------------------------------
+// Cell 单元格
+// -------------------------------------------
+
+.nut-cell {
+  background: @bg-secondary;
+  border-bottom: 1px solid @border-color;
+
+  .nut-cell__title {
+    color: @text-primary;
+  }
+
+  .nut-cell__desc {
+    color: @text-secondary;
+  }
+
+  .nut-cell__value {
+    color: @text-secondary;
+  }
+
+  &:active {
+    background: @bg-tertiary;
+  }
+}
+
+.nut-cell-group {
+  background: transparent;
+  border-radius: @radius-lg;
+  overflow: hidden;
+}
+
+// -------------------------------------------
+// Tab 标签页
+// -------------------------------------------
+
+.nut-tabs {
+  .nut-tabs__titles {
+    background: @bg-secondary;
+    border-bottom: 1px solid @border-color;
+  }
+
+  .nut-tabs__titles-item {
+    color: @text-secondary;
+
+    &--active {
+      color: @primary;
+
+      .nut-tabs__titles-item__line {
+        background: @gradient-primary;
+        height: 3px;
+        border-radius: 2px;
+      }
+    }
+  }
+}
+
+// -------------------------------------------
+// Swiper 轮播
+// -------------------------------------------
+
+.nut-swiper {
+  .nut-swiper__pagination-item {
+    background: @border-color;
+
+    &--active {
+      background: @primary;
+      width: 20px;
+    }
+  }
+}
+
+// -------------------------------------------
+// Search 搜索
+// -------------------------------------------
+
+.nut-searchbar {
+  background: @bg-tertiary;
+  border-radius: @radius-lg;
+  border: 1px solid @border-color;
+
+  .nut-searchbar__content {
+    background: transparent;
+  }
+
+  .nut-searchbar__input {
+    color: @text-primary;
+
+    &::placeholder {
+      color: @text-tertiary;
+    }
+  }
+
+  .nut-searchbar__icon {
+    color: @text-tertiary;
+  }
+}
+
+// -------------------------------------------
+// Loading 加载
+// -------------------------------------------
+
+.nut-loading {
+  color: @primary;
+}
+
+// -------------------------------------------
+// Steps 步骤条
+// -------------------------------------------
+
+.nut-steps {
+  .nut-steps-item {
+    .nut-steps-item__icon {
+      .nut-icon {
+        color: @primary;
+      }
+    }
+
+    .nut-steps-item__title {
+      color: @text-primary;
+    }
+
+    .nut-steps-item__description {
+      color: @text-secondary;
+    }
+
+    &.nut-steps-item--active {
+      .nut-steps-item__icon {
+        background: @gradient-primary;
+        border-color: transparent;
+      }
+    }
+
+    &.nut-steps-item--wait {
+      .nut-steps-item__icon {
+        background: @bg-tertiary;
+        border-color: @border-color;
+      }
+    }
+  }
+}
+
+// -------------------------------------------
+// Empty 空状态
+// -------------------------------------------
+
+.nut-empty {
+  .nut-empty__description {
+    color: @text-secondary;
+  }
+}

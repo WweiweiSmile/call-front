@@ -11,8 +11,8 @@ export default defineAppConfig({
   ],
   entryPagePath: 'pages/login/index',
   window: {
-    backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#fff',
+    backgroundTextStyle: 'dark',
+    navigationBarBackgroundColor: '#F8F9FC',
     navigationBarTitleText: 'Call游戏管理',
     navigationBarTextStyle: 'black',
   },

@@ -1,15 +1,29 @@
+// ============================================
+// 底部导航栏 - 深色主题样式
+// ============================================
+
+@import '../styles/theme.less';
+
 .bottom-tab-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  height: 50px;
-  background: #ffffff;
+  height: 60px;
+  background: @bg-secondary;
   display: flex;
-  justify-content: space-around;
+  justify-content: center;
   align-items: center;
-  border-top: 1px solid #e5e5e5;
+  border-top: 1px solid @border-color;
+  box-shadow: 0 -4px 20px fade(#000, 30%);
   z-index: 1000;
+  padding: 0 20px;
+  gap: 8px;
+
+  .safe-area-inset() {
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 
   .tab-item {
     flex: 1;
@@ -17,24 +31,54 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4px 0;
+    padding: 6px 8px;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all @duration-fast ease;
+    position: relative;
+    border-radius: @radius-lg;
+    max-width: 120px;
 
-    &.active {
-      .tab-label {
-        color: #1890ff;
-      }
+    &:active {
+      transform: scale(0.95);
+    }
+
+    // 未选中状态 - 只显示图标
+    .tab-label {
+      font-size: 11px;
+      color: @text-tertiary;
+      opacity: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: all @duration-normal ease;
+      font-weight: 500;
     }
 
     .tab-icon {
-      font-size: 20px;
-      margin-bottom: 2px;
+      font-size: 24px;
+      margin-bottom: 0;
+      transition: all @duration-normal ease;
+      filter: grayscale(100%);
+      opacity: 0.6;
     }
 
-    .tab-label {
-      font-size: 12px;
-      color: #666666;
+    // 选中状态 - 胶囊形状，渐变背景
+    &.active {
+      background: @gradient-primary;
+      box-shadow: 0 4px 15px fade(@primary, 40%);
+
+      .tab-icon {
+        filter: grayscale(0%);
+        opacity: 1;
+        transform: scale(1.1);
+        animation: bounceSmall 0.6s ease;
+      }
+
+      .tab-label {
+        opacity: 1;
+        max-height: 20px;
+        color: @text-primary;
+        margin-top: 2px;
+      }
     }
   }
 }
