@@ -1,0 +1,198 @@
+// ============================================
+// 通用组件样式
+// ============================================
+
+@import './theme.less';
+@import './mixins.less';
+
+// -------------------------------------------
+// 页面基础样式
+// -------------------------------------------
+
+.page-base {
+  min-height: 100vh;
+  background: @bg-primary;
+  color: @text-primary;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+// -------------------------------------------
+// 通用容器
+// -------------------------------------------
+
+.container {
+  padding: @spacing-md;
+}
+
+.container-fluid {
+  padding: @spacing-md @spacing-sm;
+}
+
+// -------------------------------------------
+// 通用卡片
+// -------------------------------------------
+
+.common-card {
+  .card-hover();
+}
+
+// -------------------------------------------
+// 通用按钮组
+// -------------------------------------------
+
+.btn-group {
+  display: flex;
+  gap: @spacing-sm;
+}
+
+.btn-group-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: @spacing-sm;
+}
+
+// -------------------------------------------
+// 通用标签/徽章
+// -------------------------------------------
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: @font-size-xs;
+  font-weight: 500;
+  line-height: 1;
+
+  &-primary {
+    background: fade(@primary, 20%);
+    color: @primary-light;
+  }
+
+  &-success {
+    background: fade(@success, 20%);
+    color: @success-light;
+  }
+
+  &-warning {
+    background: fade(@warning, 20%);
+    color: @warning-light;
+  }
+
+  &-danger {
+    background: fade(@danger, 20%);
+    color: @danger-light;
+  }
+}
+
+// -------------------------------------------
+// 通用分割线
+// -------------------------------------------
+
+.divider {
+  height: 1px;
+  background: @divider-color;
+  margin: @spacing-md 0;
+
+  &-vertical {
+    width: 1px;
+    height: auto;
+    margin: 0 @spacing-md;
+  }
+}
+
+// -------------------------------------------
+// 通用间距
+// -------------------------------------------
+
+.spacer-xs { height: @spacing-xs; }
+.spacer-sm { height: @spacing-sm; }
+.spacer-md { height: @spacing-md; }
+.spacer-lg { height: @spacing-lg; }
+.spacer-xl { height: @spacing-xl; }
+
+.spacer-h-xs { width: @spacing-xs; }
+.spacer-h-sm { width: @spacing-sm; }
+.spacer-h-md { width: @spacing-md; }
+.spacer-h-lg { width: @spacing-lg; }
+.spacer-h-xl { width: @spacing-xl; }
+
+// -------------------------------------------
+// 通用文本样式
+// -------------------------------------------
+
+.text-primary { color: @text-primary; }
+.text-secondary { color: @text-secondary; }
+.text-tertiary { color: @text-tertiary; }
+.text-success { color: @success; }
+.text-warning { color: @warning; }
+.text-danger { color: @danger; }
+
+.text-xs { font-size: @font-size-xs; }
+.text-sm { font-size: @font-size-sm; }
+.text-md { font-size: @font-size-md; }
+.text-lg { font-size: @font-size-lg; }
+.text-xl { font-size: @font-size-xl; }
+.text-2xl { font-size: @font-size-2xl; }
+.text-3xl { font-size: @font-size-3xl; }
+
+.text-bold { font-weight: 700; }
+.text-semibold { font-weight: 600; }
+.text-medium { font-weight: 500; }
+.text-regular { font-weight: 400; }
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+// -------------------------------------------
+// 通用显示/隐藏
+// -------------------------------------------
+
+.hide { display: none !important; }
+.show { display: block !important; }
+.invisible { visibility: hidden; }
+.visible { visibility: visible; }
+
+// -------------------------------------------
+// 通用浮动
+// -------------------------------------------
+
+.clearfix() {
+  &::after {
+    content: '';
+    display: table;
+    clear: both;
+  }
+}
+
+.pull-left { float: left; }
+.pull-right { float: right; }
+
+// -------------------------------------------
+// 通用响应式隐藏
+// -------------------------------------------
+
+.hide-xs {
+  .breakpoint-xs({
+    display: none !important;
+  });
+}
+
+.hide-sm {
+  .breakpoint-sm({
+    display: none !important;
+  });
+}
+
+.hide-md {
+  .breakpoint-md({
+    display: none !important;
+  });
+}
+
+.hide-lg {
+  .breakpoint-lg({
+    display: none !important;
+  });
+}

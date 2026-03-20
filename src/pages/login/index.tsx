@@ -24,7 +24,6 @@ function LoginPage() {
         await register(values.username, values.password, values.nickname || values.username);
         Toast.show('login-toast', {content: '注册成功'});
       }
-      // 登录成功后跳转到主页
       Taro.redirectTo({
         url: '/pages/index/index',
       });
@@ -37,6 +36,7 @@ function LoginPage() {
     <View className="login-page">
       <Toast id="login-toast"/>
       <View className="login-header">
+        <Text className="logo-icon">🎮</Text>
         <Text className="login-title">Call 游戏管理</Text>
         <Text className="login-subtitle">
           {mode === 'login' ? '欢迎回来' : '创建新账户'}
@@ -44,6 +44,29 @@ function LoginPage() {
       </View>
 
       <View className="login-form">
+        {/* Tab 切换 */}
+        <View className="form-tabs">
+          <View
+            className={`tab-item ${mode === 'login' ? 'active' : ''}`}
+            onClick={() => {
+              setMode('login');
+              form.resetFields();
+            }}
+          >
+            登录
+          </View>
+          <View
+            className={`tab-item ${mode === 'register' ? 'active' : ''}`}
+            onClick={() => {
+              setMode('register');
+              form.resetFields();
+            }}
+          >
+            注册
+          </View>
+          <View className={`tab-indicator ${mode === 'register' ? 'right' : ''}`} />
+        </View>
+
         <Form
           form={form}
           onFinish={handleSubmit}

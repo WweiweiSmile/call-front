@@ -1,6 +1,12 @@
+// ============================================
+// 游戏详情页面 - 深色主题样式
+// ============================================
+
+@import '../../styles/theme.less';
+
 .game-detail-page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: @bg-primary;
   padding-bottom: 20px;
 
   .header {
@@ -8,7 +14,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: #ffffff;
+    background: @bg-secondary;
+    border-bottom: 1px solid @border-color;
 
     .header-left,
     .header-right {
@@ -18,7 +25,12 @@
     .header-left {
       .back-icon {
         font-size: 24px;
-        color: #333333;
+        color: @text-primary;
+        cursor: pointer;
+
+        &:active {
+          opacity: 0.6;
+        }
       }
     }
 
@@ -28,15 +40,15 @@
 
       .title {
         font-size: 18px;
-        font-weight: bold;
-        color: #333333;
+        font-weight: 600;
+        color: @text-primary;
         display: block;
         margin-bottom: 4px;
       }
 
       .creator {
-        font-size: 14px;
-        color: #666666;
+        font-size: 13px;
+        color: @text-secondary;
         display: block;
       }
     }
@@ -46,27 +58,29 @@
 
       .share-icon {
         font-size: 14px;
-        color: #1890ff;
+        color: @primary;
       }
     }
   }
 
   .mode-switch {
     display: flex;
-    background: #ffffff;
+    background: @bg-secondary;
     margin-bottom: 8px;
+    border-bottom: 1px solid @border-color;
 
     .mode-item {
       flex: 1;
       text-align: center;
-      padding: 12px;
+      padding: 14px 12px;
       font-size: 14px;
-      color: #666666;
+      color: @text-secondary;
       position: relative;
+      transition: all @duration-fast ease;
 
       &.active {
-        color: #1890ff;
-        font-weight: bold;
+        color: @primary;
+        font-weight: 600;
 
         &::after {
           content: '';
@@ -75,9 +89,14 @@
           left: 50%;
           transform: translateX(-50%);
           width: 40px;
-          height: 2px;
-          background: #1890ff;
+          height: 3px;
+          background: @gradient-primary;
+          border-radius: 2px;
         }
+      }
+
+      &:active {
+        opacity: 0.7;
       }
     }
   }
@@ -87,20 +106,21 @@
 
     .section-title {
       font-size: 16px;
-      font-weight: bold;
-      color: #333333;
+      font-weight: 600;
+      color: @text-primary;
       margin-bottom: 12px;
     }
 
     .leaderboard-card {
-      background: #ffffff;
-      border-radius: 8px;
+      background: @bg-secondary;
+      border-radius: @radius-lg;
       padding: 16px;
       margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      box-shadow: @shadow-sm;
+      border: 1px solid @border-color;
 
       .card-left {
         display: flex;
@@ -110,7 +130,7 @@
         .rank {
           font-size: 20px;
           font-weight: bold;
-          color: #1890ff;
+          color: @primary;
           min-width: 30px;
           text-align: center;
         }
@@ -118,8 +138,8 @@
         .user-info {
           .name {
             font-size: 16px;
-            font-weight: bold;
-            color: #333333;
+            font-weight: 600;
+            color: @text-primary;
             display: block;
           }
         }
@@ -135,22 +155,22 @@
 
           .stat-label {
             font-size: 12px;
-            color: #999999;
+            color: @text-tertiary;
             display: block;
             margin-bottom: 4px;
           }
 
           .stat-value {
             font-size: 16px;
-            font-weight: bold;
-            color: #333333;
+            font-weight: 600;
+            color: @text-primary;
 
             &.positive {
-              color: #52c41a;
+              color: @success;
             }
 
             &.negative {
-              color: #ff4d4f;
+              color: @danger;
             }
           }
         }
@@ -158,81 +178,119 @@
     }
   }
 
+  // 余额卡片 - 3D 悬浮效果
   .balance-card {
-    background: #ffffff;
+    background: @bg-secondary;
     margin: 12px 16px;
     padding: 20px 16px;
-    border-radius: 8px;
+    border-radius: @radius-xl;
+    border: 1px solid @border-color;
+    box-shadow: @shadow-md, 0 0 40px fade(@primary, 10%);
+    position: relative;
+    overflow: hidden;
+
+    // 装饰性渐变
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: @gradient-primary;
+    }
 
     .card-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #333333;
+      font-size: 14px;
+      font-weight: 500;
+      color: @text-secondary;
       text-align: center;
       margin-bottom: 16px;
       display: block;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
     .balance-stats {
       display: flex;
       justify-content: space-around;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
 
       .stat-item {
         text-align: center;
 
         .stat-label {
-          font-size: 14px;
-          color: #666666;
+          font-size: 13px;
+          color: @text-tertiary;
           display: block;
           margin-bottom: 4px;
         }
 
         .stat-value {
-          font-size: 18px;
-          font-weight: bold;
-          color: #333333;
+          font-size: 20px;
+          font-weight: 700;
+          color: @text-primary;
         }
       }
     }
 
     .current-balance {
       text-align: center;
-      margin-bottom: 12px;
+      margin-bottom: 16px;
 
       .balance-label {
         font-size: 14px;
-        color: #666666;
+        color: @text-secondary;
         display: block;
         margin-bottom: 8px;
       }
 
       .balance-value {
-        font-size: 36px;
-        font-weight: bold;
-        color: #333333;
+        font-size: 44px;
+        font-weight: 700;
+        color: @text-primary;
+        background: @gradient-primary;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
     }
 
     .balance-status {
       text-align: center;
-      padding: 8px;
-      border-radius: 4px;
+      padding: 12px 16px;
+      border-radius: @radius-lg;
       font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
 
       &.balanced {
-        background: #f6ffed;
-        color: #52c41a;
+        background: fade(@success, 15%);
+        color: @success-light;
+
+        &::before {
+          content: '✓';
+          font-size: 18px;
+          animation: pulse 2s ease-in-out infinite;
+        }
       }
 
       &.unbalanced {
-        background: #fff7e6;
-        color: #faad14;
+        background: fade(@warning, 15%);
+        color: @warning-light;
+
+        &::before {
+          content: '⚠';
+          font-size: 16px;
+        }
       }
 
       .balance-desc {
         font-size: 12px;
-        margin-left: 8px;
+        opacity: 0.8;
       }
     }
   }
@@ -242,23 +300,26 @@
 
     .section-title {
       font-size: 16px;
-      font-weight: bold;
-      color: #333333;
+      font-weight: 600;
+      color: @text-primary;
       margin-bottom: 12px;
     }
 
     .participant-card {
-      background: #ffffff;
-      border-radius: 8px;
+      background: @bg-secondary;
+      border-radius: @radius-lg;
       padding: 16px;
       margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border: 2px solid transparent;
+      box-shadow: @shadow-sm;
+      transition: all @duration-fast ease;
 
       &.selected {
-        border-color: #1890ff;
+        border-color: @primary;
+        box-shadow: @shadow-md, 0 0 20px fade(@primary, 20%);
       }
 
       .participant-info {
@@ -266,8 +327,8 @@
 
         .participant-name {
           font-size: 16px;
-          font-weight: bold;
-          color: #333333;
+          font-weight: 600;
+          color: @text-primary;
           margin-bottom: 8px;
           display: block;
         }
@@ -277,21 +338,22 @@
           align-items: center;
           gap: 12px;
           font-size: 14px;
-          color: #666666;
+          color: @text-secondary;
 
           .balance-status-small {
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 4px 10px;
+            border-radius: 100px;
             font-size: 12px;
+            font-weight: 500;
 
             &.balanced {
-              background: #f6ffed;
-              color: #52c41a;
+              background: fade(@success, 20%);
+              color: @success-light;
             }
 
             &.unbalanced {
-              background: #fff7e6;
-              color: #faad14;
+              background: fade(@warning, 20%);
+              color: @warning-light;
             }
           }
         }
@@ -374,6 +436,9 @@
 
     .nut-button {
       flex: 1;
+      height: 54px;
+      font-size: 16px;
+      font-weight: 600;
     }
   }
 
@@ -387,8 +452,8 @@
 
     .section-title {
       font-size: 16px;
-      font-weight: bold;
-      color: #333333;
+      font-weight: 600;
+      color: @text-primary;
       margin-bottom: 12px;
     }
 
@@ -397,73 +462,77 @@
     }
 
     .transaction-item {
-      background: #ffffff;
-      border-radius: 8px;
-      padding: 12px 16px;
-      margin-bottom: 8px;
+      background: @bg-secondary;
+      border-radius: @radius-lg;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      border: 1px solid @border-color;
 
       .tx-time {
         font-size: 12px;
-        color: #999999;
+        color: @text-tertiary;
         margin-bottom: 8px;
         display: block;
       }
 
       .tx-main {
         .tx-type {
-          font-size: 16px;
-          font-weight: bold;
+          font-size: 15px;
+          font-weight: 600;
           margin-bottom: 4px;
           display: block;
 
           &.deposit {
-            color: #52c41a;
+            color: @success;
           }
 
           &.withdraw {
-            color: #ff4d4f;
+            color: @danger;
           }
         }
 
         .tx-operator {
           font-size: 12px;
-          color: #722ed1;
+          color: @primary-light;
           margin-bottom: 4px;
           display: block;
         }
 
         .tx-balance {
           font-size: 14px;
-          color: #666666;
+          color: @text-secondary;
         }
       }
     }
   }
 
+  // 底部弹窗
   .operation-popup {
-    background: #ffffff;
-    border-radius: 12px 12px 0 0;
+    background: @bg-secondary;
+    border-radius: @radius-xl @radius-xl 0 0;
     padding: 24px 16px 32px;
+    border-top: 1px solid @border-color;
 
     .popup-title {
       font-size: 20px;
-      font-weight: bold;
-      color: #333333;
+      font-weight: 600;
+      color: @text-primary;
       text-align: center;
       margin-bottom: 20px;
       display: block;
     }
 
     .popup-info {
-      background: #f5f5f5;
-      border-radius: 8px;
-      padding: 12px;
+      background: @bg-tertiary;
+      border-radius: @radius-lg;
+      padding: 14px;
       margin-bottom: 20px;
+      border: 1px solid @border-color;
 
       .info-row {
         font-size: 14px;
-        color: #333333;
-        margin-bottom: 4px;
+        color: @text-primary;
+        margin-bottom: 6px;
         display: block;
       }
     }
@@ -477,8 +546,8 @@
 
       .quick-label {
         font-size: 14px;
-        color: #666666;
-        margin-bottom: 8px;
+        color: @text-secondary;
+        margin-bottom: 10px;
         display: block;
       }
 
@@ -486,19 +555,31 @@
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
+
+        .nut-button {
+          flex: 0 0 calc(33.333% - 6px);
+          background: @bg-tertiary;
+          border-color: @border-color;
+          color: @text-primary;
+
+          &:active {
+            background: @border-color;
+          }
+        }
       }
     }
 
     .balance-preview {
-      background: #f0f5ff;
-      border-radius: 8px;
-      padding: 12px;
+      background: fade(@primary, 10%);
+      border-radius: @radius-lg;
+      padding: 14px;
       margin-bottom: 16px;
+      border: 1px solid fade(@primary, 20%);
 
       text {
         font-size: 14px;
-        color: #333333;
-        margin-bottom: 4px;
+        color: @text-primary;
+        margin-bottom: 6px;
         display: block;
       }
     }
@@ -513,6 +594,39 @@
 
       .nut-button {
         flex: 1;
+      }
+    }
+  }
+}
+
+// NutUI 组件深色主题覆盖 - 弹窗和输入框
+.game-detail-page {
+  :global {
+    .nut-popup {
+      &--bottom {
+        .nut-popup__content {
+          background: @bg-secondary;
+        }
+      }
+    }
+
+    .nut-input {
+      background: @bg-tertiary;
+      border-radius: @radius-md;
+      border: 1px solid @border-color;
+      color: @text-primary;
+
+      .nut-input__value {
+        color: @text-primary;
+      }
+
+      .nut-input__placeholder {
+        color: @text-tertiary;
+      }
+
+      &.nut-input--focus {
+        border-color: @primary;
+        box-shadow: 0 0 0 2px fade(@primary, 30%);
       }
     }
   }

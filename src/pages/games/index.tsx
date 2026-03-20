@@ -89,11 +89,6 @@ const GamesPage: React.FC = () => {
                 <View
                   key={game.id}
                   className={`game-card ${!hasJoined && !isCreator ? 'not-joined' : ''}`}
-                  onClick={() => {
-                    if (hasJoined || isCreator) {
-                      handleEnterGame(game.id);
-                    }
-                  }}
                 >
                   <View className='game-info'>
                     <Text className='game-name'>🎮 {game.name}</Text>
@@ -107,8 +102,7 @@ const GamesPage: React.FC = () => {
                   <Button
                     type={hasJoined || isCreator ? 'primary' : 'success'}
                     size='small'
-                    onClick={(e) => {
-                      e.stopPropagation();
+                    onClick={() => {
                       if (hasJoined || isCreator) {
                         handleEnterGame(game.id);
                       } else {

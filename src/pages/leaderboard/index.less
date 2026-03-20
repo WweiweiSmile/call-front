@@ -1,6 +1,12 @@
+// ============================================
+// 排行榜页面 - 深色主题样式
+// ============================================
+
+@import '../../styles/theme.less';
+
 .leaderboard-page {
   height: 100vh;
-  background: #f5f5f5;
+  background: @bg-primary;
   display: flex;
   flex-direction: column;
 
@@ -8,7 +14,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #999999;
+    color: @text-tertiary;
     font-size: 16px;
   }
 
@@ -17,9 +23,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 16px;
-    background: #ffffff;
+    background: @bg-secondary;
     flex-shrink: 0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid @border-color;
     z-index: 10;
 
     .header-left {
@@ -30,9 +36,13 @@
 
       .back-icon {
         font-size: 28px;
-        color: #333333;
+        color: @text-primary;
         line-height: 1;
         font-weight: 300;
+
+        &:active {
+          opacity: 0.6;
+        }
       }
     }
 
@@ -43,7 +53,7 @@
       .title {
         font-size: 18px;
         font-weight: 600;
-        color: #333333;
+        color: @text-primary;
       }
     }
 
@@ -59,16 +69,164 @@
     padding: 12px;
     box-sizing: border-box;
 
+    // -------------------------------------------
+    // 领奖台区域
+    // -------------------------------------------
+
+    .podium-section {
+      padding: 20px 0 30px;
+
+      .podium {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 12px;
+        padding: 20px 0;
+
+        .podium-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          opacity: 0;
+
+          &.animate-podium-bounce {
+            animation: podiumBounce 0.8s ease-out forwards;
+          }
+
+          &:nth-child(1) {
+            animation-delay: 0.1s;
+          }
+
+          &:nth-child(2) {
+            animation-delay: 0s;
+          }
+
+          &:nth-child(3) {
+            animation-delay: 0.2s;
+          }
+
+          .podium-crown {
+            font-size: 24px;
+            margin-bottom: 4px;
+            animation: bounce 1s ease-in-out infinite;
+          }
+
+          .podium-avatar {
+            font-size: 48px;
+            margin-bottom: 8px;
+          }
+
+          .podium-name {
+            color: @text-primary;
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 4px;
+            text-align: center;
+            max-width: 90px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          .podium-score {
+            color: @text-secondary;
+            font-size: 14px;
+            margin-bottom: 12px;
+            font-weight: 500;
+          }
+
+          .podium-platform {
+            width: 80px;
+            border-radius: @radius-md @radius-md 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 700;
+            color: @text-primary;
+          }
+        }
+
+        // 第二名
+        .podium-item.second {
+          order: 1;
+
+          .podium-platform {
+            height: 70px;
+            background: linear-gradient(180deg, #e8e8e8 0%, #a0a0a0 100%);
+          }
+        }
+
+        // 第一名（冠军 - 中间最高）
+        .podium-item.first {
+          order: 2;
+
+          .podium-platform {
+            height: 100px;
+            background: @gradient-primary;
+            box-shadow: 0 0 30px fade(@primary, 40%);
+          }
+        }
+
+        // 第三名
+        .podium-item.third {
+          order: 3;
+
+          .podium-platform {
+            height: 50px;
+            background: linear-gradient(180deg, #daa06d 0%, #8b5a2b 100%);
+          }
+        }
+      }
+    }
+
+    // -------------------------------------------
+    // 榜单切换 Tab
+    // -------------------------------------------
+
+    .leaderboard-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 0 4px 16px;
+      overflow-x: auto;
+
+      .tab-item {
+        padding: 8px 16px;
+        background: @bg-tertiary;
+        border-radius: @radius-md;
+        font-size: 14px;
+        color: @text-secondary;
+        white-space: nowrap;
+        border: 1px solid @border-color;
+        transition: all @duration-fast ease;
+
+        &.active {
+          background: @gradient-primary;
+          color: @text-primary;
+          border-color: transparent;
+          box-shadow: @shadow-sm;
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+      }
+    }
+
+    // -------------------------------------------
+    // 排行榜列表
+    // -------------------------------------------
+
     .leaderboard-card {
-      background: #ffffff;
-      border-radius: 12px;
+      background: @bg-secondary;
+      border-radius: @radius-lg;
       padding: 16px;
       margin-bottom: 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      box-shadow: @shadow-sm;
       transition: transform 0.2s ease;
       border: 2px solid transparent;
       position: relative;
@@ -77,19 +235,34 @@
         transform: scale(0.98);
       }
 
+      // 前三名特殊样式
       &.top-1 {
         border: 2px solid #ffd700;
-        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.25);
+        box-shadow: 0 4px 12px fade(#ffd700, 25%), @shadow-sm;
+
+        &::before {
+          content: '👑';
+          position: absolute;
+          top: -10px;
+          right: 16px;
+          font-size: 20px;
+        }
       }
 
       &.top-2 {
         border: 2px solid #c0c0c0;
-        box-shadow: 0 4px 12px rgba(192, 192, 192, 0.2);
+        box-shadow: 0 4px 12px fade(#c0c0c0, 20%), @shadow-sm;
       }
 
       &.top-3 {
         border: 2px solid #cd7f32;
-        box-shadow: 0 4px 12px rgba(205, 127, 50, 0.2);
+        box-shadow: 0 4px 12px fade(#cd7f32, 20%), @shadow-sm;
+      }
+
+      // 当前用户高亮
+      &.current-user {
+        background: fade(@primary, 10%);
+        border-color: fade(@primary, 30%);
       }
 
       .card-left {
@@ -101,8 +274,8 @@
 
         .rank {
           font-size: 20px;
-          font-weight: bold;
-          color: #999999;
+          font-weight: 700;
+          color: @text-tertiary;
           min-width: 32px;
           text-align: center;
           line-height: 1;
@@ -130,11 +303,28 @@
           .name {
             font-size: 16px;
             font-weight: 600;
-            color: #333333;
+            color: @text-primary;
             display: block;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+          }
+        }
+
+        .trend-arrow {
+          font-size: 16px;
+          margin-left: 4px;
+
+          &.up {
+            color: @success;
+          }
+
+          &.down {
+            color: @danger;
+          }
+
+          &.same {
+            color: @text-tertiary;
           }
         }
       }
@@ -150,23 +340,23 @@
 
           .stat-label {
             font-size: 11px;
-            color: #bbbbbb;
+            color: @text-tertiary;
             margin-bottom: 4px;
             display: block;
           }
 
           .stat-value {
             font-size: 15px;
-            font-weight: bold;
-            color: #333333;
+            font-weight: 600;
+            color: @text-primary;
             display: block;
 
             &.positive {
-              color: #52c41a;
+              color: @success;
             }
 
             &.negative {
-              color: #ff4d4f;
+              color: @danger;
             }
           }
         }
@@ -176,7 +366,7 @@
     .empty-state {
       text-align: center;
       padding: 100px 20px;
-      color: #999999;
+      color: @text-tertiary;
       font-size: 15px;
     }
   }

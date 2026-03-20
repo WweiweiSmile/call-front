@@ -1,0 +1,224 @@
+// ============================================
+// 样式混入 (Mixins)
+// ============================================
+
+@import './theme.less';
+
+// -------------------------------------------
+// Flexbox 布局混入
+// -------------------------------------------
+
+.flex-center() {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.flex-between() {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.flex-column() {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-column-center() {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+// -------------------------------------------
+// 文本截断
+// -------------------------------------------
+
+.text-ellipsis() {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-ellipsis-lines(@lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: @lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+// -------------------------------------------
+// 玻璃态效果
+// -------------------------------------------
+
+.glass-effect() {
+  background: @gradient-glass;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+// -------------------------------------------
+// 渐变按钮
+// -------------------------------------------
+
+.gradient-button(@gradient: @gradient-primary) {
+  background: @gradient;
+  border: none;
+  border-radius: @radius-lg;
+  color: @text-primary;
+  font-weight: 600;
+  transition: all @duration-fast ease;
+  box-shadow: @shadow-md;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left @duration-slow ease;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:hover::before {
+    left: 100%;
+  }
+}
+
+.gradient-button-primary() {
+  .gradient-button(@gradient-primary);
+}
+
+.gradient-button-success() {
+  .gradient-button(@gradient-success);
+}
+
+.gradient-button-warning() {
+  .gradient-button(@gradient-warning);
+}
+
+// -------------------------------------------
+// 发光效果
+// -------------------------------------------
+
+.glow-effect(@color: @primary) {
+  box-shadow: 0 0 10px fade(@color, 30%),
+              0 0 20px fade(@color, 20%),
+              0 0 30px fade(@color, 10%);
+}
+
+.glow-effect-sm(@color: @primary) {
+  box-shadow: 0 0 5px fade(@color, 30%),
+              0 0 10px fade(@color, 20%);
+}
+
+// -------------------------------------------
+// 卡片样式
+// -------------------------------------------
+
+.card-base() {
+  background: @bg-secondary;
+  border-radius: @radius-lg;
+  padding: @spacing-md;
+  box-shadow: @shadow-sm;
+  border: 1px solid @border-color;
+  transition: all @duration-fast ease;
+}
+
+.card-hover() {
+  .card-base();
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow: @shadow-md;
+  }
+}
+
+// -------------------------------------------
+// 输入框聚焦效果
+// -------------------------------------------
+
+.input-focus-glow(@color: @primary) {
+  transition: all @duration-fast ease;
+
+  &:focus {
+    border-color: @color;
+    box-shadow: 0 0 0 2px fade(@color, 30%),
+                0 0 10px fade(@color, 20%);
+  }
+}
+
+// -------------------------------------------
+// 安全区域
+// -------------------------------------------
+
+.safe-area-bottom() {
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-top() {
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+}
+
+// -------------------------------------------
+// 绝对定位居中
+// -------------------------------------------
+
+.absolute-center() {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.absolute-center-x() {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.absolute-center-y() {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+// -------------------------------------------
+// 媒体查询断点
+// -------------------------------------------
+
+.breakpoint-xs(@rules) {
+  @media (max-width: 374px) {
+    @rules();
+  }
+}
+
+.breakpoint-sm(@rules) {
+  @media (min-width: 375px) and (max-width: 413px) {
+    @rules();
+  }
+}
+
+.breakpoint-md(@rules) {
+  @media (min-width: 414px) and (max-width: 767px) {
+    @rules();
+  }
+}
+
+.breakpoint-lg(@rules) {
+  @media (min-width: 768px) {
+    @rules();
+  }
+}
