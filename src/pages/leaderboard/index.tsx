@@ -48,7 +48,8 @@ const LeaderboardPage: React.FC = () => {
       const leaderboardData = participantBalances
         .map((pb) => {
           const participant = participants.find((p) => p.id === pb.userId);
-          const netScore = pb.depositTotal - pb.withdrawTotal;
+          // 净分 = 存分总量 - 取分总量（也就是当前余额）
+          const netScore = pb.currentBalance;
           const userName = (pb as any)?.userName || participant?.name || '未知用户';
           return {
             userId: pb.userId,
@@ -58,7 +59,7 @@ const LeaderboardPage: React.FC = () => {
             netScore,
           };
         })
-        .sort((a, b) => a.netScore - b.netScore);
+        .sort((a, b) => b.netScore - a.netScore); // 降序排列，净分高的在前
 
       setLeaderboard(leaderboardData);
     }
