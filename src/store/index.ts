@@ -1,5 +1,4 @@
 import {useCallback, useState} from 'react';
-import {Game, UserGameBalance, Transaction, User} from './mockData';
 import {AppState, initialState} from './types';
 import {useGameStore} from './useGameStore';
 import {useBalanceStore} from './useBalanceStore';

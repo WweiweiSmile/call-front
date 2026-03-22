@@ -68,7 +68,7 @@ const CreateGamePage: React.FC = () => {
           <Form.Item label='游戏描述 (选填)' name='description'>
             <NutInput type='textarea' placeholder='请输入游戏描述'/>
           </Form.Item>
-          <Form.Item label='开始时间' required>
+          <Form.Item label='开始时间' name="startTime" required>
             <CustomDatePicker
               type={'datetime'}
             />

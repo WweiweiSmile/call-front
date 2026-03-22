@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {Input, ScrollView, Text, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
-import Taro from '@tarojs/taro';
+import Taro, {useDidShow} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import './index.less';
@@ -12,6 +12,11 @@ const GamesPage: React.FC = () => {
     setCurrentGameId, loadGames
   } = useAppStore();
   const {state: authState} = useAuthStore();
+
+  // 页面显示时刷新游戏列表
+  useDidShow(() => {
+    loadGames();
+  });
 
   // 页面加载时获取游戏列表，并定期刷新
   useEffect(() => {

@@ -30,8 +30,9 @@ const CustomDatePicker = (props: DatePickerProps) => {
     <DatePicker
       visible={show1}
       type={type}
-      defaultValue={new Date()}
+      value={hasValue ? dayjs(props.value).toDate() : new Date()}
       onConfirm={(_selectedOptions, selectedValue) => {
+        console.log('selectedValue', _selectedOptions, selectedValue)
         // selectedValue 是 [year, month, day, hour, minute, second] 格式的数组
         const [year, month, day, hour = 0, minute = 0, second = 0] = selectedValue as number[];
         const date = new Date(year, month - 1, day, hour, minute, second);
