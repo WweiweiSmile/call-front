@@ -65,7 +65,15 @@ const GameDetailPage: React.FC = () => {
   if (isLoading) {
     return (
       <View className='game-detail-page loading-page'>
-        <Text>加载中...</Text>
+        <View className='loading-container'>
+          <View className='loading-spinner'>
+            <View className='spinner-ring' />
+            <View className='spinner-ring spinner-ring-2' />
+            <View className='spinner-ring spinner-ring-3' />
+          </View>
+          <Text className='loading-text'>加载中...</Text>
+          <Text className='loading-subtitle'>正在获取游戏数据</Text>
+        </View>
       </View>
     );
   }
