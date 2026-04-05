@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
+import type { Game } from '../../store/mockData';
 import './index.less';
 
 const MyGamesPage: React.FC = () => {
@@ -30,12 +31,12 @@ const MyGamesPage: React.FC = () => {
   const userGames = getUserGames(currentUser.id);
   const userCreatedGames = getUserCreatedGames(currentUser.id);
 
-  const handleEnterGame = (gameId: string) => {
+  const handleEnterGame = useCallback((gameId: string) => {
     setCurrentGameId(gameId);
     Taro.navigateTo({ url: `/pages/game-detail/index?gameId=${gameId}` });
-  };
+  }, [setCurrentGameId]);
 
-  const renderGameCard = (game: any) => {
+  const renderGameCard = useCallback((game: Game) => {
     const balance = getUserBalance(game.id, currentUser.id);
     const isCreator = game.creatorId === currentUser.id;
 
@@ -72,10 +73,13 @@ const MyGamesPage: React.FC = () => {
         </Button>
       </View>
     );
-  };
+  }, [currentUser.id, getUserBalance, handleEnterGame]);
 
-  const ongoingGames = userGames.filter((g) => g.status === 'ongoing');
-  const endedGames = userGames.filter((g) => g.status === 'ended');
+  // 使用 useMemo 优化过滤操作
+  const { ongoingGames, endedGames } = useMemo(() => ({
+    ongoingGames: userGames.filter((g) => g.status === 'ongoing'),
+    endedGames: userGames.filter((g) => g.status === 'ended'),
+  }), [userGames]);
 
   return (
     <View className='my-games-page'>

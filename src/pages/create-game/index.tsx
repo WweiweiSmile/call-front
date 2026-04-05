@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {Text, View} from '@tarojs/components';
 import {Button, Form, Input as NutInput, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
@@ -8,12 +8,18 @@ import type {FormInstance} from '@nutui/nutui-react-taro/dist/types/packages/for
 import './index.less';
 import CustomDatePicker from "../../components/date-picker";
 
+interface FormValues {
+  name: string;
+  description?: string;
+  startTime?: Date;
+}
+
 const CreateGamePage: React.FC = () => {
   const {createGame} = useAppStore();
   const {state: authState} = useAuthStore();
   const [form] = Form.useForm() as [FormInstance];
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = useCallback(async (values: FormValues) => {
     if (!values.name?.trim() || !authState.user) {
       if (!values.name?.trim()) {
         Toast.show('create-game-toast', {content: '请输入游戏名称'});
@@ -33,7 +39,7 @@ const CreateGamePage: React.FC = () => {
     } catch (error: any) {
       Toast.show('create-game-toast', {content: error.message || '创建失败'});
     }
-  };
+  }, [authState.user, createGame]);
 
   if (!authState.user) {
     return null;

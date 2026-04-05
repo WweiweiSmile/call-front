@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useEffect, useMemo} from 'react';
 import {View} from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import {ConfigProvider} from '@nutui/nutui-react-taro';
@@ -11,13 +11,14 @@ import MyGamesPage from '../my-games/index';
 import ProfilePage from '../profile/index';
 import './index.less';
 
+type TabType = 'games' | 'my' | 'profile';
+
 function Index() {
   const {state: appState, setCurrentTab} = useAppStore();
   const {state: authState} = useAuthStore();
-  const [currentTab, setLocalTab] = useState<'games' | 'my' | 'profile'>('games');
 
-  console.log('autstate--->', authState)
-
+  // 使用 store 中的 currentTab，默认值为 'games'
+  const currentTab: TabType = appState.currentTab || 'games';
 
   // 页面加载时检查登录状态
   useEffect(() => {
@@ -28,12 +29,11 @@ function Index() {
     }
   }, [authState.isAuthenticated]);
 
-  const handleTabChange = (tab: 'games' | 'my' | 'profile') => {
-    setLocalTab(tab);
+  const handleTabChange = (tab: TabType) => {
     setCurrentTab(tab);
   };
 
-  const renderContent = () => {
+  const renderContent = useMemo(() => {
     switch (currentTab) {
       case 'games':
         return <GamesPage/>;
@@ -44,7 +44,7 @@ function Index() {
       default:
         return <GamesPage/>;
     }
-  };
+  }, [currentTab]);
 
   // 如果未登录，不渲染任何内容（会跳转到登录页）
   if (!authState.isAuthenticated) {
@@ -54,7 +54,7 @@ function Index() {
   return (
     <ConfigProvider locale={zhCN}>
       <View className='main-container'>
-        {renderContent()}
+        {renderContent}
         <BottomTabBar currentTab={currentTab} onTabChange={handleTabChange}/>
       </View>
     </ConfigProvider>

@@ -1,16 +1,30 @@
-import {useState} from 'react';
+import {useState, useCallback} from 'react';
 import {Text, View} from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import {Button, Form, Input, Toast} from '@nutui/nutui-react-taro';
 import {useAuthStore} from '../../store/auth';
 import './index.less';
 
+type ModeType = 'login' | 'register';
+
+interface FormValues {
+  username: string;
+  password: string;
+  nickname?: string;
+}
+
 function LoginPage() {
   const {login, register, state} = useAuthStore();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [mode, setMode] = useState<ModeType>('login');
   const [form] = Form.useForm();
 
-  const handleSubmit = async (values: any) => {
+  // 提取重复的模式切换逻辑
+  const switchMode = useCallback((newMode: ModeType) => {
+    setMode(newMode);
+    form.resetFields();
+  }, [form]);
+
+  const handleSubmit = async (values: FormValues) => {
     if (!values.username || !values.password) {
       Toast.show('login-toast', {content: '请填写完整信息'});
       return;
@@ -22,7 +36,7 @@ function LoginPage() {
         Toast.show('login-toast', {content: <View data-testid="login-success">登录成功</View>});
       } else {
         await register(values.username, values.password, values.nickname || values.username);
-        Toast.show('login-toast', {content: '注册成功',});
+        Toast.show('login-toast', {content: '注册成功'});
       }
       Taro.redirectTo({
         url: '/pages/index/index',
@@ -48,20 +62,14 @@ function LoginPage() {
         <View className="form-tabs">
           <View
             className={`tab-item ${mode === 'login' ? 'active' : ''}`}
-            onClick={() => {
-              setMode('login');
-              form.resetFields();
-            }}
+            onClick={() => switchMode('login')}
             data-testid="tab-login"
           >
             登录
           </View>
           <View
             className={`tab-item ${mode === 'register' ? 'active' : ''}`}
-            onClick={() => {
-              setMode('register');
-              form.resetFields();
-            }}
+            onClick={() => switchMode('register')}
             data-testid="tab-register"
           >
             注册
@@ -122,10 +130,7 @@ function LoginPage() {
       <View className="login-footer">
         <Text
           className="switch-mode"
-          onClick={() => {
-            setMode(mode === 'login' ? 'register' : 'login');
-            form.resetFields();
-          }}
+          onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
           data-testid="btn-switch-mode"
         >
           {mode === 'login' ? '没有账户？去注册' : '已有账户？去登录'}

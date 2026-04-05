@@ -1,8 +1,9 @@
-import React, {useEffect, useState, useRef, useCallback} from 'react';
+import React, {useEffect, useState, useRef, useCallback, useMemo} from 'react';
 import {ScrollView, Text, View} from '@tarojs/components';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
+import type { UserGameBalance, User } from '../../store/mockData';
 import './index.less';
 
 // 轮询间隔（毫秒）
@@ -27,14 +28,13 @@ const LeaderboardPage: React.FC = () => {
   const {state: authState} = useAuthStore();
 
   const gameId = router.params?.gameId as string;
-  const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     Taro.navigateBack();
-  };
+  }, []);
 
   // 加载数据的函数
   const loadData = useCallback(async (showLoading = true) => {
@@ -58,7 +58,7 @@ const LeaderboardPage: React.FC = () => {
 
     // 使用 setTimeout 链式轮询，避免请求重叠
     const poll = async () => {
-      if (!pollingTimerRef.current) return; // 已停止
+      if (!pollingTimerRef.current) return;
       await loadData(false);
       pollingTimerRef.current = setTimeout(poll, POLLING_INTERVAL);
     };
@@ -73,45 +73,46 @@ const LeaderboardPage: React.FC = () => {
         pollingTimerRef.current = null;
       }
     };
-  }, [gameId, authState.user?.id, loadData]);
+  }, [gameId, authState.user, loadData]);
 
-  useEffect(() => {
-    if (gameId && !isLoading) {
-      const participantBalances = getGameParticipantBalances(gameId);
-      const participants = getGameParticipants(gameId);
-
-      // 预先构建参与者 Map，避免 O(n*m) 查找
-      const participantsMap = new Map(
-        participants.map(p => [p.id, p])
-      );
-
-      const leaderboardData = participantBalances
-        .map((pb) => {
-          const participant = participantsMap.get(pb.userId);
-          const netScore = pb.depositTotal - pb.withdrawTotal;
-          const userName = (pb as any)?.userName || participant?.name || '未知用户';
-          return {
-            userId: pb.userId,
-            name: userName,
-            depositTotal: pb.depositTotal,
-            withdrawTotal: pb.withdrawTotal,
-            netScore,
-          };
-        })
-        .sort((a, b) => a.netScore - b.netScore);
-
-      setLeaderboard(leaderboardData);
+  // 使用 useMemo 计算排行榜数据
+  const leaderboard = useMemo((): LeaderboardItem[] => {
+    if (!gameId || isLoading) {
+      return [];
     }
-  }, [gameId, isLoading, lastUpdated]);
 
-  // 格式化最后更新时间
-  const formatLastUpdated = () => {
+    const participantBalances = getGameParticipantBalances(gameId);
+    const participants = getGameParticipants(gameId);
+
+    // 预先构建参与者 Map，避免 O(n*m) 查找
+    const participantsMap = new Map<string, User>(
+      participants.map(p => [p.id, p])
+    );
+
+    return participantBalances
+      .map((pb: UserGameBalance & { userName?: string }) => {
+        const participant = participantsMap.get(pb.userId);
+        const netScore = pb.depositTotal - pb.withdrawTotal;
+        const userName = pb.userName || participant?.name || '未知用户';
+        return {
+          userId: pb.userId,
+          name: userName,
+          depositTotal: pb.depositTotal,
+          withdrawTotal: pb.withdrawTotal,
+          netScore,
+        };
+      })
+      .sort((a, b) => a.netScore - b.netScore);
+  }, [gameId, isLoading, lastUpdated, getGameParticipantBalances, getGameParticipants]);
+
+  // 使用 useMemo 格式化最后更新时间
+  const formattedLastUpdated = useMemo(() => {
     if (!lastUpdated) return '';
     const hours = lastUpdated.getHours().toString().padStart(2, '0');
     const minutes = lastUpdated.getMinutes().toString().padStart(2, '0');
     const seconds = lastUpdated.getSeconds().toString().padStart(2, '0');
     return `${hours}:${minutes}:${seconds}`;
-  };
+  }, [lastUpdated]);
 
   if (isLoading) {
     return (
@@ -130,7 +131,7 @@ const LeaderboardPage: React.FC = () => {
         <View className='header-center'>
           <Text className='title'>🏆 排行榜</Text>
           {lastUpdated && (
-            <Text className='update-time'>更新于 {formatLastUpdated()}</Text>
+            <Text className='update-time'>更新于 {formattedLastUpdated}</Text>
           )}
         </View>
         <View className='header-right' />
