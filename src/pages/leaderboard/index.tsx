@@ -1,9 +1,13 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef, useCallback} from 'react';
 import {ScrollView, Text, View} from '@tarojs/components';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import './index.less';
+
+// 轮询间隔（毫秒）
+const POLLING_INTERVAL = 3000;
+const POLLING_START_DELAY = 500;
 
 interface LeaderboardItem {
   userId: string;
@@ -25,29 +29,65 @@ const LeaderboardPage: React.FC = () => {
   const gameId = router.params?.gameId as string;
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleBack = () => {
     Taro.navigateBack();
   };
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (gameId && authState.user) {
-        await loadGameParticipantBalances(gameId);
+  // 加载数据的函数
+  const loadData = useCallback(async (showLoading = true) => {
+    if (gameId && authState.user) {
+      await loadGameParticipantBalances(gameId);
+      if (showLoading) {
         setIsLoading(false);
       }
+      setLastUpdated(new Date());
+    }
+  }, [gameId, authState.user, loadGameParticipantBalances]);
+
+  // 初始加载和设置轮询
+  useEffect(() => {
+    if (!gameId || !authState.user) {
+      return;
+    }
+
+    // 初始加载
+    loadData(true);
+
+    // 使用 setTimeout 链式轮询，避免请求重叠
+    const poll = async () => {
+      if (!pollingTimerRef.current) return; // 已停止
+      await loadData(false);
+      pollingTimerRef.current = setTimeout(poll, POLLING_INTERVAL);
     };
-    loadData();
-  }, [gameId, authState.user?.id, loadGameParticipantBalances]);
+
+    // 延迟一点开始轮询，确保初始加载完成
+    pollingTimerRef.current = setTimeout(poll, POLLING_START_DELAY);
+
+    // 清理定时器
+    return () => {
+      if (pollingTimerRef.current) {
+        clearTimeout(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+    };
+  }, [gameId, authState.user?.id, loadData]);
 
   useEffect(() => {
     if (gameId && !isLoading) {
       const participantBalances = getGameParticipantBalances(gameId);
       const participants = getGameParticipants(gameId);
 
+      // 预先构建参与者 Map，避免 O(n*m) 查找
+      const participantsMap = new Map(
+        participants.map(p => [p.id, p])
+      );
+
       const leaderboardData = participantBalances
         .map((pb) => {
-          const participant = participants.find((p) => p.id === pb.userId);
+          const participant = participantsMap.get(pb.userId);
           const netScore = pb.depositTotal - pb.withdrawTotal;
           const userName = (pb as any)?.userName || participant?.name || '未知用户';
           return {
@@ -62,7 +102,16 @@ const LeaderboardPage: React.FC = () => {
 
       setLeaderboard(leaderboardData);
     }
-  }, [gameId, isLoading, getGameParticipantBalances, getGameParticipants]);
+  }, [gameId, isLoading, lastUpdated]);
+
+  // 格式化最后更新时间
+  const formatLastUpdated = () => {
+    if (!lastUpdated) return '';
+    const hours = lastUpdated.getHours().toString().padStart(2, '0');
+    const minutes = lastUpdated.getMinutes().toString().padStart(2, '0');
+    const seconds = lastUpdated.getSeconds().toString().padStart(2, '0');
+    return `${hours}:${minutes}:${seconds}`;
+  };
 
   if (isLoading) {
     return (
@@ -75,11 +124,14 @@ const LeaderboardPage: React.FC = () => {
   return (
     <View className='leaderboard-page'>
       <View className='header'>
-        <View className='header-left' onClick={handleBack}>
+        <View className='header-left' onClick={handleBack} data-testid="btn-leaderboard-back">
           <Text className='back-icon'>←</Text>
         </View>
         <View className='header-center'>
           <Text className='title'>🏆 排行榜</Text>
+          {lastUpdated && (
+            <Text className='update-time'>更新于 {formatLastUpdated()}</Text>
+          )}
         </View>
         <View className='header-right' />
       </View>

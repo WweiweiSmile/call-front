@@ -125,6 +125,7 @@ const GameDetailPage: React.FC = () => {
       totalDeposit,
       totalWithdraw,
       isBalanced,
+      allBalanced: isBalanced,
       participantCount: participantBalances.length,
     };
   };
@@ -181,7 +182,7 @@ const GameDetailPage: React.FC = () => {
         <View className='header-left' onClick={(e) => {
           e.stopPropagation();
           Taro.navigateBack();
-        }}>
+        }} data-testid="btn-game-detail-back">
           <Text className='back-icon'>←</Text>
         </View>
         <View className='header-center'>
@@ -203,12 +204,14 @@ const GameDetailPage: React.FC = () => {
               setViewMode('self');
               setSelectedUserId(null);
             }}
+            data-testid="btn-mode-self"
           >
             查看自己
           </View>
           <View
             className={`mode-item ${viewMode === 'manage' ? 'active' : ''}`}
             onClick={() => setViewMode('manage')}
+            data-testid="btn-mode-manage"
           >
             管理参与者
           </View>
@@ -256,6 +259,7 @@ const GameDetailPage: React.FC = () => {
               setRemark('');
               setShowDepositPopup(true);
             }}
+            data-testid="btn-deposit"
           >
             💰 存分
           </Button>
@@ -268,6 +272,7 @@ const GameDetailPage: React.FC = () => {
               setRemark('');
               setShowWithdrawPopup(true);
             }}
+            data-testid="btn-withdraw"
           >
             💵 取分
           </Button>
@@ -286,6 +291,7 @@ const GameDetailPage: React.FC = () => {
               url: `/pages/leaderboard/index?gameId=${gameId}`,
             });
           }}
+          data-testid="btn-view-leaderboard"
         >
           🏆 查看排行榜
         </Button>
@@ -322,6 +328,7 @@ const GameDetailPage: React.FC = () => {
                     e.stopPropagation();
                     setSelectedUserId(participant.id);
                   }}
+                  data-testid={`btn-proxy-${participant.id}`}
                 >
                   代理操作
                 </Button>
@@ -376,6 +383,7 @@ const GameDetailPage: React.FC = () => {
                 Toast.show('game-detail-toast', {content: error.message || '结束游戏失败'});
               }
             }}
+            data-testid="btn-end-game"
           >
             结束游戏
           </Button>
@@ -433,6 +441,7 @@ const GameDetailPage: React.FC = () => {
               placeholder='输入存分数量'
               value={amount}
               onChange={(value) => setAmount(value)}
+              data-testid="input-deposit-amount"
             />
           </View>
 
@@ -445,6 +454,7 @@ const GameDetailPage: React.FC = () => {
                   type='default'
                   size='small'
                   onClick={() => setAmount(num.toString())}
+                  data-testid={`btn-quick-deposit-${num}`}
                 >
                   +{num}
                 </Button>
@@ -464,14 +474,15 @@ const GameDetailPage: React.FC = () => {
               placeholder='备注 (选填)'
               value={remark}
               onChange={(value) => setRemark(value)}
+              data-testid="input-withdraw-remark"
             />
           </View>
 
           <View className='popup-actions'>
-            <Button type='default' onClick={() => setShowDepositPopup(false)}>
+            <Button type='default' onClick={() => setShowDepositPopup(false)} data-testid="btn-deposit-cancel">
               取消
             </Button>
-            <Button type='success' onClick={handleDeposit}>
+            <Button type='success' onClick={handleDeposit} data-testid="btn-deposit-confirm">
               确认存分
             </Button>
           </View>
@@ -505,6 +516,7 @@ const GameDetailPage: React.FC = () => {
               placeholder='输入取分数量'
               value={amount}
               onChange={(value) => setAmount(value)}
+              data-testid="input-withdraw-amount"
             />
           </View>
 
@@ -517,6 +529,7 @@ const GameDetailPage: React.FC = () => {
                   type='default'
                   size='small'
                   onClick={() => setAmount(num.toString())}
+                  data-testid={`btn-quick-withdraw-${num}`}
                 >
                   -{num}
                 </Button>
@@ -536,14 +549,15 @@ const GameDetailPage: React.FC = () => {
               placeholder='备注 (选填)'
               value={remark}
               onChange={(value) => setRemark(value)}
+              data-testid="input-deposit-remark"
             />
           </View>
 
           <View className='popup-actions'>
-            <Button type='default' onClick={() => setShowWithdrawPopup(false)}>
+            <Button type='default' onClick={() => setShowWithdrawPopup(false)} data-testid="btn-withdraw-cancel">
               取消
             </Button>
-            <Button type='warning' onClick={handleWithdraw}>
+            <Button type='warning' onClick={handleWithdraw} data-testid="btn-withdraw-confirm">
               确认取分
             </Button>
           </View>

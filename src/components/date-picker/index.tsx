@@ -17,6 +17,7 @@ const CustomDatePicker = (props: DatePickerProps) => {
   const {type = 'date', onChange, placeholder = '请选择时间'} = props
   const [show1, setShow1] = useState(false)
   const hasValue = !!props.value
+  const parsedDate = hasValue ? dayjs(props.value) : null
 
   return <View>
     <View
@@ -25,12 +26,13 @@ const CustomDatePicker = (props: DatePickerProps) => {
         width: '100%',
       }}
       onClick={() => setShow1(true)}
-    >{hasValue ? dayjs(props.value).format('YYYY-MM-DD HH:mm:ss') : placeholder}</View>
+      data-testid="date-picker-trigger"
+    >{hasValue && parsedDate ? parsedDate.format('YYYY-MM-DD HH:mm:ss') : placeholder}</View>
 
     <DatePicker
       visible={show1}
       type={type}
-      defaultValue={new Date()}
+      value={hasValue && parsedDate ? parsedDate.toDate() : new Date()}
       onConfirm={(_selectedOptions, selectedValue) => {
         // selectedValue 是 [year, month, day, hour, minute, second] 格式的数组
         const [year, month, day, hour = 0, minute = 0, second = 0] = selectedValue as number[];

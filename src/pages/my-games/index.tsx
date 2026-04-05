@@ -44,6 +44,7 @@ const MyGamesPage: React.FC = () => {
         key={game.id}
         className='game-card'
         onClick={() => handleEnterGame(game.id)}
+        data-testid={`my-game-card-${game.id}`}
       >
         <View className='game-info'>
           <Text className='game-name'>🎮 {game.name}</Text>
@@ -66,7 +67,7 @@ const MyGamesPage: React.FC = () => {
           </Text>
           )}
         </View>
-        <Button type='primary' size='small'>
+        <Button type='primary' size='small' data-testid={`btn-my-game-enter-${game.id}`}>
           {isCreator ? '管理 →' : '进入 →'}
         </Button>
       </View>

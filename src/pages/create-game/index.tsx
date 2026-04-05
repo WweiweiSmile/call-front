@@ -43,7 +43,7 @@ const CreateGamePage: React.FC = () => {
     <View className='create-game-page'>
       <Toast id="create-game-toast"/>
       <View className='header'>
-        <View className='header-left' onClick={() => Taro.navigateBack()}>
+        <View className='header-left' onClick={() => Taro.navigateBack()} data-testid="btn-back">
           <Text className='back-icon'>←</Text>
         </View>
         <View className='header-center'>
@@ -63,10 +63,10 @@ const CreateGamePage: React.FC = () => {
           className='create-form'
         >
           <Form.Item label='游戏名称' name='name' required>
-            <NutInput placeholder='请输入游戏名称'/>
+            <NutInput placeholder='请输入游戏名称' data-testid="input-game-name"/>
           </Form.Item>
           <Form.Item label='游戏描述 (选填)' name='description'>
-            <NutInput type='textarea' placeholder='请输入游戏描述'/>
+            <NutInput type='textarea' placeholder='请输入游戏描述' data-testid="input-game-description"/>
           </Form.Item>
           <Form.Item label='开始时间' required>
             <CustomDatePicker
@@ -74,7 +74,7 @@ const CreateGamePage: React.FC = () => {
             />
           </Form.Item>
           <Form.Item>
-            <Button type='primary' size='large' block nativeType='submit'>
+            <Button type='primary' size='large' block nativeType='submit' data-testid="btn-create-game-submit">
               创建游戏
             </Button>
           </Form.Item>

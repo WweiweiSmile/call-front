@@ -52,6 +52,7 @@ function LoginPage() {
               setMode('login');
               form.resetFields();
             }}
+            data-testid="tab-login"
           >
             登录
           </View>
@@ -61,6 +62,7 @@ function LoginPage() {
               setMode('register');
               form.resetFields();
             }}
+            data-testid="tab-register"
           >
             注册
           </View>
@@ -80,6 +82,7 @@ function LoginPage() {
             <Input
               type="text"
               placeholder="请输入用户名"
+              data-testid="input-username"
             />
           </Form.Item>
 
@@ -88,6 +91,7 @@ function LoginPage() {
               <Input
                 type="text"
                 placeholder="请输入昵称（可选）"
+                data-testid="input-nickname"
               />
             </Form.Item>
           )}
@@ -96,6 +100,7 @@ function LoginPage() {
             <Input
               type="password"
               placeholder="请输入密码"
+              data-testid="input-password"
             />
           </Form.Item>
 
@@ -106,6 +111,7 @@ function LoginPage() {
               loading={state.isLoading}
               block
               htmlType="submit"
+              data-testid="btn-submit"
             >
               {mode === 'login' ? '登录' : '注册'}
             </Button>
@@ -120,6 +126,7 @@ function LoginPage() {
             setMode(mode === 'login' ? 'register' : 'login');
             form.resetFields();
           }}
+          data-testid="btn-switch-mode"
         >
           {mode === 'login' ? '没有账户？去注册' : '已有账户？去登录'}
         </Text>

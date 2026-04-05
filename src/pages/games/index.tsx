@@ -13,9 +13,8 @@ const GamesPage: React.FC = () => {
   } = useAppStore();
   const {state: authState} = useAuthStore();
 
-  // 页面加载时获取游戏列表，并定期刷新
+  // 页面加载时设置定时器，不重复初始加载
   useEffect(() => {
-    loadGames();
     // 每30秒刷新一次游戏列表
     const interval = setInterval(() => {
       loadGames();
@@ -63,6 +62,7 @@ const GamesPage: React.FC = () => {
           type='primary'
           size='small'
           onClick={() => Taro.navigateTo({url: '/pages/create-game/index'})}
+          data-testid="btn-create-game"
         >
           +创建游戏
         </Button>
@@ -74,6 +74,7 @@ const GamesPage: React.FC = () => {
           placeholder='搜索游戏名称...'
           value={searchText}
           onInput={(e) => setSearchText(e.detail.value)}
+          data-testid="input-search"
         />
       </View>
 
@@ -109,6 +110,7 @@ const GamesPage: React.FC = () => {
                         handleJoinGame(game.id);
                       }
                     }}
+                    data-testid={`btn-game-action-${game.id}`}
                   >
                     {isCreator
                       ? (hasJoined ? '管理 →' : '加入游戏 →')
@@ -140,6 +142,7 @@ const GamesPage: React.FC = () => {
                   type='default'
                   size='small'
                   onClick={() => handleJoinGame(game.id)}
+                  data-testid={`btn-reserve-${game.id}`}
                 >
                   预约提醒
                 </Button>

@@ -106,6 +106,7 @@ const ProfilePage: React.FC = () => {
             size='large'
             block
             onClick={handleLogout}
+            data-testid="btn-logout"
           >
             退出登录
           </Button>

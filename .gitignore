@@ -5,3 +5,8 @@ deploy_versions/
 node_modules/
 .DS_Store
 .swc
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
