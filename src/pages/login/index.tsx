@@ -19,16 +19,16 @@ function LoginPage() {
     try {
       if (mode === 'login') {
         await login(values.username, values.password);
-        Toast.show('login-toast', {content: '登录成功'});
+        Toast.show('login-toast', {content: <View data-testid="login-success">登录成功</View>});
       } else {
         await register(values.username, values.password, values.nickname || values.username);
-        Toast.show('login-toast', {content: '注册成功'});
+        Toast.show('login-toast', {content: '注册成功',});
       }
       Taro.redirectTo({
         url: '/pages/index/index',
       });
     } catch (error: any) {
-      Toast.show('login-toast', {content: error.message || '操作失败'});
+      Toast.show('login-toast', {content: <View data-testid="login-error">{error.message || '操作失败'}</View>});
     }
   };
 
@@ -66,7 +66,7 @@ function LoginPage() {
           >
             注册
           </View>
-          <View className={`tab-indicator ${mode === 'register' ? 'right' : ''}`} />
+          <View className={`tab-indicator ${mode === 'register' ? 'right' : ''}`}/>
         </View>
 
         <Form
