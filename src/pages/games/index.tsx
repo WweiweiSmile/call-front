@@ -1,44 +1,142 @@
-import React, {useEffect, useState, useMemo, useCallback} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {Input, ScrollView, Text, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import type { Game } from '../../store/mockData';
+import {useLoadMore} from '../../hooks';
+import {gameApi} from '../../services/api';
+import type {GameResponse} from '../../models/service';
+import type {Game} from '../../store/mockData';
 import './index.less';
 
 type FilterType = 'all' | 'joined' | 'created' | 'recent';
 
+interface GamesFilterParams {
+  status?: string;
+  filterType?: FilterType;
+}
+
 const GamesPage: React.FC = () => {
   const {
-    getOngoingGames, getPendingGames, getGames, getUserGames, getUserCreatedGames, joinGame,
-    setCurrentGameId, loadGames
+    joinGame,
+    setCurrentGameId
   } = useAppStore();
   const {state: authState} = useAuthStore();
 
-  // 页面加载时调用接口，并设置定时器
-  useEffect(() => {
-    // 初始加载游戏列表
-    loadGames();
-
-    // 每30秒刷新一次游戏列表
-    const interval = setInterval(() => {
-      loadGames();
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [loadGames]);
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
+
+  // 使用 useLoadMore 管理游戏列表数据
+  const {
+    data: rawGames,
+    loading,
+    refreshing,
+    hasMore,
+    refresh,
+    loadMore,
+    setParams,
+  } = useLoadMore<GameResponse, GamesFilterParams>(
+    async (params) => {
+      let response;
+      const {page, pageSize, filterType: ft} = params;
+
+      switch (ft) {
+        case 'joined':
+          response = await gameApi.getMyGames({page, pageSize});
+          break;
+        case 'created':
+          response = await gameApi.getCreatedGames({page, pageSize});
+          break;
+        case 'recent':
+          response = await gameApi.getMyGames({page, pageSize});
+          break;
+        case 'all':
+        default:
+          response = await gameApi.getGames({page, pageSize});
+          break;
+      }
+      return response;
+    },
+    {
+      defaultCurrent: 1,
+      defaultPageSize: 10,
+      defaultParams: {filterType: 'all'},
+      autoLoad: true,
+    }
+  );
+
+  // 将 API 返回的数据转换为前端 Game 格式
+  const allGames = useMemo((): Game[] => {
+    return rawGames.map((g) => ({
+      id: String(g.id),
+      name: g.name,
+      creatorId: String(g.creatorId),
+      creatorName: g.creatorName || '创建者',
+      status: g.status as 'pending' | 'ongoing' | 'ended',
+      participantCount: g.playerCount,
+      description: g.description,
+      startTime: g.startTime,
+      endTime: g.endTime,
+      isJoined: g.isJoined,
+    }));
+  }, [rawGames]);
+
+  // filterType 变化时更新参数
+  React.useEffect(() => {
+    setParams({filterType});
+  }, [filterType, setParams]);
 
   const handleEnterGame = useCallback((gameId: string) => {
     setCurrentGameId(gameId);
     Taro.navigateTo({url: `/pages/game-detail/index?gameId=${gameId}`});
   }, [setCurrentGameId]);
 
-  const allGames = useMemo(() => getGames(), [getGames]);
-  const ongoingGames = useMemo(() => getOngoingGames(), [getOngoingGames]);
-  const pendingGames = useMemo(() => getPendingGames(), [getPendingGames]);
+  const ongoingGames = useMemo(() => {
+    const now = new Date();
+    return allGames.filter((g) => {
+      if (g.status === 'ongoing') return true;
+      if (g.status === 'pending' && g.startTime) {
+        try {
+          const startTime = new Date(g.startTime);
+          return startTime <= now;
+        } catch {
+          return false;
+        }
+      }
+      return false;
+    });
+  }, [allGames]);
+
+  const pendingGames = useMemo(() => {
+    const now = new Date();
+    return allGames.filter((g) => {
+      if (g.status === 'pending') {
+        if (!g.startTime) return true;
+        try {
+          const startTime = new Date(g.startTime);
+          return startTime > now;
+        } catch {
+          return true;
+        }
+      }
+      return false;
+    });
+  }, [allGames]);
+
   const currentUser = authState.user;
+
+  // 获取用户参与的游戏
+  const getUserGames = useCallback((currentUserId: string) => {
+    return allGames.filter((g) => {
+      return g.status === 'ongoing' || g.creatorId === currentUserId;
+    });
+  }, [allGames]);
+
+  // 获取用户创建的游戏
+  const getUserCreatedGames = useCallback((currentUserId: string) => {
+    return allGames.filter((g) => g.creatorId === currentUserId);
+  }, [allGames]);
 
   // 获取符合筛选条件的游戏 ID 集合
   const filteredGameIds = useMemo(() => {
@@ -55,7 +153,6 @@ const GamesPage: React.FC = () => {
         filtered = getUserCreatedGames(currentUser.id);
         break;
       case 'recent':
-        // 最近玩过的游戏 - 这里简化处理，实际可以根据参与时间排序
         filtered = getUserGames(currentUser.id);
         break;
       case 'all':
@@ -88,16 +185,28 @@ const GamesPage: React.FC = () => {
       await joinGame(gameId, currentUser.id);
       Toast.show('games-toast', {content: '加入成功'});
       // 刷新游戏列表
-      await loadGames();
+      await refresh();
     } catch (error: any) {
       Toast.show('games-toast', {content: error.message || '加入失败'});
     }
-  }, [currentUser, joinGame, loadGames]);
+  }, [currentUser, joinGame, refresh]);
 
   // 切换筛选标签
   const handleFilterChange = useCallback((type: FilterType) => {
     setFilterType(type);
   }, []);
+
+  // 下拉刷新
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+
+  // 上滑加载更多
+  const handleScrollToLower = useCallback(() => {
+    if (hasMore && !loading) {
+      loadMore();
+    }
+  }, [hasMore, loading, loadMore]);
 
   if (!currentUser) {
     return null;
@@ -156,7 +265,15 @@ const GamesPage: React.FC = () => {
         </View>
       </View>
 
-      <ScrollView className='content' scrollY>
+      <ScrollView
+        className='content'
+        scrollY
+        refresherEnabled
+        refresherTriggered={refreshing}
+        onRefresherRefresh={handleRefresh}
+        onScrollToLower={handleScrollToLower}
+        lowerThreshold={100}
+      >
         {filteredOngoingGames.length > 0 && (
           <View className='section'>
             <Text className='section-title'>🔥 进行中的游戏</Text>
@@ -226,6 +343,29 @@ const GamesPage: React.FC = () => {
                 </Button>
               </View>
             ))}
+          </View>
+        )}
+
+        {/* 加载更多提示 */}
+        {hasMore && (
+          <View className='load-more'>
+            <Text className='load-more-text'>
+              {loading ? '加载中...' : '上拉加载更多'}
+            </Text>
+          </View>
+        )}
+
+        {/* 没有更多数据 */}
+        {!hasMore && allGames.length > 0 && (
+          <View className='load-more'>
+            <Text className='load-more-text'>没有更多数据了</Text>
+          </View>
+        )}
+
+        {/* 空状态 */}
+        {filteredOngoingGames.length === 0 && filteredPendingGames.length === 0 && !loading && (
+          <View className='empty-state'>
+            <Text className='empty-text'>暂无相关游戏</Text>
           </View>
         )}
       </ScrollView>

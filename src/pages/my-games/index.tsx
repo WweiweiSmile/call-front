@@ -1,39 +1,79 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
+import { useLoadMore } from '../../hooks';
+import { gameApi } from '../../services/api';
+import type { GameResponse } from '../../models/service';
 import type { Game } from '../../store/mockData';
 import './index.less';
 
 type FilterType = 'all' | 'ongoing' | 'ended' | 'recent';
 
+interface MyGamesFilterParams {
+  status?: string;
+}
+
 const MyGamesPage: React.FC = () => {
   const {
-    state,
     getUserBalance,
     setCurrentGameId,
-    loadMyGames,
   } = useAppStore();
   const {state: authState} = useAuthStore();
 
   const [filterType, setFilterType] = useState<FilterType>('all');
 
-  // 页面加载时获取我的游戏列表，tab 切换时也重新加载
+  // 使用 useLoadMore 管理我的游戏列表数据
+  const {
+    data: rawGames,
+    loading,
+    refreshing,
+    hasMore,
+    refresh,
+    loadMore,
+    setParams,
+  } = useLoadMore<GameResponse, MyGamesFilterParams>(
+    async (params) => {
+      const { page, pageSize, status } = params;
+      return await gameApi.getMyGames({ page, pageSize, status });
+    },
+    {
+      defaultCurrent: 1,
+      defaultPageSize: 10,
+      defaultParams: { status: undefined },
+      autoLoad: true,
+    }
+  );
+
+  // 将 API 返回的数据转换为前端 Game 格式
+  const games = useMemo((): Game[] => {
+    return rawGames.map((g) => ({
+      id: String(g.id),
+      name: g.name,
+      creatorId: String(g.creatorId),
+      creatorName: g.creatorName || '创建者',
+      status: g.status as 'pending' | 'ongoing' | 'ended',
+      participantCount: g.playerCount,
+      description: g.description,
+      startTime: g.startTime,
+      endTime: g.endTime,
+      isJoined: g.isJoined,
+    }));
+  }, [rawGames]);
+
+  // filterType 变化时更新参数并刷新
   useEffect(() => {
-    const statusParam = filterType === 'all' ? undefined : filterType;
-    loadMyGames(statusParam);
-  }, [loadMyGames, filterType]);
+    const statusParam = filterType === 'all' || filterType === 'recent' ? undefined : filterType;
+    setParams({ status: statusParam });
+  }, [filterType, setParams]);
 
   const currentUser = authState.user;
 
   if (!currentUser) {
     return null;
   }
-
-  // 直接使用 store 中的 games 数据（已经是后端过滤后的）
-  const games = state.games;
 
   const handleEnterGame = useCallback((gameId: string) => {
     setCurrentGameId(gameId);
@@ -84,6 +124,18 @@ const MyGamesPage: React.FC = () => {
     setFilterType(type);
   }, []);
 
+  // 下拉刷新
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+
+  // 上滑加载更多
+  const handleScrollToLower = useCallback(() => {
+    if (hasMore && !loading) {
+      loadMore();
+    }
+  }, [hasMore, loading, loadMore]);
+
   return (
     <View className='my-games-page'>
       <View className='header'>
@@ -118,9 +170,35 @@ const MyGamesPage: React.FC = () => {
         </View>
       </View>
 
-      <ScrollView className='content' scrollY>
+      <ScrollView
+        className='content'
+        scrollY
+        refresherEnabled
+        refresherTriggered={refreshing}
+        onRefresherRefresh={handleRefresh}
+        onScrollToLower={handleScrollToLower}
+        lowerThreshold={100}
+      >
         {games.length > 0 ? (
-          games.map(renderGameCard)
+          <>
+            {games.map(renderGameCard)}
+
+            {/* 加载更多提示 */}
+            {hasMore && (
+              <View className='load-more'>
+                <Text className='load-more-text'>
+                  {loading ? '加载中...' : '上拉加载更多'}
+                </Text>
+              </View>
+            )}
+
+            {/* 没有更多数据 */}
+            {!hasMore && games.length > 0 && (
+              <View className='load-more'>
+                <Text className='load-more-text'>没有更多数据了</Text>
+              </View>
+            )}
+          </>
         ) : (
           <View className='empty-state'>
             <Text className='empty-text'>暂无相关场次</Text>
