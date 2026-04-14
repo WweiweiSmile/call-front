@@ -26,89 +26,126 @@
     }
   }
 
+  // 筛选标签
+  .filter-tabs {
+    display: flex;
+    background: @bg-secondary;
+    margin-bottom: 8px;
+    border-bottom: 1px solid @border-color;
+
+    .filter-tab {
+      flex: 1;
+      text-align: center;
+      padding: 14px 12px;
+      font-size: 14px;
+      color: @text-secondary;
+      position: relative;
+      transition: all @duration-fast ease;
+
+      &.active {
+        color: @primary;
+        font-weight: 600;
+
+        &::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 40px;
+          height: 3px;
+          background: @gradient-primary;
+          border-radius: 2px;
+        }
+      }
+
+      &:active {
+        opacity: 0.7;
+      }
+    }
+  }
+
   .content {
     flex: 1;
     padding: 16px;
     overflow-y: auto;
     box-sizing: border-box;
 
-    .section {
-      margin-bottom: 24px;
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 20px;
 
-      .section-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: @text-primary;
-        margin-bottom: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+      .empty-text {
+        font-size: 14px;
+        color: @text-tertiary;
+      }
+    }
+
+    .game-card {
+      background: @bg-secondary;
+      border-radius: @radius-lg;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid @border-color;
+      box-shadow: @shadow-sm;
+      transition: all @duration-fast ease;
+
+      &:active {
+        transform: scale(0.98);
+        box-shadow: @shadow-md;
       }
 
-      .game-card {
-        background: @bg-secondary;
-        border-radius: @radius-lg;
-        padding: 16px;
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border: 1px solid @border-color;
-        box-shadow: @shadow-sm;
-        transition: all @duration-fast ease;
+      .game-info {
+        flex: 1;
+        min-width: 0;
 
-        &:active {
-          transform: scale(0.98);
-          box-shadow: @shadow-md;
+        .game-name {
+          font-size: 16px;
+          font-weight: 600;
+          color: @text-primary;
+          margin-bottom: 8px;
+          display: block;
         }
 
-        .game-info {
-          flex: 1;
-          min-width: 0;
+        .game-creator,
+        .participants {
+          font-size: 14px;
+          color: @text-secondary;
+          margin-bottom: 8px;
+          display: block;
+        }
 
-          .game-name {
-            font-size: 16px;
-            font-weight: 600;
-            color: @text-primary;
-            margin-bottom: 8px;
-            display: block;
-          }
+        .balance-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
 
-          .game-creator,
-          .participants {
+          .balance {
             font-size: 14px;
-            color: @text-secondary;
-            margin-bottom: 8px;
-            display: block;
+            color: @text-primary;
+            font-weight: 500;
           }
 
-          .balance-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
+          .balance-status {
+            padding: 4px 10px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 500;
 
-            .balance {
-              font-size: 14px;
-              color: @text-primary;
-              font-weight: 500;
+            &.balanced {
+              background: fade(@success, 20%);
+              color: @success-light;
             }
 
-            .balance-status {
-              padding: 4px 10px;
-              border-radius: 100px;
-              font-size: 12px;
-              font-weight: 500;
-
-              &.balanced {
-                background: fade(@success, 20%);
-                color: @success-light;
-              }
-
-              &.unbalanced {
-                background: fade(@warning, 20%);
-                color: @warning-light;
-              }
+            &.unbalanced {
+              background: fade(@warning, 20%);
+              color: @warning-light;
             }
           }
         }

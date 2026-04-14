@@ -46,6 +46,7 @@ export interface GetGamesParams {
 
 // 获取我的游戏参数
 export interface GetMyGamesParams {
+  status?: string;
   page?: number;
   pageSize?: number;
 }

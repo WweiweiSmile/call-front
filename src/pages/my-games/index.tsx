@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
@@ -7,20 +7,24 @@ import { useAuthStore } from '../../store/auth';
 import type { Game } from '../../store/mockData';
 import './index.less';
 
+type FilterType = 'all' | 'ongoing' | 'ended' | 'recent';
+
 const MyGamesPage: React.FC = () => {
   const {
-    getUserGames,
-    getUserCreatedGames,
+    state,
     getUserBalance,
     setCurrentGameId,
     loadMyGames,
   } = useAppStore();
   const {state: authState} = useAuthStore();
 
-  // 页面加载时获取我的游戏列表
+  const [filterType, setFilterType] = useState<FilterType>('all');
+
+  // 页面加载时获取我的游戏列表，tab 切换时也重新加载
   useEffect(() => {
-    loadMyGames();
-  }, [loadMyGames]);
+    const statusParam = filterType === 'all' ? undefined : filterType;
+    loadMyGames(statusParam);
+  }, [loadMyGames, filterType]);
 
   const currentUser = authState.user;
 
@@ -28,8 +32,8 @@ const MyGamesPage: React.FC = () => {
     return null;
   }
 
-  const userGames = getUserGames(currentUser.id);
-  const userCreatedGames = getUserCreatedGames(currentUser.id);
+  // 直接使用 store 中的 games 数据（已经是后端过滤后的）
+  const games = state.games;
 
   const handleEnterGame = useCallback((gameId: string) => {
     setCurrentGameId(gameId);
@@ -75,11 +79,10 @@ const MyGamesPage: React.FC = () => {
     );
   }, [currentUser.id, getUserBalance, handleEnterGame]);
 
-  // 使用 useMemo 优化过滤操作
-  const { ongoingGames, endedGames } = useMemo(() => ({
-    ongoingGames: userGames.filter((g) => g.status === 'ongoing'),
-    endedGames: userGames.filter((g) => g.status === 'ended'),
-  }), [userGames]);
+  // 切换筛选标签
+  const handleFilterChange = useCallback((type: FilterType) => {
+    setFilterType(type);
+  }, []);
 
   return (
     <View className='my-games-page'>
@@ -87,26 +90,41 @@ const MyGamesPage: React.FC = () => {
         <Text className='title'>我的场次</Text>
       </View>
 
+      {/* 筛选标签 */}
+      <View className='filter-tabs'>
+        <View
+          className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('all')}
+        >
+          全部
+        </View>
+        <View
+          className={`filter-tab ${filterType === 'ongoing' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('ongoing')}
+        >
+          进行中
+        </View>
+        <View
+          className={`filter-tab ${filterType === 'ended' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('ended')}
+        >
+          已结束
+        </View>
+        <View
+          className={`filter-tab ${filterType === 'recent' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('recent')}
+        >
+          最近玩过
+        </View>
+      </View>
+
       <ScrollView className='content' scrollY>
-        {ongoingGames.length > 0 && (
-        <View className='section'>
-          <Text className='section-title'>🎯 进行中的场次 ({ongoingGames.length})</Text>
-          {ongoingGames.map(renderGameCard)}
-        </View>
-        )}
-
-        {userCreatedGames.length > 0 && (
-        <View className='section'>
-          <Text className='section-title'>📋 我创建的游戏 ({userCreatedGames.length})</Text>
-          {userCreatedGames.map(renderGameCard)}
-        </View>
-        )}
-
-        {endedGames.length > 0 && (
-        <View className='section'>
-          <Text className='section-title'>📋 历史场次 ({endedGames.length})</Text>
-          {endedGames.map(renderGameCard)}
-        </View>
+        {games.length > 0 ? (
+          games.map(renderGameCard)
+        ) : (
+          <View className='empty-state'>
+            <Text className='empty-text'>暂无相关场次</Text>
+          </View>
         )}
       </ScrollView>
     </View>

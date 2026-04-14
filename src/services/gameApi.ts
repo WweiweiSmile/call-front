@@ -31,6 +31,7 @@ export const gameApi = {
   // 获取我的游戏
   getMyGames: (params?: GetMyGamesParams) => {
     const query = new URLSearchParams();
+    if (params?.status) query.append('status', params.status);
     if (params?.page) query.append('page', params.page.toString());
     if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
     const queryString = query.toString();

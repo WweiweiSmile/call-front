@@ -44,10 +44,10 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
   }, [setLoading, setState]);
 
   // 从后端加载我的游戏
-  const loadMyGames = useCallback(async () => {
+  const loadMyGames = useCallback(async (status?: string) => {
     setLoading(true);
     try {
-      const response: any = await gameApi.getMyGames();
+      const response: any = await gameApi.getMyGames(status ? { status } : undefined);
       const games: Game[] = response.list.map((g: any) => ({
         id: String(g.id),
         name: g.name,
@@ -196,7 +196,11 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
 
         setState((prev) => ({
           ...prev,
-          games: prev.games.filter((g) => g.id !== gameId),
+          games: prev.games.map((g) =>
+            g.id === gameId
+              ? {...g, status: 'ended' as const}
+              : g
+          ),
         }));
       } catch (error) {
         console.error('结束游戏失败:', error);
