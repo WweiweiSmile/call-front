@@ -176,62 +176,27 @@ const GameDetailPage: React.FC = () => {
     loadData();
   }, [gameId, currentUser, setCurrentGameId, loadGames, loadUserBalance, loadGameTransactions, loadGameParticipantBalances]);
 
-  if (!gameId || !currentUser) {
-    return null;
-  }
-
-  if (isLoading) {
-    return (
-      <View className='game-detail-page loading-page'>
-        <Text>加载中...</Text>
-      </View>
-    );
-  }
-
-  const game = state.games.find((g) => g.id === gameId);
-  const isCreator = game?.creatorId === currentUser.id;
-  const hasJoined = game?.isJoined || isCreator;
-
-  if (!game) {
-    return (
-      <View className='game-detail-page error-page'>
-        <Text>游戏不存在</Text>
-        <Button onClick={() => Taro.navigateBack()}>返回</Button>
-      </View>
-    );
-  }
-
-  // 检查权限：只有创建者或已加入的用户才能访问
-  if (!isCreator && !hasJoined) {
-    Taro.showToast({
-      title: '请先加入游戏',
-      icon: 'none',
-      duration: 2000,
-    });
-    setTimeout(() => {
-      Taro.navigateBack();
-    }, 2000);
-    return null;
-  }
+  // ========== 所有 hooks 必须在任何条件返回之前定义 ==========
 
   const getDisplayUser = useCallback(() => {
     if (viewMode === 'self') {
       return currentUser;
     }
     if (selectedUserId) {
-      return getGameParticipants(gameId).find((u) => u.id === selectedUserId);
+      const participants = getGameParticipants(gameId) || [];
+      return participants.find((u) => u.id === selectedUserId);
     }
     return null;
   }, [viewMode, selectedUserId, currentUser, gameId, getGameParticipants]);
 
   const displayUser = getDisplayUser();
   const balance = displayUser ? getUserBalance(gameId, displayUser.id) : null;
-  const transactions = displayUser ? getGameTransactions(gameId, displayUser.id) : getGameTransactions(gameId);
-  const participants = getGameParticipants(gameId);
+  const transactions = (displayUser ? getGameTransactions(gameId, displayUser.id) : getGameTransactions(gameId)) || [];
+  const participants = getGameParticipants(gameId) || [];
 
   // 使用 useMemo 计算所有参与者的整体平衡状态
   const overallBalance = useMemo(() => {
-    const participantBalances = getGameParticipantBalances(gameId);
+    const participantBalances = getGameParticipantBalances(gameId) || [];
     if (participantBalances.length === 0) return null;
 
     const totalDeposit = participantBalances.reduce((sum, b) => sum + b.depositTotal, 0);
@@ -288,7 +253,7 @@ const GameDetailPage: React.FC = () => {
     } catch (error: any) {
       Toast.show('game-detail-toast', {content: error.message || `${type === 'deposit' ? '存分' : '取分'}失败`});
     }
-  }, [amount, viewMode, selectedUserId, gameId, currentUser.id, remark, deposit, withdraw, resetPopupForm]);
+  }, [amount, viewMode, selectedUserId, gameId, currentUser?.id, remark, deposit, withdraw, resetPopupForm]);
 
   const handleDeposit = useCallback(() => handleOperation('deposit'), [handleOperation]);
   const handleWithdraw = useCallback(() => handleOperation('withdraw'), [handleOperation]);
@@ -300,6 +265,46 @@ const GameDetailPage: React.FC = () => {
       setSelectedUserId(null);
     }
   }, []);
+
+  // ========== 条件返回从这里开始 ==========
+
+  if (!gameId || !currentUser) {
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <View className='game-detail-page loading-page'>
+        <Text>加载中...</Text>
+      </View>
+    );
+  }
+
+  const game = state.games.find((g) => g.id === gameId);
+  const isCreator = game?.creatorId === currentUser.id;
+  const hasJoined = game?.isJoined || isCreator;
+
+  if (!game) {
+    return (
+      <View className='game-detail-page error-page'>
+        <Text>游戏不存在</Text>
+        <Button onClick={() => Taro.navigateBack()}>返回</Button>
+      </View>
+    );
+  }
+
+  // 检查权限：只有创建者或已加入的用户才能访问
+  if (!isCreator && !hasJoined) {
+    Taro.showToast({
+      title: '请先加入游戏',
+      icon: 'none',
+      duration: 2000,
+    });
+    setTimeout(() => {
+      Taro.navigateBack();
+    }, 2000);
+    return null;
+  }
 
   return (
     <View className='game-detail-page'>
@@ -416,14 +421,14 @@ const GameDetailPage: React.FC = () => {
         <View className='participants-section'>
           <Text className='section-title'>参与者列表</Text>
           {participants.map((participant) => {
-            const pBalance = getUserBalance(gameId, participant.id);
+            const pBalance = participant ? getUserBalance(gameId, participant.id) : null;
             return (
               <View
-                key={participant.id}
-                className={`participant-card ${selectedUserId === participant.id ? 'selected' : ''}`}
+                key={participant?.id || Math.random().toString()}
+                className={`participant-card ${selectedUserId === participant?.id ? 'selected' : ''}`}
               >
                 <View className='participant-info'>
-                  <Text className='participant-name'>👤 {participant.name}</Text>
+                  <Text className='participant-name'>👤 {participant?.name || '未知用户'}</Text>
                   {pBalance && (
                     <View className='participant-balance'>
                       <Text>余额：{pBalance.currentBalance.toLocaleString()}</Text>
@@ -440,9 +445,11 @@ const GameDetailPage: React.FC = () => {
                   size='small'
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSelectedUserId(participant.id);
+                    if (participant?.id) {
+                      setSelectedUserId(participant.id);
+                    }
                   }}
-                  data-testid={`btn-proxy-${participant.id}`}
+                  data-testid={`btn-proxy-${participant?.id}`}
                 >
                   代理操作
                 </Button>
@@ -509,19 +516,19 @@ const GameDetailPage: React.FC = () => {
       <View className='transactions-section'>
         <Text className='section-title'>交易记录</Text>
         <ScrollView className='transactions-list' scrollY>
-          {transactions.map((tx) => (
-            <View key={tx.id} className='transaction-item'>
-              <Text className='tx-time'>⏰ {tx.createdAt}</Text>
+          {(transactions || []).map((tx) => (
+            <View key={tx?.id || Math.random().toString()} className='transaction-item'>
+              <Text className='tx-time'>⏰ {tx?.createdAt || ''}</Text>
               <View className='tx-main'>
-                <Text className={`tx-type ${tx.type === 'deposit' ? 'deposit' : 'withdraw'}`}>
-                  {tx.type === 'deposit' ? '🟢 存分' : '🔴 取分'}{' '}
-                  {tx.type === 'deposit' ? '+' : '-'}{tx.amount.toLocaleString()}
-                  {tx.isProxy && ` (${viewMode === 'self' ? '代理' : tx.userName})`}
+                <Text className={`tx-type ${tx?.type === 'deposit' ? 'deposit' : 'withdraw'}`}>
+                  {tx?.type === 'deposit' ? '🟢 存分' : '🔴 取分'}{' '}
+                  {tx?.type === 'deposit' ? '+' : '-'}{(tx?.amount || 0).toLocaleString()}
+                  {tx?.isProxy && ` (${viewMode === 'self' ? '代理' : tx?.userName || ''})`}
                 </Text>
-                {tx.isProxy && viewMode === 'self' && (
-                  <Text className='tx-operator'>{tx.operatorName}操作</Text>
+                {tx?.isProxy && viewMode === 'self' && (
+                  <Text className='tx-operator'>{tx?.operatorName || ''}操作</Text>
                 )}
-                <Text className='tx-balance'>余额: {tx.balanceAfter.toLocaleString()}</Text>
+                <Text className='tx-balance'>余额: {(tx?.balanceAfter || 0).toLocaleString()}</Text>
               </View>
             </View>
           ))}

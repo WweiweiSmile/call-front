@@ -1,20 +1,26 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useMemo, useCallback} from 'react';
 import {Input, ScrollView, Text, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
+import type { Game } from '../../store/mockData';
 import './index.less';
+
+type FilterType = 'all' | 'joined' | 'created' | 'recent';
 
 const GamesPage: React.FC = () => {
   const {
-    getOngoingGames, getPendingGames, joinGame,
+    getOngoingGames, getPendingGames, getGames, getUserGames, getUserCreatedGames, joinGame,
     setCurrentGameId, loadGames
   } = useAppStore();
   const {state: authState} = useAuthStore();
 
-  // 页面加载时设置定时器，不重复初始加载
+  // 页面加载时调用接口，并设置定时器
   useEffect(() => {
+    // 初始加载游戏列表
+    loadGames();
+
     // 每30秒刷新一次游戏列表
     const interval = setInterval(() => {
       loadGames();
@@ -22,22 +28,61 @@ const GamesPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [loadGames]);
   const [searchText, setSearchText] = useState('');
+  const [filterType, setFilterType] = useState<FilterType>('all');
 
-  const handleEnterGame = (gameId: string) => {
+  const handleEnterGame = useCallback((gameId: string) => {
     setCurrentGameId(gameId);
     Taro.navigateTo({url: `/pages/game-detail/index?gameId=${gameId}`});
-  };
+  }, [setCurrentGameId]);
 
-  const ongoingGames = getOngoingGames();
-  const pendingGames = getPendingGames();
+  const allGames = useMemo(() => getGames(), [getGames]);
+  const ongoingGames = useMemo(() => getOngoingGames(), [getOngoingGames]);
+  const pendingGames = useMemo(() => getPendingGames(), [getPendingGames]);
   const currentUser = authState.user;
 
-  const filteredOngoingGames = ongoingGames.filter((g) =>
-    g.name.includes(searchText));
-  const filteredPendingGames = pendingGames.filter((g) =>
-    g.name.includes(searchText));
+  // 获取符合筛选条件的游戏 ID 集合
+  const filteredGameIds = useMemo(() => {
+    if (!currentUser) return new Set<string>();
 
-  const handleJoinGame = async (gameId: string) => {
+    let filtered: Game[] = allGames;
+
+    // 应用筛选类型
+    switch (filterType) {
+      case 'joined':
+        filtered = getUserGames(currentUser.id);
+        break;
+      case 'created':
+        filtered = getUserCreatedGames(currentUser.id);
+        break;
+      case 'recent':
+        // 最近玩过的游戏 - 这里简化处理，实际可以根据参与时间排序
+        filtered = getUserGames(currentUser.id);
+        break;
+      case 'all':
+      default:
+        break;
+    }
+
+    // 应用搜索文本过滤
+    if (searchText) {
+      filtered = filtered.filter(g => g.name.includes(searchText));
+    }
+
+    return new Set(filtered.map(g => g.id));
+  }, [filterType, searchText, currentUser, allGames, getUserGames, getUserCreatedGames]);
+
+  // 对 ongoing 和 pending 分别应用筛选
+  const filteredOngoingGames = useMemo(() => {
+    if (filterType === 'all' && !searchText) return ongoingGames;
+    return ongoingGames.filter(g => filteredGameIds.has(g.id));
+  }, [ongoingGames, filteredGameIds, filterType, searchText]);
+
+  const filteredPendingGames = useMemo(() => {
+    if (filterType === 'all' && !searchText) return pendingGames;
+    return pendingGames.filter(g => filteredGameIds.has(g.id));
+  }, [pendingGames, filteredGameIds, filterType, searchText]);
+
+  const handleJoinGame = useCallback(async (gameId: string) => {
     if (!currentUser) return;
     try {
       await joinGame(gameId, currentUser.id);
@@ -47,7 +92,12 @@ const GamesPage: React.FC = () => {
     } catch (error: any) {
       Toast.show('games-toast', {content: error.message || '加入失败'});
     }
-  };
+  }, [currentUser, joinGame, loadGames]);
+
+  // 切换筛选标签
+  const handleFilterChange = useCallback((type: FilterType) => {
+    setFilterType(type);
+  }, []);
 
   if (!currentUser) {
     return null;
@@ -76,6 +126,34 @@ const GamesPage: React.FC = () => {
           onInput={(e) => setSearchText(e.detail.value)}
           data-testid="input-search"
         />
+      </View>
+
+      {/* 筛选标签 */}
+      <View className='filter-tabs'>
+        <View
+          className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('all')}
+        >
+          全部
+        </View>
+        <View
+          className={`filter-tab ${filterType === 'joined' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('joined')}
+        >
+          我参与的
+        </View>
+        <View
+          className={`filter-tab ${filterType === 'created' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('created')}
+        >
+          我创建的
+        </View>
+        <View
+          className={`filter-tab ${filterType === 'recent' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('recent')}
+        >
+          最近玩过
+        </View>
       </View>
 
       <ScrollView className='content' scrollY>

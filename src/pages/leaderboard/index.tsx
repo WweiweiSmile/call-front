@@ -10,6 +10,8 @@ import './index.less';
 const POLLING_INTERVAL = 3000;
 const POLLING_START_DELAY = 500;
 
+type LeaderboardType = 'net' | 'deposit' | 'luck';
+
 interface LeaderboardItem {
   userId: string;
   name: string;
@@ -30,6 +32,8 @@ const LeaderboardPage: React.FC = () => {
   const gameId = router.params?.gameId as string;
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [leaderboardType, setLeaderboardType] = useState<LeaderboardType>('net');
+  const [showPodiumAnimation, setShowPodiumAnimation] = useState(false);
   const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleBack = useCallback(() => {
@@ -55,6 +59,11 @@ const LeaderboardPage: React.FC = () => {
 
     // 初始加载
     loadData(true);
+
+    // 触发领奖台动画
+    setTimeout(() => {
+      setShowPodiumAnimation(true);
+    }, 100);
 
     // 使用 setTimeout 链式轮询，避免请求重叠
     const poll = async () => {
@@ -89,7 +98,7 @@ const LeaderboardPage: React.FC = () => {
       participants.map(p => [p.id, p])
     );
 
-    return participantBalances
+    let sorted = participantBalances
       .map((pb: UserGameBalance & { userName?: string }) => {
         const participant = participantsMap.get(pb.userId);
         const netScore = pb.depositTotal - pb.withdrawTotal;
@@ -101,9 +110,24 @@ const LeaderboardPage: React.FC = () => {
           withdrawTotal: pb.withdrawTotal,
           netScore,
         };
-      })
-      .sort((a, b) => a.netScore - b.netScore);
-  }, [gameId, isLoading, lastUpdated, getGameParticipantBalances, getGameParticipants]);
+      });
+
+    // 根据榜单类型排序
+    switch (leaderboardType) {
+      case 'net':
+        sorted = sorted.sort((a, b) => a.netScore - b.netScore);
+        break;
+      case 'deposit':
+        sorted = sorted.sort((a, b) => b.depositTotal - a.depositTotal);
+        break;
+      case 'luck':
+        // 运势榜可以根据一些随机因素或者其他逻辑
+        sorted = sorted.sort((a, b) => a.netScore - b.netScore);
+        break;
+    }
+
+    return sorted;
+  }, [gameId, isLoading, lastUpdated, leaderboardType, getGameParticipantBalances, getGameParticipants]);
 
   // 使用 useMemo 格式化最后更新时间
   const formattedLastUpdated = useMemo(() => {
@@ -113,6 +137,22 @@ const LeaderboardPage: React.FC = () => {
     const seconds = lastUpdated.getSeconds().toString().padStart(2, '0');
     return `${hours}:${minutes}:${seconds}`;
   }, [lastUpdated]);
+
+  // 获取前三名用于领奖台展示
+  const topThree = useMemo(() => {
+    if (leaderboard.length < 1) return [];
+    // 注意：领奖台排序是 2, 1, 3 的视觉顺序
+    const result = [];
+    if (leaderboard.length >= 2) result.push({...leaderboard[1], rank: 2}); // 第二名
+    result.push({...leaderboard[0], rank: 1}); // 第一名（冠军）
+    if (leaderboard.length >= 3) result.push({...leaderboard[2], rank: 3}); // 第三名
+    return result;
+  }, [leaderboard]);
+
+  // 榜单切换
+  const handleTabChange = useCallback((type: LeaderboardType) => {
+    setLeaderboardType(type);
+  }, []);
 
   if (isLoading) {
     return (
@@ -136,14 +176,77 @@ const LeaderboardPage: React.FC = () => {
         </View>
         <View className='header-right' />
       </View>
+
       <ScrollView className='content' scrollY>
+        {/* 领奖台区域 - 只在净分榜显示 */}
+        {leaderboardType === 'net' && topThree.length > 0 && (
+          <View className='podium-section'>
+            <View className='podium'>
+              {topThree.map((item, index) => {
+                const rankClass = item.rank === 1 ? 'first' : item.rank === 2 ? 'second' : 'third';
+                const crown = item.rank === 1 ? '👑' : item.rank === 2 ? '🥈' : '🥉';
+                return (
+                  <View
+                    key={item.userId}
+                    className={`podium-item ${rankClass} ${showPodiumAnimation ? 'animate-podium-bounce' : ''}`}
+                  >
+                    <Text className='podium-crown'>{crown}</Text>
+                    <Text className='podium-avatar'>👤</Text>
+                    <Text className='podium-name'>{item.name}</Text>
+                    <Text className='podium-score'>
+                      {leaderboardType === 'net'
+                        ? (item.netScore >= 0 ? '+' : '') + item.netScore.toLocaleString()
+                        : item.depositTotal.toLocaleString()
+                      }
+                    </Text>
+                    <View className='podium-platform'>
+                      <Text>{item.rank}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* 榜单切换 Tab */}
+        <View className='leaderboard-tabs'>
+          <View
+            className={`tab-item ${leaderboardType === 'net' ? 'active' : ''}`}
+            onClick={() => handleTabChange('net')}
+          >
+            净分排行
+          </View>
+          <View
+            className={`tab-item ${leaderboardType === 'deposit' ? 'active' : ''}`}
+            onClick={() => handleTabChange('deposit')}
+          >
+            存分榜
+          </View>
+          <View
+            className={`tab-item ${leaderboardType === 'luck' ? 'active' : ''}`}
+            onClick={() => handleTabChange('luck')}
+          >
+            运势
+          </View>
+        </View>
+
+        {/* 排行榜列表 */}
         {leaderboard.length > 0 ? (
           leaderboard.map((item, index) => (
-            <View key={item.userId} className={`leaderboard-card top-${index + 1}`}>
+            <View
+              key={item.userId}
+              className={`leaderboard-card top-${index + 1} ${
+                authState.user?.id === item.userId ? 'current-user' : ''
+              }`}
+            >
               <View className='card-left'>
                 <Text className={`rank rank-${index + 1}`}>{index + 1}</Text>
                 <View className='user-info'>
                   <Text className='name'>{item.name}</Text>
+                  {authState.user?.id === item.userId && (
+                    <Text className='self-tag'>我</Text>
+                  )}
                 </View>
               </View>
               <View className='card-right'>
@@ -156,7 +259,9 @@ const LeaderboardPage: React.FC = () => {
                   <Text className='stat-value'>{item.withdrawTotal.toLocaleString()}</Text>
                 </View>
                 <View className='stat'>
-                  <Text className='stat-label'>净分</Text>
+                  <Text className='stat-label'>
+                    {leaderboardType === 'net' ? '净分' : leaderboardType === 'deposit' ? '存分' : '净分'}
+                  </Text>
                   <Text className={`stat-value ${item.netScore >= 0 ? 'positive' : 'negative'}`}>
                     {item.netScore >= 0 ? '+' : ''}{item.netScore.toLocaleString()}
                   </Text>
@@ -166,6 +271,7 @@ const LeaderboardPage: React.FC = () => {
           ))
         ) : (
           <View className='empty-state'>
+            <Text>( ´･･)ﾉ(._.`)</Text>
             <Text>暂无排行榜数据</Text>
           </View>
         )}
