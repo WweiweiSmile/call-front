@@ -48,6 +48,8 @@ export function useLoadMore<TData, TParams = any>(
   const apiRef = useRef(api);
   const paramsRef = useRef(params);
   const isParamChangeTriggered = useRef(false);
+  const isLoadingRef = useRef(false);
+  const requestCounterRef = useRef(0);
 
   // 更新 api 引用
   useEffect(() => {
@@ -63,8 +65,15 @@ export function useLoadMore<TData, TParams = any>(
 
   // 加载数据的核心方法
   const fetchData = useCallback(async (page: number, isRefresh: boolean = false) => {
-    if (loading) return;
+    // 如果正在加载且不是刷新操作，则直接返回
+    if (isLoadingRef.current && !isRefresh) {
+      return;
+    }
 
+    // 增加请求计数器，用于标识这是最新的请求
+    const currentRequestId = ++requestCounterRef.current;
+
+    isLoadingRef.current = true;
     setLoading(true);
     if (isRefresh) {
       setRefreshing(true);
@@ -77,6 +86,11 @@ export function useLoadMore<TData, TParams = any>(
         ...paramsRef.current,
       } as any);
 
+      // 只有当这个请求还是最新的请求时才更新状态
+      if (requestCounterRef.current !== currentRequestId) {
+        return;
+      }
+
       setTotal(response.total);
 
       if (isRefresh || page === defaultCurrent) {
@@ -87,21 +101,29 @@ export function useLoadMore<TData, TParams = any>(
 
       setCurrent(page);
     } catch (error) {
+      // 只有当这个请求还是最新的请求时才处理错误
+      if (requestCounterRef.current !== currentRequestId) {
+        return;
+      }
       console.error('加载数据失败:', error);
       throw error;
     } finally {
-      setLoading(false);
-      if (isRefresh) {
-        setRefreshing(false);
+      // 只有当这个请求还是最新的请求时才更新 loading 状态
+      if (requestCounterRef.current === currentRequestId) {
+        isLoadingRef.current = false;
+        setLoading(false);
+        if (isRefresh) {
+          setRefreshing(false);
+        }
       }
     }
-  }, [loading, pageSize, defaultCurrent]);
+  }, [pageSize, defaultCurrent]);
 
   // 加载更多
   const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return;
+    if (isLoadingRef.current || !hasMore) return;
     await fetchData(current + 1, false);
-  }, [current, loading, hasMore, fetchData]);
+  }, [current, hasMore, fetchData]);
 
   // 刷新
   const refresh = useCallback(async () => {

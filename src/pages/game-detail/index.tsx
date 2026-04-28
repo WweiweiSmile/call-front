@@ -391,7 +391,7 @@ const GameDetailPage: React.FC = () => {
       )}
 
       {/* 操作按钮 */}
-      {(viewMode === 'self' || (viewMode === 'manage' && selectedUserId)) && (
+      {isCreator && ((viewMode === 'self' || (viewMode === 'manage' && selectedUserId))) && (
         <View className='action-buttons-section'>
           <Button
             type='success'
