@@ -1,9 +1,9 @@
-import React, {useEffect, useState, useRef, useCallback, useMemo} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ScrollView, Text, View} from '@tarojs/components';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import type { UserGameBalance, User } from '../../store/mockData';
+import type {User, UserGameBalance} from '../../store/mockData';
 import './index.less';
 
 // 轮询间隔（毫秒）
@@ -20,6 +20,10 @@ interface LeaderboardItem {
   netScore: number;
 }
 
+interface LeaderboardItemWithRank extends LeaderboardItem {
+  rank: number;
+}
+
 const LeaderboardPage: React.FC = () => {
   const router = useRouter();
   const {
@@ -34,7 +38,7 @@ const LeaderboardPage: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [leaderboardType, setLeaderboardType] = useState<LeaderboardType>('net');
   const [showPodiumAnimation, setShowPodiumAnimation] = useState(false);
-  const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingTimerRef = useRef<number | null>(null);
 
   const handleBack = useCallback(() => {
     Taro.navigateBack();
@@ -115,7 +119,18 @@ const LeaderboardPage: React.FC = () => {
     // 根据榜单类型排序
     switch (leaderboardType) {
       case 'net':
-        sorted = sorted.sort((a, b) => a.netScore - b.netScore);
+        sorted = sorted.sort((a, b) => {
+          // 判断是否有存分或取分操作
+          const aHasActivity = a.depositTotal > 0 || a.withdrawTotal > 0;
+          const bHasActivity = b.depositTotal > 0 || b.withdrawTotal > 0;
+
+          // 如果一个有操作一个没有，有操作的排前面
+          if (aHasActivity && !bHasActivity) return -1;
+          if (!aHasActivity && bHasActivity) return 1;
+
+          // 都有操作或都没有操作时，按净分从大到小排序
+          return b.netScore - a.netScore;
+        });
         break;
       case 'deposit':
         sorted = sorted.sort((a, b) => b.depositTotal - a.depositTotal);
@@ -139,10 +154,10 @@ const LeaderboardPage: React.FC = () => {
   }, [lastUpdated]);
 
   // 获取前三名用于领奖台展示
-  const topThree = useMemo(() => {
+  const topThree = useMemo((): LeaderboardItemWithRank[] => {
     if (leaderboard.length < 1) return [];
     // 注意：领奖台排序是 2, 1, 3 的视觉顺序
-    const result = [];
+    const result: LeaderboardItemWithRank[] = [];
     if (leaderboard.length >= 2) result.push({...leaderboard[1], rank: 2}); // 第二名
     result.push({...leaderboard[0], rank: 1}); // 第一名（冠军）
     if (leaderboard.length >= 3) result.push({...leaderboard[2], rank: 3}); // 第三名
@@ -174,7 +189,7 @@ const LeaderboardPage: React.FC = () => {
             <Text className='update-time'>更新于 {formattedLastUpdated}</Text>
           )}
         </View>
-        <View className='header-right' />
+        <View className='header-right'/>
       </View>
 
       <ScrollView className='content' scrollY>
@@ -182,7 +197,7 @@ const LeaderboardPage: React.FC = () => {
         {leaderboardType === 'net' && topThree.length > 0 && (
           <View className='podium-section'>
             <View className='podium'>
-              {topThree.map((item, index) => {
+              {topThree.map((item) => {
                 const rankClass = item.rank === 1 ? 'first' : item.rank === 2 ? 'second' : 'third';
                 const crown = item.rank === 1 ? '👑' : item.rank === 2 ? '🥈' : '🥉';
                 return (
