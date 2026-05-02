@@ -10,7 +10,6 @@ export interface CreateGameRequest {
   name: string;
   description?: string;
   startTime?: string;
-  endTime?: string;
 }
 
 // 加入游戏请求

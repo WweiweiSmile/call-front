@@ -1,7 +1,7 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect} from 'react';
 import {gameApi} from '../services/api';
 import {Game} from './mockData';
-import {AppState, initialState} from './types';
+import {AppState} from './types';
 
 interface UseGameStoreOptions {
   state: AppState;
@@ -36,7 +36,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
       };
       setState((prev) => {
         const gameIndex = prev.games.findIndex(g => g.id === gameId);
-        let newGames;
+        let newGames: Game[];
         if (gameIndex >= 0) {
           newGames = [...prev.games];
           newGames[gameIndex] = game;
@@ -81,7 +81,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
   const loadMyGames = useCallback(async (status?: string) => {
     setLoading(true);
     try {
-      const response: any = await gameApi.getMyGames(status ? { status } : undefined);
+      const response: any = await gameApi.getMyGames(status ? {status} : undefined);
       const games: Game[] = response.list.map((g: any) => ({
         id: String(g.id),
         name: g.name,
@@ -156,21 +156,20 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
 
   // 创建游戏
   const createGame = useCallback(
-    async (game: Omit<Game, 'id' | 'creatorId' | 'creatorName' | 'status' | 'participantCount'>, currentUser: { id: string; name: string }) => {
+    async (game: Omit<Game, 'id' | 'creatorId' | 'creatorName' | 'status' | 'participantCount'>) => {
       setLoading(true);
       try {
         const newGame: any = await gameApi.createGame({
           name: game.name,
           description: game.description,
           startTime: game.startTime,
-          endTime: game.endTime,
         });
 
         const gameData: Game = {
           id: String(newGame.id),
           name: newGame.name,
           creatorId: String(newGame.creatorId),
-          creatorName: currentUser.name,
+          creatorName: newGame.creatorName,
           status: newGame.status as 'pending' | 'ongoing' | 'ended',
           participantCount: newGame.playerCount || 0,
           description: newGame.description,
@@ -196,7 +195,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
 
   // 加入游戏
   const joinGame = useCallback(
-    async (gameId: string, currentUserId: string) => {
+    async (gameId: string) => {
       setLoading(true);
       try {
         await gameApi.joinGame(parseInt(gameId));

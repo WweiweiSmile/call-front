@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, {useCallback, useState} from 'react';
 import {Text, View} from '@tarojs/components';
 import {Button, Form, Input as NutInput, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
@@ -12,7 +12,6 @@ import CustomDatePicker from "../../components/date-picker";
 interface FormValues {
   name: string;
   description?: string;
-  startTime?: Date;
 }
 
 const CreateGamePage: React.FC = () => {
@@ -20,11 +19,15 @@ const CreateGamePage: React.FC = () => {
   const {createGame} = useAppStore();
   const {state: authState} = useAuthStore();
   const [form] = Form.useForm() as [FormInstance];
+  const [startTime, setStartTime] = useState<Date | null>(null);
 
   const handleSubmit = useCallback(async (values: FormValues) => {
-    if (!values.name?.trim() || !authState.user) {
+    if (!values.name?.trim() || !authState.user || !startTime) {
       if (!values.name?.trim()) {
         Toast.show('create-game-toast', {content: '请输入游戏名称'});
+      }
+      if (!startTime) {
+        Toast.show('create-game-toast', {content: '请选择开始时间'});
       }
       return;
     }
@@ -33,19 +36,18 @@ const CreateGamePage: React.FC = () => {
       await createGame({
         name: values.name,
         description: values.description || '',
-        startTime: values.startTime ? values.startTime.toISOString() : '',
-        endTime: '',
-      }, authState.user);
+        startTime: startTime.toISOString(),
+      });
       Toast.show('create-game-toast', {content: '创建成功'});
       await Taro.navigateBack();
     } catch (error: any) {
       Toast.show('create-game-toast', {content: error.message || '创建失败'});
     }
-  }, [authState.user, createGame]);
+  }, [authState.user, createGame, startTime]);
 
   // 如果未认证，不渲染内容（会自动跳转）
   if (!isAuthenticated || !authState.user) {
-    return <View />;
+    return <View/>;
   }
 
   return (
@@ -80,6 +82,8 @@ const CreateGamePage: React.FC = () => {
           <Form.Item label='开始时间' required>
             <CustomDatePicker
               type={'datetime'}
+              value={startTime}
+              onChange={(date) => setStartTime(date)}
             />
           </Form.Item>
           <Form.Item>
