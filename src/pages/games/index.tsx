@@ -208,6 +208,31 @@ const GamesPage: React.FC = () => {
     }
   }, [hasMore, loading, loadMore]);
 
+  // 游戏卡片点击事件
+  const handleGameCardClick = useCallback((game: Game) => {
+    const hasJoined = game.isJoined;
+    const isCreator = game.creatorId === (currentUser?.id || '');
+    const isJoinButton = !hasJoined && !isCreator;
+
+    if (!isJoinButton) {
+      handleEnterGame(game.id);
+    }
+  }, [currentUser, handleEnterGame]);
+
+  // 游戏按钮点击事件
+  const handleGameButtonClick = useCallback((e: any, game: Game) => {
+    e.stopPropagation();
+    const hasJoined = game.isJoined;
+    const isCreator = game.creatorId === (currentUser?.id || '');
+    const isJoinButton = !hasJoined && !isCreator;
+
+    if (isJoinButton) {
+      handleJoinGame(game.id);
+    } else {
+      handleEnterGame(game.id);
+    }
+  }, [currentUser, handleJoinGame, handleEnterGame]);
+
   if (!currentUser) {
     return null;
   }
@@ -285,6 +310,7 @@ const GamesPage: React.FC = () => {
                 <View
                   key={game.id}
                   className={`game-card ${!hasJoined && !isCreator ? 'not-joined' : ''}`}
+                  onClick={() => handleGameCardClick(game)}
                 >
                   <View className='game-info'>
                     <Text className='game-name'>🎮 {game.name}</Text>
@@ -298,13 +324,7 @@ const GamesPage: React.FC = () => {
                   <Button
                     type={hasJoined ? 'primary' : 'success'}
                     size='small'
-                    onClick={() => {
-                      if (hasJoined) {
-                        handleEnterGame(game.id);
-                      } else {
-                        handleJoinGame(game.id);
-                      }
-                    }}
+                    onClick={(e) => handleGameButtonClick(e, game)}
                     data-testid={`btn-game-action-${game.id}`}
                   >
                     {isCreator
