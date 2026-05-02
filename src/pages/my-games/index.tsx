@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
 import { useRequireAuth } from '../../components/RequireAuth';
@@ -70,6 +70,11 @@ const MyGamesPage: React.FC = () => {
     const statusParam = filterType === 'all' || filterType === 'recent' ? undefined : filterType;
     setParams({ status: statusParam });
   }, [filterType, setParams]);
+
+  // 页面显示时刷新数据
+  useDidShow(() => {
+    refresh();
+  });
 
   const currentUser = authState.user;
 

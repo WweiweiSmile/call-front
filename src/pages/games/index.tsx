@@ -1,7 +1,7 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {Input, ScrollView, Text, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
-import Taro from '@tarojs/taro';
+import Taro, {useDidShow} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import {useRequireAuth} from '../../components/RequireAuth';
@@ -88,6 +88,11 @@ const GamesPage: React.FC = () => {
   React.useEffect(() => {
     setParams({filterType});
   }, [filterType, setParams]);
+
+  // 页面显示时刷新数据
+  useDidShow(() => {
+    refresh();
+  });
 
   const handleEnterGame = useCallback((gameId: string) => {
     setCurrentGameId(gameId);
