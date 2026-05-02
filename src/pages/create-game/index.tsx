@@ -4,6 +4,7 @@ import {Button, Form, Input as NutInput, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
+import {useRequireAuth} from '../../components/RequireAuth';
 import type {FormInstance} from '@nutui/nutui-react-taro/dist/types/packages/form/types';
 import './index.less';
 import CustomDatePicker from "../../components/date-picker";
@@ -15,6 +16,7 @@ interface FormValues {
 }
 
 const CreateGamePage: React.FC = () => {
+  const {isAuthenticated} = useRequireAuth();
   const {createGame} = useAppStore();
   const {state: authState} = useAuthStore();
   const [form] = Form.useForm() as [FormInstance];
@@ -41,8 +43,9 @@ const CreateGamePage: React.FC = () => {
     }
   }, [authState.user, createGame]);
 
-  if (!authState.user) {
-    return null;
+  // 如果未认证，不渲染内容（会自动跳转）
+  if (!isAuthenticated || !authState.user) {
+    return <View />;
   }
 
   return (

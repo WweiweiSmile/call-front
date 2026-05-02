@@ -4,6 +4,7 @@ import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
+import {useRequireAuth} from '../../components/RequireAuth';
 import type {Game, User as UserType, UserGameBalance} from '../../store/mockData';
 import './index.less';
 
@@ -134,6 +135,7 @@ const OperationPopup: React.FC<OperationPopupProps> = (props) => {
 };
 
 const GameDetailPage: React.FC = () => {
+  const {isAuthenticated} = useRequireAuth();
   const router = useRouter();
   const {
     state,
@@ -149,6 +151,7 @@ const GameDetailPage: React.FC = () => {
     loadGameParticipantBalances,
     loadGameTransactions,
     loadGames,
+    joinGame,
   } = useAppStore();
   const {state: authState} = useAuthStore();
 
@@ -168,6 +171,63 @@ const GameDetailPage: React.FC = () => {
   const [remark, setRemark] = useState('');
 
   const quickAmounts = [100, 500, 1000, 5000];
+  const inviteGameId = router.params?.inviteGameId as string | undefined;
+
+  // 分享功能
+  const handleShare = useCallback(() => {
+    // 生成分享链接 - 使用 hash 路由格式
+    let shareUrl = '';
+    try {
+      // 尝试使用 window.location（Web 环境）
+      if (typeof window !== 'undefined' && window.location) {
+        // 构建 hash 路由格式的链接
+        shareUrl = `${window.location.origin}${window.location.pathname}#/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`;
+      } else {
+        // 降级方案：构建一个 hash 路由格式的链接
+        shareUrl = `#/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`;
+      }
+    } catch (e) {
+      // 如果获取失败，使用降级方案
+      shareUrl = `#/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`;
+    }
+
+    // 复制到剪贴板
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        Toast.show('game-detail-toast', {content: '分享链接已复制'});
+      }).catch(() => {
+        // 降级方案
+        const textArea = document.createElement('textarea');
+        textArea.value = shareUrl;
+        textArea.style.position = 'fixed';
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          Toast.show('game-detail-toast', {content: '分享链接已复制'});
+        } catch {
+          Toast.show('game-detail-toast', {content: '复制失败，请手动复制链接'});
+        }
+        document.body.removeChild(textArea);
+      });
+    } else {
+      // 降级方案
+      const textArea = document.createElement('textarea');
+      textArea.value = shareUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        Toast.show('game-detail-toast', {content: '分享链接已复制'});
+      } catch {
+        Toast.show('game-detail-toast', {content: '复制失败，请手动复制链接'});
+      }
+      document.body.removeChild(textArea);
+    }
+  }, [gameId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -182,6 +242,30 @@ const GameDetailPage: React.FC = () => {
     };
     loadData();
   }, [gameId, currentUser, setCurrentGameId, loadGames, loadUserBalance, loadGameTransactions, loadGameParticipantBalances]);
+
+  // 处理邀请链接自动加入游戏
+  useEffect(() => {
+    const handleInvite = async () => {
+      if (inviteGameId && currentUser && !isLoading) {
+        const game = state.games.find((g) => g.id === inviteGameId);
+        const hasJoined = game?.isJoined;
+        const isCreator = game?.creatorId === currentUser.id;
+
+        if (!hasJoined && !isCreator && game) {
+          try {
+            await joinGame(inviteGameId, currentUser.id);
+            Toast.show('game-detail-toast', {content: '成功加入游戏'});
+            // 重新加载数据
+            await loadGames();
+            await loadUserBalance(inviteGameId);
+          } catch (error: any) {
+            Toast.show('game-detail-toast', {content: error.message || '加入失败'});
+          }
+        }
+      }
+    };
+    handleInvite();
+  }, [inviteGameId, currentUser, isLoading, state.games, joinGame, loadGames, loadUserBalance]);
 
   // ========== 所有 hooks 必须在任何条件返回之前定义 ==========
 
@@ -282,8 +366,9 @@ const GameDetailPage: React.FC = () => {
 
   // ========== 条件返回从这里开始 ==========
 
-  if (!gameId || !currentUser) {
-    return null;
+  // 如果未认证，不渲染内容（会自动跳转）
+  if (!isAuthenticated || !gameId || !currentUser) {
+    return <View />;
   }
 
   if (isLoading) {
@@ -341,7 +426,7 @@ const GameDetailPage: React.FC = () => {
       <View className='header'>
         <View className='header-left' onClick={(e) => {
           e.stopPropagation();
-          Taro.navigateBack();
+          Taro.redirectTo({url: '/pages/index/index'})
         }} data-testid="btn-game-detail-back">
           <Text className='back-icon'>←</Text>
         </View>
@@ -352,7 +437,9 @@ const GameDetailPage: React.FC = () => {
           </Text>
         </View>
         <View className='header-right'>
-          <Text className='share-icon'>分享</Text>
+          {isCreator && (
+            <Text className='share-icon' onClick={handleShare}>分享</Text>
+          )}
         </View>
       </View>
 

@@ -1,6 +1,6 @@
-import {useState, useCallback} from 'react';
+import {useCallback, useState} from 'react';
 import {Text, View} from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, {useRouter} from '@tarojs/taro';
 import {Button, Form, Input, Toast} from '@nutui/nutui-react-taro';
 import {useAuthStore} from '../../store/auth';
 import './index.less';
@@ -14,9 +14,13 @@ interface FormValues {
 }
 
 function LoginPage() {
+  const router = useRouter();
   const {login, register, state} = useAuthStore();
   const [mode, setMode] = useState<ModeType>('login');
   const [form] = Form.useForm();
+
+  // 获取 redirectUri
+  const redirectUri = router.params?.redirectUri as string | undefined;
 
   // 提取重复的模式切换逻辑
   const switchMode = useCallback((newMode: ModeType) => {
@@ -38,9 +42,21 @@ function LoginPage() {
         await register(values.username, values.password, values.nickname || values.username);
         Toast.show('login-toast', {content: '注册成功'});
       }
-      Taro.redirectTo({
-        url: '/pages/index/index',
-      });
+
+      // 如果有 redirectUri，跳转到指定页面，否则跳转到首页
+      if (redirectUri) {
+        // 解码 redirectUri 并跳转
+        const decodedRedirectUri = decodeURIComponent(redirectUri);
+        // 确保路径格式正确
+        const targetUrl = decodedRedirectUri.startsWith('/') ? decodedRedirectUri : `/${decodedRedirectUri}`;
+        Taro.redirectTo({
+          url: targetUrl,
+        });
+      } else {
+        Taro.redirectTo({
+          url: '/pages/index/index',
+        });
+      }
     } catch (error: any) {
       Toast.show('login-toast', {content: <View data-testid="login-error">{error.message || '操作失败'}</View>});
     }

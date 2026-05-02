@@ -4,6 +4,7 @@ import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
+import {useRequireAuth} from '../../components/RequireAuth';
 import {useLoadMore} from '../../hooks';
 import {gameApi} from '../../services/api';
 import type {GameResponse} from '../../models/service';
@@ -18,6 +19,7 @@ interface GamesFilterParams {
 }
 
 const GamesPage: React.FC = () => {
+  const {isAuthenticated} = useRequireAuth();
   const {
     joinGame,
     setCurrentGameId
@@ -233,8 +235,9 @@ const GamesPage: React.FC = () => {
     }
   }, [currentUser, handleJoinGame, handleEnterGame]);
 
-  if (!currentUser) {
-    return null;
+  // 如果未认证，不渲染内容（会自动跳转）
+  if (!isAuthenticated || !currentUser) {
+    return <View />;
   }
 
   return (

@@ -3,6 +3,7 @@ import {ScrollView, Text, View} from '@tarojs/components';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
+import {useRequireAuth} from '../../components/RequireAuth';
 import type {User, UserGameBalance} from '../../store/mockData';
 import './index.less';
 
@@ -25,6 +26,7 @@ interface LeaderboardItemWithRank extends LeaderboardItem {
 }
 
 const LeaderboardPage: React.FC = () => {
+  const {isAuthenticated} = useRequireAuth();
   const router = useRouter();
   const {
     getGameParticipantBalances,
@@ -188,6 +190,11 @@ const LeaderboardPage: React.FC = () => {
   const handleTabChange = useCallback((type: LeaderboardType) => {
     setLeaderboardType(type);
   }, []);
+
+  // 如果未认证，不渲染内容（会自动跳转）
+  if (!isAuthenticated) {
+    return <View />;
+  }
 
   if (isLoading) {
     return (

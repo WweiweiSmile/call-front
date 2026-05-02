@@ -4,10 +4,12 @@ import Taro from '@tarojs/taro';
 import { Cell, Button, Dialog } from '@nutui/nutui-react-taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
+import { useRequireAuth } from '../../components/RequireAuth';
 import type { Transaction, UserGameBalance } from '../../store/mockData';
 import './index.less';
 
 const ProfilePage: React.FC = () => {
+  const {isAuthenticated} = useRequireAuth();
   const {
     getUserGames,
     getUserCreatedGames,
@@ -69,8 +71,9 @@ const ProfilePage: React.FC = () => {
     });
   }, [logout]);
 
-  if (!currentUser) {
-    return null;
+  // 如果未认证，不渲染内容（会自动跳转）
+  if (!isAuthenticated || !currentUser) {
+    return <View />;
   }
 
   return (
