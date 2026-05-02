@@ -3,6 +3,7 @@
 // ============================================
 
 @import '../../styles/theme.less';
+@import '../../styles/animations.less';
 
 .leaderboard-page {
   height: 100vh;
@@ -87,9 +88,10 @@
           display: flex;
           flex-direction: column;
           align-items: center;
-          opacity: 0;
+          opacity: 1; // 默认可见，作为保底
 
           &.animate-podium-bounce {
+            opacity: 0; // 动画开始时设为0，让动画接管
             animation: podiumBounce 0.8s ease-out forwards;
           }
 

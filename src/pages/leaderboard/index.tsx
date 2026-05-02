@@ -64,11 +64,6 @@ const LeaderboardPage: React.FC = () => {
     // 初始加载
     loadData(true);
 
-    // 触发领奖台动画
-    setTimeout(() => {
-      setShowPodiumAnimation(true);
-    }, 100);
-
     // 使用 setTimeout 链式轮询，避免请求重叠
     const poll = async () => {
       if (!pollingTimerRef.current) return;
@@ -88,14 +83,27 @@ const LeaderboardPage: React.FC = () => {
     };
   }, [gameId, authState.user, loadData]);
 
+  // 当数据加载完成后，触发领奖台动画
+  useEffect(() => {
+    if (!isLoading && leaderboard && leaderboard.length > 0) {
+      setTimeout(() => {
+        setShowPodiumAnimation(true);
+      }, 50);
+      // 兜底方案：即使动画有问题，1秒后也强制显示
+      setTimeout(() => {
+        setShowPodiumAnimation(true);
+      }, 1000);
+    }
+  }, [isLoading]);
+
   // 使用 useMemo 计算排行榜数据
   const leaderboard = useMemo((): LeaderboardItem[] => {
     if (!gameId || isLoading) {
       return [];
     }
 
-    const participantBalances = getGameParticipantBalances(gameId);
-    const participants = getGameParticipants(gameId);
+    const participantBalances = getGameParticipantBalances(gameId) || [];
+    const participants = getGameParticipants(gameId) || [];
 
     // 预先构建参与者 Map，避免 O(n*m) 查找
     const participantsMap = new Map<string, User>(
@@ -155,12 +163,24 @@ const LeaderboardPage: React.FC = () => {
 
   // 获取前三名用于领奖台展示
   const topThree = useMemo((): LeaderboardItemWithRank[] => {
-    if (leaderboard.length < 1) return [];
+    if (!leaderboard || leaderboard.length < 1) return [];
     // 注意：领奖台排序是 2, 1, 3 的视觉顺序
     const result: LeaderboardItemWithRank[] = [];
-    if (leaderboard.length >= 2) result.push({...leaderboard[1], rank: 2}); // 第二名
-    result.push({...leaderboard[0], rank: 1}); // 第一名（冠军）
-    if (leaderboard.length >= 3) result.push({...leaderboard[2], rank: 3}); // 第三名
+
+    // 始终添加第一名
+    if (leaderboard.length >= 1) {
+      // 如果有第二名，先添加第二名
+      if (leaderboard.length >= 2) {
+        result.push({...leaderboard[1], rank: 2});
+      }
+      // 添加第一名（冠军）
+      result.push({...leaderboard[0], rank: 1});
+      // 如果有第三名，添加第三名
+      if (leaderboard.length >= 3) {
+        result.push({...leaderboard[2], rank: 3});
+      }
+    }
+
     return result;
   }, [leaderboard]);
 
