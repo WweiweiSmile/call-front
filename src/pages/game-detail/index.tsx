@@ -151,6 +151,7 @@ const GameDetailPage: React.FC = () => {
     loadGameParticipantBalances,
     loadGameTransactions,
     loadGames,
+    loadGame,
     joinGame,
   } = useAppStore();
   const {state: authState} = useAuthStore();
@@ -233,7 +234,19 @@ const GameDetailPage: React.FC = () => {
     const loadData = async () => {
       if (gameId && currentUser) {
         setCurrentGameId(gameId);
-        await loadGames();
+        // 先查找游戏是否在列表中，如果不在，单独加载游戏详情
+        let game = state.games.find((g) => g.id === gameId);
+        if (!game) {
+          try {
+            game = await loadGame(gameId);
+          } catch (error) {
+            console.error('加载游戏详情失败:', error);
+          }
+        }
+        if (!game) {
+          // 如果还是找不到，再尝试加载游戏列表
+          await loadGames();
+        }
         await loadUserBalance(gameId);
         await loadGameTransactions(gameId);
         await loadGameParticipantBalances(gameId);
@@ -241,7 +254,7 @@ const GameDetailPage: React.FC = () => {
       }
     };
     loadData();
-  }, [gameId, currentUser, setCurrentGameId, loadGames, loadUserBalance, loadGameTransactions, loadGameParticipantBalances]);
+  }, [gameId, currentUser, setCurrentGameId, loadGames, loadGame, loadUserBalance, loadGameTransactions, loadGameParticipantBalances, state.games]);
 
   // 处理邀请链接自动加入游戏
   useEffect(() => {

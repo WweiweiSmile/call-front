@@ -18,6 +18,40 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
     return () => clearInterval(interval);
   }, [setState]);
 
+  // 从后端加载单个游戏详情
+  const loadGame = useCallback(async (gameId: string) => {
+    try {
+      const g: any = await gameApi.getGame(gameId);
+      const game: Game = {
+        id: String(g.id),
+        name: g.name,
+        creatorId: String(g.creatorId),
+        creatorName: g.creatorName || '创建者',
+        status: g.status as 'pending' | 'ongoing' | 'ended',
+        participantCount: g.playerCount,
+        description: g.description,
+        startTime: g.startTime,
+        endTime: g.endTime,
+        isJoined: g.isJoined,
+      };
+      setState((prev) => {
+        const gameIndex = prev.games.findIndex(g => g.id === gameId);
+        let newGames;
+        if (gameIndex >= 0) {
+          newGames = [...prev.games];
+          newGames[gameIndex] = game;
+        } else {
+          newGames = [game, ...prev.games];
+        }
+        return {...prev, games: newGames};
+      });
+      return game;
+    } catch (error) {
+      console.error('加载游戏详情失败:', error);
+      throw error;
+    }
+  }, [setState]);
+
   // 从后端加载游戏列表
   const loadGames = useCallback(async () => {
     setLoading(true);
@@ -213,6 +247,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
   );
 
   return {
+    loadGame,
     loadGames,
     loadMyGames,
     getGames,
