@@ -1,4 +1,9 @@
-import {Game, Transaction, User, UserGameBalance} from './mockData';
+import type {
+  FrontendGame as Game,
+  FrontendTransaction as Transaction,
+  FrontendUser as User,
+  FrontendUserGameBalance as UserGameBalance,
+} from '../models/types';
 
 // 全局状态类型
 export interface AppState {

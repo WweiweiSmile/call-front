@@ -1,21 +1,27 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {ScrollView, Text, View} from '@tarojs/components';
 import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import type { Game, User, UserGameBalance } from '../../store/mockData';
+import type {Game, User as UserType, UserGameBalance} from '../../store/mockData';
 import './index.less';
 
 type ViewMode = 'self' | 'manage';
 type OperationType = 'deposit' | 'withdraw';
+
+// 兼容两种 User 类型的接口
+interface DisplayUser {
+  id: string;
+  name: string;
+}
 
 interface OperationPopupProps {
   visible: boolean;
   type: OperationType;
   viewMode: ViewMode;
   game: Game;
-  displayUser: User | null | undefined;
+  displayUser: DisplayUser | null | undefined;
   balance: UserGameBalance | null;
   amount: string;
   remark: string;
@@ -27,21 +33,22 @@ interface OperationPopupProps {
 }
 
 // 提取存分/取分弹窗组件
-const OperationPopup: React.FC<OperationPopupProps> = ({
-  visible,
-  type,
-  viewMode,
-  game,
-  displayUser,
-  balance,
-  amount,
-  remark,
-  quickAmounts,
-  onClose,
-  onAmountChange,
-  onRemarkChange,
-  onConfirm,
-}) => {
+const OperationPopup: React.FC<OperationPopupProps> = (props) => {
+  const {
+    visible,
+    type,
+    viewMode,
+    game,
+    displayUser,
+    balance,
+    amount,
+    remark,
+    quickAmounts,
+    onClose,
+    onAmountChange,
+    onRemarkChange,
+    onConfirm,
+  } = props
   const isDeposit = type === 'deposit';
   const title = viewMode === 'manage' ? (isDeposit ? '代理存分' : '代理取分') : (isDeposit ? '存分' : '取分');
   const buttonType = isDeposit ? 'success' : 'warning';
@@ -146,8 +153,8 @@ const GameDetailPage: React.FC = () => {
   const {state: authState} = useAuthStore();
 
   // 从 URL 参数获取 gameId
-  const gameIdFromUrl = router.params?.gameId as string;
-  const gameId = gameIdFromUrl || state.currentGameId;
+  const gameIdFromUrl = router.params?.gameId as string | undefined;
+  const gameId = gameIdFromUrl || state.currentGameId || '';
   const currentUser = authState.user;
 
   const [viewMode, setViewMode] = useState<ViewMode>('self');
@@ -178,21 +185,28 @@ const GameDetailPage: React.FC = () => {
 
   // ========== 所有 hooks 必须在任何条件返回之前定义 ==========
 
-  const getDisplayUser = useCallback(() => {
-    if (viewMode === 'self') {
-      return currentUser;
+  const getDisplayUser = useCallback((): DisplayUser | null => {
+    if (viewMode === 'self' && currentUser) {
+      // 将 AuthUser 转换为兼容类型
+      return {
+        id: currentUser.id,
+        name: currentUser.nickname || currentUser.username,
+      };
     }
     if (selectedUserId) {
       const participants = getGameParticipants(gameId) || [];
-      return participants.find((u) => u.id === selectedUserId);
+      const participant = participants.find((u) => u.id === selectedUserId);
+      if (participant) {
+        return participant as DisplayUser;
+      }
     }
     return null;
   }, [viewMode, selectedUserId, currentUser, gameId, getGameParticipants]);
 
   const displayUser = getDisplayUser();
-  const balance = displayUser ? getUserBalance(gameId, displayUser.id) : null;
+  const balance = (displayUser ? getUserBalance(gameId, displayUser.id) : null) ?? null;
   const transactions = (displayUser ? getGameTransactions(gameId, displayUser.id) : getGameTransactions(gameId)) || [];
-  const participants = getGameParticipants(gameId) || [];
+  const participants = (getGameParticipants(gameId) || []) as UserType[];
 
   // 使用 useMemo 计算所有参与者的整体平衡状态
   const overallBalance = useMemo(() => {
@@ -241,7 +255,7 @@ const GameDetailPage: React.FC = () => {
     try {
       const targetUserId = viewMode === 'manage' && selectedUserId ? selectedUserId : undefined;
       const operation = type === 'deposit' ? deposit : withdraw;
-      await operation(gameId, numAmount, currentUser.id, targetUserId, remark);
+      await operation(gameId, numAmount, currentUser?.id || '', targetUserId, remark);
 
       if (type === 'deposit') {
         setShowDepositPopup(false);
@@ -391,7 +405,7 @@ const GameDetailPage: React.FC = () => {
       )}
 
       {/* 操作按钮 */}
-      {isCreator && ((viewMode === 'self' || (viewMode === 'manage' && selectedUserId))) && (
+      {isCreator && viewMode === 'manage' && selectedUserId && (
         <View className='action-buttons-section'>
           <Button
             type='success'
@@ -503,8 +517,8 @@ const GameDetailPage: React.FC = () => {
         </View>
       )}
 
-      {/* 结束游戏按钮（仅创建者可见） */}
-      {isCreator && game?.status !== 'ended' && (
+      {/* 结束游戏按钮（仅创建者在管理模式下可见） */}
+      {isCreator && game?.status !== 'ended' && viewMode === 'manage' && (
         <View className='end-game-section'>
           <Button
             type='danger'
