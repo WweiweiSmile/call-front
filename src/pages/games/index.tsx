@@ -213,23 +213,23 @@ const GamesPage: React.FC = () => {
   // 游戏卡片点击事件
   const handleGameCardClick = useCallback((game: Game) => {
     const hasJoined = game.isJoined;
-    const isCreator = game.creatorId === (currentUser?.id || '');
-    const isJoinButton = !hasJoined && !isCreator;
 
-    if (!isJoinButton) {
+    if (hasJoined) {
       handleEnterGame(game.id);
     }
   }, [currentUser, handleEnterGame]);
 
   // 游戏按钮点击事件
   const handleGameButtonClick = useCallback((e: any, game: Game) => {
-    e.stopPropagation();
     const hasJoined = game.isJoined;
-    const isCreator = game.creatorId === (currentUser?.id || '');
-    const isJoinButton = !hasJoined && !isCreator;
+    const isJoinButton = !hasJoined;
+
+    console.log('game----->', game)
 
     if (isJoinButton) {
       handleJoinGame(game.id);
+      e.preventDefault();
+      e.stopPropagation();
     } else {
       handleEnterGame(game.id);
     }
@@ -237,7 +237,7 @@ const GamesPage: React.FC = () => {
 
   // 如果未认证，不渲染内容（会自动跳转）
   if (!isAuthenticated || !currentUser) {
-    return <View />;
+    return <View/>;
   }
 
   return (
