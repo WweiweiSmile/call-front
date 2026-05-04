@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ScrollView, Text, View} from '@tarojs/components';
 import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
+import dayjs from 'dayjs';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import {useRequireAuth} from '../../components/RequireAuth';
@@ -449,6 +450,7 @@ const GameDetailPage: React.FC = () => {
   const game = state.games.find((g) => g.id === gameId);
   const isCreator = game?.creatorId === currentUser.id;
   const hasJoined = game?.isJoined || isCreator;
+  const isGameEnded = game?.status === 'ended';
 
   if (!game) {
     return (
@@ -544,7 +546,7 @@ const GameDetailPage: React.FC = () => {
       )}
 
       {/* 操作按钮 */}
-      {isCreator && viewMode === 'manage' && selectedUserId && (
+      {isCreator && viewMode === 'manage' && selectedUserId && !isGameEnded && (
         <View className='action-buttons-section'>
           <Button
             type='success'
@@ -591,19 +593,21 @@ const GameDetailPage: React.FC = () => {
                     </View>
                   )}
                 </View>
-                <Button
-                  type='primary'
-                  size='small'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (participant?.id) {
-                      setSelectedUserId(participant.id);
-                    }
-                  }}
-                  data-testid={`btn-proxy-${participant?.id}`}
-                >
-                  代理操作
-                </Button>
+                {!isGameEnded && (
+                  <Button
+                    type='primary'
+                    size='small'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (participant?.id) {
+                        setSelectedUserId(participant.id);
+                      }
+                    }}
+                    data-testid={`btn-proxy-${participant?.id}`}
+                  >
+                    代理操作
+                  </Button>
+                )}
               </View>
             );
           })}
@@ -702,7 +706,7 @@ const GameDetailPage: React.FC = () => {
         <ScrollView className='transactions-list' scrollY>
           {(transactions || []).map((tx) => (
             <View key={tx?.id || Math.random().toString()} className='transaction-item'>
-              <Text className='tx-time'>⏰ {tx?.createdAt || ''}</Text>
+              <Text className='tx-time'>⏰ {tx?.createdAt ? dayjs(tx.createdAt).format('YYYY-MM-DD HH:mm:ss') : ''}</Text>
               <View className='tx-main'>
                 <Text className={`tx-type ${tx?.type === 'deposit' ? 'deposit' : 'withdraw'}`}>
                   {tx?.type === 'deposit' ? '🟢 存分' : '🔴 取分'}{' '}
