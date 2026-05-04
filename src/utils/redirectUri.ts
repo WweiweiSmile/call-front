@@ -1,4 +1,5 @@
 import Taro, { useRouter } from '@tarojs/taro';
+import { throttle } from 'lodash';
 
 /**
  * 获取当前页面的完整路径作为 redirectUri
@@ -42,15 +43,19 @@ export const getCurrentRedirectUri = (): string => {
   return encodeURIComponent('/pages/index/index');
 };
 
-/**
- * 跳转到登录页面，并携带 redirectUri
- */
-export const redirectToLogin = (redirectUri?: string) => {
+// 实际的跳转逻辑
+const doRedirectToLogin = (redirectUri?: string) => {
   const uri = redirectUri || getCurrentRedirectUri();
   Taro.redirectTo({
     url: `/pages/login/index?redirectUri=${uri}`,
   });
 };
+
+// 使用 lodash throttle 包装跳转函数，1秒内只能执行一次
+export const redirectToLogin = throttle(doRedirectToLogin, 1000, {
+  leading: true,
+  trailing: false,
+});
 
 /**
  * 登录成功后，根据 redirectUri 进行回调跳转

@@ -93,6 +93,9 @@ importers:
       '@tarojs/vite-runner':
         specifier: 4.1.11
         version: 4.1.11(@tarojs/runtime@4.1.11)(@types/babel__core@7.20.5)(postcss@8.5.8)(rollup@3.30.0)(terser@5.46.0)(typescript@5.9.3)(vite@4.5.14(@types/node@25.3.5)(less@4.5.1)(sass@1.97.3)(terser@5.46.0))
+      '@types/lodash':
+        specifier: ^4.17.24
+        version: 4.17.24
       '@types/react':
         specifier: ^18.0.0
         version: 18.3.28

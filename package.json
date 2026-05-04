@@ -70,6 +70,7 @@
     "@tarojs/cli": "4.1.11",
     "@tarojs/test-utils-react": "^0.1.1",
     "@tarojs/vite-runner": "4.1.11",
+    "@types/lodash": "^4.17.24",
     "@types/react": "^18.0.0",
     "@typescript-eslint/eslint-plugin": "^6.2.0",
     "@typescript-eslint/parser": "^6.2.0",
