@@ -21,6 +21,7 @@ const BottomTabBar: React.FC<BottomTabBarProps> = ({ currentTab, onTabChange }) 
           key={tab.key}
           className={`tab-item ${currentTab === tab.key ? 'active' : ''}`}
           onClick={() => onTabChange(tab.key as any)}
+          data-testid={`tab-${tab.key}`}
         >
           <Text className='tab-icon'>{tab.icon}</Text>
           <Text className='tab-label'>{tab.label}</Text>

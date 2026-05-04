@@ -1,46 +1,94 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
+import { useRequireAuth } from '../../components/RequireAuth';
+import { useLoadMore } from '../../hooks';
+import { gameApi } from '../../services/api';
+import type { GameResponse } from '../../models/service';
+import type { Game } from '../../store/mockData';
 import './index.less';
 
+type FilterType = 'all' | 'ongoing' | 'ended' | 'recent';
+
+interface MyGamesFilterParams {
+  status?: string;
+}
+
 const MyGamesPage: React.FC = () => {
+  const {isAuthenticated} = useRequireAuth();
   const {
-    getUserGames,
-    getUserCreatedGames,
     getUserBalance,
     setCurrentGameId,
-    loadMyGames,
   } = useAppStore();
   const {state: authState} = useAuthStore();
 
-  // 页面显示时刷新游戏列表
-  useDidShow(() => {
-    loadMyGames();
-  });
+  const [filterType, setFilterType] = useState<FilterType>('all');
 
-  // 页面加载时获取我的游戏列表
+  // 使用 useLoadMore 管理我的游戏列表数据
+  const {
+    data: rawGames,
+    loading,
+    refreshing,
+    hasMore,
+    refresh,
+    loadMore,
+    setParams,
+  } = useLoadMore<GameResponse, MyGamesFilterParams>(
+    async (params) => {
+      const { page, pageSize, status } = params;
+      return await gameApi.getMyGames({ page, pageSize, status });
+    },
+    {
+      defaultCurrent: 1,
+      defaultPageSize: 10,
+      defaultParams: { status: undefined },
+      autoLoad: true,
+    }
+  );
+
+  // 将 API 返回的数据转换为前端 Game 格式
+  const games = useMemo((): Game[] => {
+    return rawGames.map((g) => ({
+      id: String(g.id),
+      name: g.name,
+      creatorId: String(g.creatorId),
+      creatorName: g.creatorName || '创建者',
+      status: g.status as 'pending' | 'ongoing' | 'ended',
+      participantCount: g.playerCount,
+      description: g.description,
+      startTime: g.startTime,
+      endTime: g.endTime,
+      isJoined: g.isJoined,
+    }));
+  }, [rawGames]);
+
+  // filterType 变化时更新参数并刷新
   useEffect(() => {
-    loadMyGames();
-  }, [loadMyGames]);
+    const statusParam = filterType === 'all' || filterType === 'recent' ? undefined : filterType;
+    setParams({ status: statusParam });
+  }, [filterType, setParams]);
+
+  // 页面显示时刷新数据
+  useDidShow(() => {
+    refresh();
+  });
 
   const currentUser = authState.user;
 
-  if (!currentUser) {
-    return null;
+  // 如果未认证，不渲染内容（会自动跳转）
+  if (!isAuthenticated || !currentUser) {
+    return <View />;
   }
 
-  const userGames = getUserGames(currentUser.id);
-  const userCreatedGames = getUserCreatedGames(currentUser.id);
-
-  const handleEnterGame = (gameId: string) => {
+  const handleEnterGame = useCallback((gameId: string) => {
     setCurrentGameId(gameId);
     Taro.navigateTo({ url: `/pages/game-detail/index?gameId=${gameId}` });
-  };
+  }, [setCurrentGameId]);
 
-  const renderGameCard = (game: any) => {
+  const renderGameCard = useCallback((game: Game) => {
     const balance = getUserBalance(game.id, currentUser.id);
     const isCreator = game.creatorId === currentUser.id;
 
@@ -49,6 +97,7 @@ const MyGamesPage: React.FC = () => {
         key={game.id}
         className='game-card'
         onClick={() => handleEnterGame(game.id)}
+        data-testid={`my-game-card-${game.id}`}
       >
         <View className='game-info'>
           <Text className='game-name'>🎮 {game.name}</Text>
@@ -71,15 +120,29 @@ const MyGamesPage: React.FC = () => {
           </Text>
           )}
         </View>
-        <Button type='primary' size='small'>
+        <Button type='primary' size='small' data-testid={`btn-my-game-enter-${game.id}`}>
           {isCreator ? '管理 →' : '进入 →'}
         </Button>
       </View>
     );
-  };
+  }, [currentUser.id, getUserBalance, handleEnterGame]);
 
-  const ongoingGames = userGames.filter((g) => g.status === 'ongoing');
-  const endedGames = userGames.filter((g) => g.status === 'ended');
+  // 切换筛选标签
+  const handleFilterChange = useCallback((type: FilterType) => {
+    setFilterType(type);
+  }, []);
+
+  // 下拉刷新
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+
+  // 上滑加载更多
+  const handleScrollToLower = useCallback(() => {
+    if (hasMore && !loading) {
+      loadMore();
+    }
+  }, [hasMore, loading, loadMore]);
 
   return (
     <View className='my-games-page'>
@@ -87,26 +150,67 @@ const MyGamesPage: React.FC = () => {
         <Text className='title'>我的场次</Text>
       </View>
 
-      <ScrollView className='content' scrollY>
-        {ongoingGames.length > 0 && (
-        <View className='section'>
-          <Text className='section-title'>🎯 进行中的场次 ({ongoingGames.length})</Text>
-          {ongoingGames.map(renderGameCard)}
+      {/* 筛选标签 */}
+      <View className='filter-tabs'>
+        <View
+          className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('all')}
+        >
+          全部
         </View>
-        )}
+        <View
+          className={`filter-tab ${filterType === 'ongoing' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('ongoing')}
+        >
+          进行中
+        </View>
+        <View
+          className={`filter-tab ${filterType === 'ended' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('ended')}
+        >
+          已结束
+        </View>
+        <View
+          className={`filter-tab ${filterType === 'recent' ? 'active' : ''}`}
+          onClick={() => handleFilterChange('recent')}
+        >
+          最近玩过
+        </View>
+      </View>
 
-        {userCreatedGames.length > 0 && (
-        <View className='section'>
-          <Text className='section-title'>📋 我创建的游戏 ({userCreatedGames.length})</Text>
-          {userCreatedGames.map(renderGameCard)}
-        </View>
-        )}
+      <ScrollView
+        className='content'
+        scrollY
+        refresherEnabled
+        refresherTriggered={refreshing}
+        onRefresherRefresh={handleRefresh}
+        onScrollToLower={handleScrollToLower}
+        lowerThreshold={100}
+      >
+        {games.length > 0 ? (
+          <>
+            {games.map(renderGameCard)}
 
-        {endedGames.length > 0 && (
-        <View className='section'>
-          <Text className='section-title'>📋 历史场次 ({endedGames.length})</Text>
-          {endedGames.map(renderGameCard)}
-        </View>
+            {/* 加载更多提示 */}
+            {hasMore && (
+              <View className='load-more'>
+                <Text className='load-more-text'>
+                  {loading ? '加载中...' : '上拉加载更多'}
+                </Text>
+              </View>
+            )}
+
+            {/* 没有更多数据 */}
+            {!hasMore && games.length > 0 && (
+              <View className='load-more'>
+                <Text className='load-more-text'>没有更多数据了</Text>
+              </View>
+            )}
+          </>
+        ) : (
+          <View className='empty-state'>
+            <Text className='empty-text'>暂无相关场次</Text>
+          </View>
         )}
       </ScrollView>
     </View>

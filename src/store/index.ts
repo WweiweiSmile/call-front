@@ -72,6 +72,7 @@ export function useAppStore() {
     createGame: gameStore.createGame,
     joinGame: joinGameWithBalanceInit,
     endGame: gameStore.endGame,
+    loadGame: gameStore.loadGame,
     loadGames: gameStore.loadGames,
     loadMyGames: gameStore.loadMyGames,
 

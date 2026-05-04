@@ -1,7 +1,7 @@
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect} from 'react';
 import {gameApi} from '../services/api';
 import {Game} from './mockData';
-import {AppState, initialState} from './types';
+import {AppState} from './types';
 
 interface UseGameStoreOptions {
   state: AppState;
@@ -16,6 +16,40 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
       setState(prev => ({...prev, currentTime: new Date()}));
     }, 60000);
     return () => clearInterval(interval);
+  }, [setState]);
+
+  // 从后端加载单个游戏详情
+  const loadGame = useCallback(async (gameId: string) => {
+    try {
+      const g: any = await gameApi.getGame(gameId);
+      const game: Game = {
+        id: String(g.id),
+        name: g.name,
+        creatorId: String(g.creatorId),
+        creatorName: g.creatorName || '创建者',
+        status: g.status as 'pending' | 'ongoing' | 'ended',
+        participantCount: g.playerCount,
+        description: g.description,
+        startTime: g.startTime,
+        endTime: g.endTime,
+        isJoined: g.isJoined,
+      };
+      setState((prev) => {
+        const gameIndex = prev.games.findIndex(g => g.id === gameId);
+        let newGames: Game[];
+        if (gameIndex >= 0) {
+          newGames = [...prev.games];
+          newGames[gameIndex] = game;
+        } else {
+          newGames = [game, ...prev.games];
+        }
+        return {...prev, games: newGames};
+      });
+      return game;
+    } catch (error) {
+      console.error('加载游戏详情失败:', error);
+      throw error;
+    }
   }, [setState]);
 
   // 从后端加载游戏列表
@@ -44,10 +78,10 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
   }, [setLoading, setState]);
 
   // 从后端加载我的游戏
-  const loadMyGames = useCallback(async () => {
+  const loadMyGames = useCallback(async (status?: string) => {
     setLoading(true);
     try {
-      const response: any = await gameApi.getMyGames();
+      const response: any = await gameApi.getMyGames(status ? {status} : undefined);
       const games: Game[] = response.list.map((g: any) => ({
         id: String(g.id),
         name: g.name,
@@ -122,21 +156,20 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
 
   // 创建游戏
   const createGame = useCallback(
-    async (game: Omit<Game, 'id' | 'creatorId' | 'creatorName' | 'status' | 'participantCount'>, currentUser: { id: string; name: string }) => {
+    async (game: Omit<Game, 'id' | 'creatorId' | 'creatorName' | 'status' | 'participantCount'>) => {
       setLoading(true);
       try {
         const newGame: any = await gameApi.createGame({
           name: game.name,
           description: game.description,
           startTime: game.startTime,
-          endTime: game.endTime,
         });
 
         const gameData: Game = {
           id: String(newGame.id),
           name: newGame.name,
           creatorId: String(newGame.creatorId),
-          creatorName: currentUser.name,
+          creatorName: newGame.creatorName,
           status: newGame.status as 'pending' | 'ongoing' | 'ended',
           participantCount: newGame.playerCount || 0,
           description: newGame.description,
@@ -162,7 +195,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
 
   // 加入游戏
   const joinGame = useCallback(
-    async (gameId: string, currentUserId: string) => {
+    async (gameId: string) => {
       setLoading(true);
       try {
         await gameApi.joinGame(parseInt(gameId));
@@ -196,7 +229,11 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
 
         setState((prev) => ({
           ...prev,
-          games: prev.games.filter((g) => g.id !== gameId),
+          games: prev.games.map((g) =>
+            g.id === gameId
+              ? {...g, status: 'ended' as const}
+              : g
+          ),
         }));
       } catch (error) {
         console.error('结束游戏失败:', error);
@@ -209,6 +246,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
   );
 
   return {
+    loadGame,
     loadGames,
     loadMyGames,
     getGames,

@@ -3,14 +3,13 @@
 // 对应后端: dto/game.go
 // ============================================
 
-import type { ListResponse } from './common';
+import type {ListResponse} from './common';
 
 // 创建游戏请求
 export interface CreateGameRequest {
   name: string;
   description?: string;
   startTime?: string;
-  endTime?: string;
 }
 
 // 加入游戏请求
@@ -26,8 +25,8 @@ export interface GameResponse {
   creatorId: number;
   creatorName?: string;
   status: string;
-  startTime: string | null;
-  endTime: string | null;
+  startTime: string;
+  endTime?: string;
   playerCount: number;
   createdAt: string;
   isCreator?: boolean;
@@ -46,6 +45,7 @@ export interface GetGamesParams {
 
 // 获取我的游戏参数
 export interface GetMyGamesParams {
+  status?: string;
   page?: number;
   pageSize?: number;
 }

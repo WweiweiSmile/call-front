@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { Cell, Button, Dialog } from '@nutui/nutui-react-taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
+import { useRequireAuth } from '../../components/RequireAuth';
+import type { Transaction, UserGameBalance } from '../../store/mockData';
 import './index.less';
 
 const ProfilePage: React.FC = () => {
+  const {isAuthenticated} = useRequireAuth();
   const {
     getUserGames,
     getUserCreatedGames,
@@ -21,27 +24,56 @@ const ProfilePage: React.FC = () => {
   const userGames = currentUser ? getUserGames(currentUser.id) : [];
   const userCreatedGames = currentUser ? getUserCreatedGames(currentUser.id) : [];
 
-  // 计算统计数据
-  const userBalances = currentUser ? state.userGameBalances.filter((b) => b.userId === currentUser.id) : [];
-  const balancedCount = userBalances.filter((b) => b.isBalanced).length;
-  const selfTransactions = currentUser ? getGameTransactions('').filter((t) => !t.isProxy && t.userId === currentUser.id) : [];
-  const proxyTransactions = currentUser ? getGameTransactions('').filter((t) => t.isProxy && t.userId === currentUser.id) : [];
+  // 使用 useMemo 优化统计数据计算，避免重复 filter
+  const stats = useMemo(() => {
+    if (!currentUser) {
+      return {
+        userBalances: [] as UserGameBalance[],
+        balancedCount: 0,
+        selfTransactions: [] as Transaction[],
+        proxyTransactions: [] as Transaction[],
+      };
+    }
 
-  const handleLogout = () => {
+    const userBalances = state.userGameBalances.filter((b) => b.userId === currentUser.id);
+    const allTransactions = getGameTransactions('');
+
+    // 单次遍历同时获取 self 和 proxy transactions
+    const selfTransactions: Transaction[] = [];
+    const proxyTransactions: Transaction[] = [];
+    for (const t of allTransactions) {
+      if (t.userId === currentUser.id) {
+        if (t.isProxy) {
+          proxyTransactions.push(t);
+        } else {
+          selfTransactions.push(t);
+        }
+      }
+    }
+
+    return {
+      userBalances,
+      balancedCount: userBalances.filter((b) => b.isBalanced).length,
+      selfTransactions,
+      proxyTransactions,
+    };
+  }, [currentUser, state.userGameBalances, getGameTransactions]);
+
+  const handleLogout = useCallback(() => {
     setVisible(true);
-  };
+  }, []);
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = useCallback(() => {
     setVisible(false);
     logout();
-    // 跳转到登录页面
     Taro.redirectTo({
       url: '/pages/login/index',
     });
-  };
+  }, [logout]);
 
-  if (!currentUser) {
-    return null;
+  // 如果未认证，不渲染内容（会自动跳转）
+  if (!isAuthenticated || !currentUser) {
+    return <View />;
   }
 
   return (
@@ -71,15 +103,15 @@ const ProfilePage: React.FC = () => {
               <Text className='stat-label'>创建游戏</Text>
             </View>
             <View className='stat-item'>
-              <Text className='stat-value'>{balancedCount}</Text>
+              <Text className='stat-value'>{stats.balancedCount}</Text>
               <Text className='stat-label'>平衡场次</Text>
             </View>
             <View className='stat-item'>
-              <Text className='stat-value'>{selfTransactions.length}</Text>
+              <Text className='stat-value'>{stats.selfTransactions.length}</Text>
               <Text className='stat-label'>自主操作</Text>
             </View>
             <View className='stat-item'>
-              <Text className='stat-value'>{proxyTransactions.length}</Text>
+              <Text className='stat-value'>{stats.proxyTransactions.length}</Text>
               <Text className='stat-label'>被代理操作</Text>
             </View>
           </View>
@@ -106,6 +138,7 @@ const ProfilePage: React.FC = () => {
             size='large'
             block
             onClick={handleLogout}
+            data-testid="btn-logout"
           >
             退出登录
           </Button>

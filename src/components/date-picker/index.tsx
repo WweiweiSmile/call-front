@@ -3,20 +3,21 @@ import {View} from "@tarojs/components";
 import {useState} from "react";
 import dayjs from "dayjs";
 
-// TODO: onChange 事件给的Date类型的值，传入的是 string 类型的值，应该需要统一，时间的颗粒到什么地步
-
 interface DatePickerProps {
-  value?: string;
+  value?: string | Date | null;
   type?: 'date' | 'datetime' | 'time';
   onChange?: (value: Date) => void;
   placeholder?: string;
-
 }
 
 const CustomDatePicker = (props: DatePickerProps) => {
-  const {type = 'date', onChange, placeholder = '请选择时间'} = props
+  const {type = 'date', onChange, placeholder = '请选择时间', value} = props
   const [show1, setShow1] = useState(false)
-  const hasValue = !!props.value
+
+  const hasValue = !!value
+  const parsedDate = hasValue
+    ? (typeof value === 'string' ? dayjs(value) : dayjs(value))
+    : null
 
   return <View>
     <View
@@ -25,15 +26,14 @@ const CustomDatePicker = (props: DatePickerProps) => {
         width: '100%',
       }}
       onClick={() => setShow1(true)}
-    >{hasValue ? dayjs(props.value).format('YYYY-MM-DD HH:mm:ss') : placeholder}</View>
+      data-testid="date-picker-trigger"
+    >{hasValue && parsedDate ? parsedDate.format('YYYY-MM-DD HH:mm:ss') : placeholder}</View>
 
     <DatePicker
       visible={show1}
       type={type}
-      value={hasValue ? dayjs(props.value).toDate() : new Date()}
+      value={hasValue && parsedDate ? parsedDate.toDate() : new Date()}
       onConfirm={(_selectedOptions, selectedValue) => {
-        console.log('selectedValue', _selectedOptions, selectedValue)
-        // selectedValue 是 [year, month, day, hour, minute, second] 格式的数组
         const [year, month, day, hour = 0, minute = 0, second = 0] = selectedValue as number[];
         const date = new Date(year, month - 1, day, hour, minute, second);
         onChange?.(date);
