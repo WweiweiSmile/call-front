@@ -5,6 +5,7 @@ import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import {useRequireAuth} from '../../components/RequireAuth';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import type {Game, User as UserType, UserGameBalance} from '../../store/mockData';
 import './index.less';
 
@@ -171,6 +172,10 @@ const GameDetailPage: React.FC = () => {
   const [showWithdrawPopup, setShowWithdrawPopup] = useState(false);
   const [amount, setAmount] = useState('0');
   const [remark, setRemark] = useState('');
+
+  // 结束游戏确认弹窗状态
+  const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
+  const [endGameLoading, setEndGameLoading] = useState(false);
 
   const quickAmounts = [100, 500, 1000, 5000];
   const inviteGameId = router.params?.inviteGameId as string | undefined;
@@ -661,15 +666,7 @@ const GameDetailPage: React.FC = () => {
                 type='danger'
                 size='large'
                 block
-                onClick={async () => {
-                  try {
-                    await endGame(gameId);
-                    Toast.show('game-detail-toast', {content: '游戏已结束'});
-                    Taro.navigateBack();
-                  } catch (error: any) {
-                    Toast.show('game-detail-toast', {content: error.message || '结束游戏失败'});
-                  }
-                }}
+                onClick={() => setShowEndGameConfirm(true)}
                 data-testid="btn-end-game"
               >
                 结束游戏
@@ -754,6 +751,32 @@ const GameDetailPage: React.FC = () => {
         onAmountChange={setAmount}
         onRemarkChange={setRemark}
         onConfirm={handleWithdraw}
+      />
+
+      {/* 结束游戏确认弹窗 */}
+      <ConfirmDialog
+        visible={showEndGameConfirm}
+        title="确认结束游戏？"
+        content="游戏结束后将无法继续进行存取分操作，请确认是否结束。"
+        confirmText="结束"
+        cancelText="取消"
+        confirmType="danger"
+        loading={endGameLoading}
+        onClose={() => setShowEndGameConfirm(false)}
+        onCancel={() => setShowEndGameConfirm(false)}
+        onConfirm={async () => {
+          try {
+            setEndGameLoading(true);
+            await endGame(gameId);
+            setShowEndGameConfirm(false);
+            Toast.show('game-detail-toast', {content: '游戏已结束'});
+            Taro.navigateBack();
+          } catch (error: any) {
+            Toast.show('game-detail-toast', {content: error.message || '结束游戏失败'});
+          } finally {
+            setEndGameLoading(false);
+          }
+        }}
       />
     </View>
   );
