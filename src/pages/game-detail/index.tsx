@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ScrollView, Text, View} from '@tarojs/components';
 import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
@@ -164,6 +164,7 @@ const GameDetailPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('self');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pollingTimerRef = useRef<number | null>(null);
 
   // 存分/取分弹窗状态
   const [showDepositPopup, setShowDepositPopup] = useState(false);
@@ -230,31 +231,64 @@ const GameDetailPage: React.FC = () => {
     }
   }, [gameId]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (gameId && currentUser) {
-        setCurrentGameId(gameId);
-        // 先查找游戏是否在列表中，如果不在，单独加载游戏详情
-        let game = state.games.find((g) => g.id === gameId);
-        if (!game) {
-          try {
-            game = await loadGame(gameId);
-          } catch (error) {
-            console.error('加载游戏详情失败:', error);
-          }
+  // 加载数据的函数
+  const loadData = useCallback(async (showLoading = false) => {
+    if (gameId && currentUser) {
+      if (showLoading) {
+        setIsLoading(true);
+      }
+      setCurrentGameId(gameId);
+      // 先查找游戏是否在列表中，如果不在，单独加载游戏详情
+      let game = state.games.find((g) => g.id === gameId);
+      if (!game) {
+        try {
+          game = await loadGame(gameId);
+        } catch (error) {
+          console.error('加载游戏详情失败:', error);
         }
-        if (!game) {
-          // 如果还是找不到，再尝试加载游戏列表
-          await loadGames();
-        }
-        await loadUserBalance(gameId);
-        await loadGameTransactions(gameId);
-        await loadGameParticipantBalances(gameId);
+      }
+      if (!game) {
+        // 如果还是找不到，再尝试加载游戏列表
+        await loadGames();
+      }
+      await loadUserBalance(gameId);
+      await loadGameTransactions(gameId);
+      await loadGameParticipantBalances(gameId);
+      if (showLoading) {
         setIsLoading(false);
       }
-    };
-    loadData();
+    }
   }, [gameId, currentUser, setCurrentGameId, loadGames, loadGame, loadUserBalance, loadGameTransactions, loadGameParticipantBalances, state.games]);
+
+  // 初始加载数据
+  useEffect(() => {
+    loadData(true);
+  }, [loadData]);
+
+  // 设置轮询：每隔5秒更新一次数据
+  useEffect(() => {
+    if (!gameId || !currentUser || isLoading) {
+      return;
+    }
+
+    // 使用 setTimeout 链式轮询
+    const poll = async () => {
+      if (!pollingTimerRef.current) return;
+      await loadData(false);
+      pollingTimerRef.current = setTimeout(poll, 5000);
+    };
+
+    // 延迟一点开始轮询，确保初始加载完成
+    pollingTimerRef.current = setTimeout(poll, 1000);
+
+    // 清理定时器
+    return () => {
+      if (pollingTimerRef.current) {
+        clearTimeout(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+    };
+  }, [gameId, currentUser, isLoading, loadData]);
 
   // 处理邀请链接自动加入游戏
   useEffect(() => {
@@ -528,23 +562,6 @@ const GameDetailPage: React.FC = () => {
         </View>
       )}
 
-      {/* 去排行榜按钮 */}
-      <View className='leaderboard-button-section'>
-        <Button
-          type='primary'
-          size='large'
-          block
-          onClick={() => {
-            Taro.navigateTo({
-              url: `/pages/leaderboard/index?gameId=${gameId}`,
-            });
-          }}
-          data-testid="btn-view-leaderboard"
-        >
-          🏆 查看排行榜
-        </Button>
-      </View>
-
       {/* 管理参与者列表 */}
       {isCreator && viewMode === 'manage' && (
         <View className='participants-section'>
@@ -617,25 +634,66 @@ const GameDetailPage: React.FC = () => {
         </View>
       )}
 
-      {/* 结束游戏按钮（仅创建者在管理模式下可见） */}
-      {isCreator && game?.status !== 'ended' && viewMode === 'manage' && (
-        <View className='end-game-section'>
+      {/* 管理模式下的操作按钮组 */}
+      {isCreator && viewMode === 'manage' && (
+        <>
+          {/* 去排行榜按钮 */}
+          <View className='leaderboard-button-section'>
+            <Button
+              type='primary'
+              size='large'
+              block
+              onClick={() => {
+                Taro.navigateTo({
+                  url: `/pages/leaderboard/index?gameId=${gameId}`,
+                });
+              }}
+              data-testid="btn-view-leaderboard"
+            >
+              🏆 查看排行榜
+            </Button>
+          </View>
+
+          {/* 结束游戏按钮（仅创建者在管理模式下且游戏未结束可见） */}
+          {game?.status !== 'ended' && (
+            <View className='end-game-section'>
+              <Button
+                type='danger'
+                size='large'
+                block
+                onClick={async () => {
+                  try {
+                    await endGame(gameId);
+                    Toast.show('game-detail-toast', {content: '游戏已结束'});
+                    Taro.navigateBack();
+                  } catch (error: any) {
+                    Toast.show('game-detail-toast', {content: error.message || '结束游戏失败'});
+                  }
+                }}
+                data-testid="btn-end-game"
+              >
+                结束游戏
+              </Button>
+            </View>
+          )}
+        </>
+      )}
+
+      {/* 查看自己模式下的排行榜按钮 */}
+      {(!isCreator || viewMode === 'self') && (
+        <View className='leaderboard-button-section'>
           <Button
-            type='danger'
+            type='primary'
             size='large'
             block
-            onClick={async () => {
-              try {
-                await endGame(gameId);
-                Toast.show('game-detail-toast', {content: '游戏已结束'});
-                Taro.navigateBack();
-              } catch (error: any) {
-                Toast.show('game-detail-toast', {content: error.message || '结束游戏失败'});
-              }
+            onClick={() => {
+              Taro.navigateTo({
+                url: `/pages/leaderboard/index?gameId=${gameId}`,
+              });
             }}
-            data-testid="btn-end-game"
+            data-testid="btn-view-leaderboard"
           >
-            结束游戏
+            🏆 查看排行榜
           </Button>
         </View>
       )}
