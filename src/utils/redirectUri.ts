@@ -22,7 +22,7 @@ export const getCurrentRedirectUri = (): string => {
       const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
 
       // 构建完整路径
-      const fullPath = `/${route}${queryString}`;
+      const fullPath = `${route}${queryString}`;
       return encodeURIComponent(fullPath);
     }
   } catch (error) {
