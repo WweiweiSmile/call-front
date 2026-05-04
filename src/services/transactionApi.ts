@@ -65,6 +65,9 @@ export const transactionApi = {
 
   // 获取游戏参与者（含余额）
   getGameParticipants: (gameId: string) => {
+    if (!gameId || !gameId.trim()) {
+      return Promise.reject(new Error('gameId 不能为空'));
+    }
     return request<UserBalanceResponse[]>(`/transactions/participants/${gameId}`);
   },
 };

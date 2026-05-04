@@ -239,7 +239,10 @@ const GameDetailPage: React.FC = () => {
 
   // 加载数据的函数
   const loadData = useCallback(async (showLoading = false) => {
-    if (gameId && currentUser) {
+    if (!gameId || !currentUser || !gameId.trim()) {
+      return;
+    }
+    try {
       if (showLoading) {
         setIsLoading(true);
       }
@@ -260,6 +263,9 @@ const GameDetailPage: React.FC = () => {
       await loadUserBalance(gameId);
       await loadGameTransactions(gameId);
       await loadGameParticipantBalances(gameId);
+    } catch (error) {
+      console.error('加载数据失败:', error);
+    } finally {
       if (showLoading) {
         setIsLoading(false);
       }
@@ -268,12 +274,14 @@ const GameDetailPage: React.FC = () => {
 
   // 初始加载数据
   useEffect(() => {
-    loadData(true);
-  }, [loadData]);
+    if (gameId && currentUser) {
+      loadData(true);
+    }
+  }, [gameId, currentUser, loadData]);
 
-  // 设置轮询：每隔5秒更新一次数据
+  // 设置轮询：每隔5秒更新一次数据，只在游戏未结束时轮询
   useEffect(() => {
-    if (!gameId || !currentUser || isLoading) {
+    if (!gameId || !currentUser || isLoading || isGameEnded) {
       return;
     }
 
@@ -294,7 +302,7 @@ const GameDetailPage: React.FC = () => {
         pollingTimerRef.current = null;
       }
     };
-  }, [gameId, currentUser, isLoading, loadData]);
+  }, [gameId, currentUser, isLoading, isGameEnded, loadData]);
 
   // 处理邀请链接自动加入游戏
   useEffect(() => {
