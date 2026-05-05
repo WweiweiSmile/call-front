@@ -1,10 +1,12 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ScrollView, Text, View} from '@tarojs/components';
 import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
+import dayjs from 'dayjs';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import {useRequireAuth} from '../../components/RequireAuth';
+import ConfirmDialog from '../../components/ConfirmDialog';
 import type {Game, User as UserType, UserGameBalance} from '../../store/mockData';
 import './index.less';
 
@@ -164,12 +166,17 @@ const GameDetailPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('self');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pollingTimerRef = useRef<number | null>(null);
 
   // 存分/取分弹窗状态
   const [showDepositPopup, setShowDepositPopup] = useState(false);
   const [showWithdrawPopup, setShowWithdrawPopup] = useState(false);
   const [amount, setAmount] = useState('0');
   const [remark, setRemark] = useState('');
+
+  // 结束游戏确认弹窗状态
+  const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
+  const [endGameLoading, setEndGameLoading] = useState(false);
 
   const quickAmounts = [100, 500, 1000, 5000];
   const inviteGameId = router.params?.inviteGameId as string | undefined;
@@ -230,31 +237,72 @@ const GameDetailPage: React.FC = () => {
     }
   }, [gameId]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      if (gameId && currentUser) {
-        setCurrentGameId(gameId);
-        // 先查找游戏是否在列表中，如果不在，单独加载游戏详情
-        let game = state.games.find((g) => g.id === gameId);
-        if (!game) {
-          try {
-            game = await loadGame(gameId);
-          } catch (error) {
-            console.error('加载游戏详情失败:', error);
-          }
+  // 加载数据的函数
+  const loadData = useCallback(async (showLoading = false) => {
+    if (!gameId || !currentUser || !gameId.trim()) {
+      return;
+    }
+    try {
+      if (showLoading) {
+        setIsLoading(true);
+      }
+      setCurrentGameId(gameId);
+      // 先查找游戏是否在列表中，如果不在，单独加载游戏详情
+      let game = state.games.find((g) => g.id === gameId);
+      if (!game) {
+        try {
+          game = await loadGame(gameId);
+        } catch (error) {
+          console.error('加载游戏详情失败:', error);
         }
-        if (!game) {
-          // 如果还是找不到，再尝试加载游戏列表
-          await loadGames();
-        }
-        await loadUserBalance(gameId);
-        await loadGameTransactions(gameId);
-        await loadGameParticipantBalances(gameId);
+      }
+      if (!game) {
+        // 如果还是找不到，再尝试加载游戏列表
+        await loadGames();
+      }
+      await loadUserBalance(gameId);
+      await loadGameTransactions(gameId);
+      await loadGameParticipantBalances(gameId);
+    } catch (error) {
+      console.error('加载数据失败:', error);
+    } finally {
+      if (showLoading) {
         setIsLoading(false);
       }
-    };
-    loadData();
+    }
   }, [gameId, currentUser, setCurrentGameId, loadGames, loadGame, loadUserBalance, loadGameTransactions, loadGameParticipantBalances, state.games]);
+
+  // 初始加载数据
+  useEffect(() => {
+    if (gameId && currentUser) {
+      loadData(true);
+    }
+  }, [gameId, currentUser, loadData]);
+
+  // 设置轮询：每隔5秒更新一次数据，只在游戏未结束时轮询
+  useEffect(() => {
+    if (!gameId || !currentUser || isLoading || isGameEnded) {
+      return;
+    }
+
+    // 使用 setTimeout 链式轮询
+    const poll = async () => {
+      if (!pollingTimerRef.current) return;
+      await loadData(false);
+      pollingTimerRef.current = setTimeout(poll, 5000);
+    };
+
+    // 延迟一点开始轮询，确保初始加载完成
+    pollingTimerRef.current = setTimeout(poll, 1000);
+
+    // 清理定时器
+    return () => {
+      if (pollingTimerRef.current) {
+        clearTimeout(pollingTimerRef.current);
+        pollingTimerRef.current = null;
+      }
+    };
+  }, [gameId, currentUser, isLoading, isGameEnded, loadData]);
 
   // 处理邀请链接自动加入游戏
   useEffect(() => {
@@ -410,6 +458,7 @@ const GameDetailPage: React.FC = () => {
   const game = state.games.find((g) => g.id === gameId);
   const isCreator = game?.creatorId === currentUser.id;
   const hasJoined = game?.isJoined || isCreator;
+  const isGameEnded = game?.status === 'ended';
 
   if (!game) {
     return (
@@ -505,7 +554,7 @@ const GameDetailPage: React.FC = () => {
       )}
 
       {/* 操作按钮 */}
-      {isCreator && viewMode === 'manage' && selectedUserId && (
+      {isCreator && viewMode === 'manage' && selectedUserId && !isGameEnded && (
         <View className='action-buttons-section'>
           <Button
             type='success'
@@ -527,23 +576,6 @@ const GameDetailPage: React.FC = () => {
           </Button>
         </View>
       )}
-
-      {/* 去排行榜按钮 */}
-      <View className='leaderboard-button-section'>
-        <Button
-          type='primary'
-          size='large'
-          block
-          onClick={() => {
-            Taro.navigateTo({
-              url: `/pages/leaderboard/index?gameId=${gameId}`,
-            });
-          }}
-          data-testid="btn-view-leaderboard"
-        >
-          🏆 查看排行榜
-        </Button>
-      </View>
 
       {/* 管理参与者列表 */}
       {isCreator && viewMode === 'manage' && (
@@ -569,19 +601,21 @@ const GameDetailPage: React.FC = () => {
                     </View>
                   )}
                 </View>
-                <Button
-                  type='primary'
-                  size='small'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (participant?.id) {
-                      setSelectedUserId(participant.id);
-                    }
-                  }}
-                  data-testid={`btn-proxy-${participant?.id}`}
-                >
-                  代理操作
-                </Button>
+                {!isGameEnded && (
+                  <Button
+                    type='primary'
+                    size='small'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (participant?.id) {
+                        setSelectedUserId(participant.id);
+                      }
+                    }}
+                    data-testid={`btn-proxy-${participant?.id}`}
+                  >
+                    代理操作
+                  </Button>
+                )}
               </View>
             );
           })}
@@ -617,25 +651,58 @@ const GameDetailPage: React.FC = () => {
         </View>
       )}
 
-      {/* 结束游戏按钮（仅创建者在管理模式下可见） */}
-      {isCreator && game?.status !== 'ended' && viewMode === 'manage' && (
-        <View className='end-game-section'>
+      {/* 管理模式下的操作按钮组 */}
+      {isCreator && viewMode === 'manage' && (
+        <>
+          {/* 去排行榜按钮 */}
+          <View className='leaderboard-button-section'>
+            <Button
+              type='primary'
+              size='large'
+              block
+              onClick={() => {
+                Taro.navigateTo({
+                  url: `/pages/leaderboard/index?gameId=${gameId}`,
+                });
+              }}
+              data-testid="btn-view-leaderboard"
+            >
+              🏆 查看排行榜
+            </Button>
+          </View>
+
+          {/* 结束游戏按钮（仅创建者在管理模式下且游戏未结束可见） */}
+          {game?.status !== 'ended' && (
+            <View className='end-game-section'>
+              <Button
+                type='danger'
+                size='large'
+                block
+                onClick={() => setShowEndGameConfirm(true)}
+                data-testid="btn-end-game"
+              >
+                结束游戏
+              </Button>
+            </View>
+          )}
+        </>
+      )}
+
+      {/* 查看自己模式下的排行榜按钮 */}
+      {(!isCreator || viewMode === 'self') && (
+        <View className='leaderboard-button-section'>
           <Button
-            type='danger'
+            type='primary'
             size='large'
             block
-            onClick={async () => {
-              try {
-                await endGame(gameId);
-                Toast.show('game-detail-toast', {content: '游戏已结束'});
-                Taro.navigateBack();
-              } catch (error: any) {
-                Toast.show('game-detail-toast', {content: error.message || '结束游戏失败'});
-              }
+            onClick={() => {
+              Taro.navigateTo({
+                url: `/pages/leaderboard/index?gameId=${gameId}`,
+              });
             }}
-            data-testid="btn-end-game"
+            data-testid="btn-view-leaderboard"
           >
-            结束游戏
+            🏆 查看排行榜
           </Button>
         </View>
       )}
@@ -647,7 +714,7 @@ const GameDetailPage: React.FC = () => {
         <ScrollView className='transactions-list' scrollY>
           {(transactions || []).map((tx) => (
             <View key={tx?.id || Math.random().toString()} className='transaction-item'>
-              <Text className='tx-time'>⏰ {tx?.createdAt || ''}</Text>
+              <Text className='tx-time'>⏰ {tx?.createdAt ? dayjs(tx.createdAt).format('YYYY-MM-DD HH:mm:ss') : ''}</Text>
               <View className='tx-main'>
                 <Text className={`tx-type ${tx?.type === 'deposit' ? 'deposit' : 'withdraw'}`}>
                   {tx?.type === 'deposit' ? '🟢 存分' : '🔴 取分'}{' '}
@@ -696,6 +763,32 @@ const GameDetailPage: React.FC = () => {
         onAmountChange={setAmount}
         onRemarkChange={setRemark}
         onConfirm={handleWithdraw}
+      />
+
+      {/* 结束游戏确认弹窗 */}
+      <ConfirmDialog
+        visible={showEndGameConfirm}
+        title="确认结束游戏？"
+        content="游戏结束后将无法继续进行存取分操作，请确认是否结束。"
+        confirmText="结束"
+        cancelText="取消"
+        confirmType="danger"
+        loading={endGameLoading}
+        onClose={() => setShowEndGameConfirm(false)}
+        onCancel={() => setShowEndGameConfirm(false)}
+        onConfirm={async () => {
+          try {
+            setEndGameLoading(true);
+            await endGame(gameId);
+            setShowEndGameConfirm(false);
+            Toast.show('game-detail-toast', {content: '游戏已结束'});
+            Taro.navigateBack();
+          } catch (error: any) {
+            Toast.show('game-detail-toast', {content: error.message || '结束游戏失败'});
+          } finally {
+            setEndGameLoading(false);
+          }
+        }}
       />
     </View>
   );

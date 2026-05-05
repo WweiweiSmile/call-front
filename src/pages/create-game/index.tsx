@@ -71,7 +71,6 @@ const CreateGamePage: React.FC = () => {
             name: '',
             description: '',
           }}
-          className='create-form'
         >
           <Form.Item label='游戏名称' name='name' required>
             <NutInput placeholder='请输入游戏名称' data-testid="input-game-name"/>

@@ -65,6 +65,10 @@ export function useBalanceStore({state, setState, setLoading}: UseBalanceStoreOp
 
   // 加载游戏参与者余额
   const loadGameParticipantBalances = useCallback(async (gameId: string) => {
+    if (!gameId || !gameId.trim()) {
+      console.warn('loadGameParticipantBalances: gameId 为空');
+      return;
+    }
     try {
       const participants: any[] = await transactionApi.getGameParticipants(gameId);
       const balances: UserGameBalance[] = participants.map((p: any) => ({

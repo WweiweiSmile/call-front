@@ -11,8 +11,6 @@ import './index.less';
 const POLLING_INTERVAL = 3000;
 const POLLING_START_DELAY = 500;
 
-type LeaderboardType = 'net' | 'deposit' | 'luck';
-
 interface LeaderboardItem {
   userId: string;
   name: string;
@@ -38,7 +36,6 @@ const LeaderboardPage: React.FC = () => {
   const gameId = router.params?.gameId as string;
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [leaderboardType, setLeaderboardType] = useState<LeaderboardType>('net');
   const [showPodiumAnimation, setShowPodiumAnimation] = useState(false);
   const pollingTimerRef = useRef<number | null>(null);
 
@@ -98,7 +95,7 @@ const LeaderboardPage: React.FC = () => {
     }
   }, [isLoading]);
 
-  // 使用 useMemo 计算排行榜数据
+  // 使用 useMemo 计算排行榜数据（只按净分排序）
   const leaderboard = useMemo((): LeaderboardItem[] => {
     if (!gameId || isLoading) {
       return [];
@@ -112,7 +109,7 @@ const LeaderboardPage: React.FC = () => {
       participants.map(p => [p.id, p])
     );
 
-    let sorted = participantBalances
+    return participantBalances
       .map((pb: UserGameBalance & { userName?: string }) => {
         const participant = participantsMap.get(pb.userId);
         const netScore = pb.depositTotal - pb.withdrawTotal;
@@ -124,44 +121,21 @@ const LeaderboardPage: React.FC = () => {
           withdrawTotal: pb.withdrawTotal,
           netScore,
         };
+      })
+      .sort((a, b) => {
+        // 判断是否有存分或取分操作
+        const aHasActivity = a.depositTotal > 0 || a.withdrawTotal > 0;
+        const bHasActivity = b.depositTotal > 0 || b.withdrawTotal > 0;
+
+        // 如果一个有操作一个没有，有操作的排前面
+        if (aHasActivity && !bHasActivity) return -1;
+        if (!aHasActivity && bHasActivity) return 1;
+
+        // 都有操作或都没有操作时，按净分从大到小排序
+        return b.netScore - a.netScore;
       });
+  }, [gameId, isLoading, lastUpdated, getGameParticipantBalances, getGameParticipants]);
 
-    // 根据榜单类型排序
-    switch (leaderboardType) {
-      case 'net':
-        sorted = sorted.sort((a, b) => {
-          // 判断是否有存分或取分操作
-          const aHasActivity = a.depositTotal > 0 || a.withdrawTotal > 0;
-          const bHasActivity = b.depositTotal > 0 || b.withdrawTotal > 0;
-
-          // 如果一个有操作一个没有，有操作的排前面
-          if (aHasActivity && !bHasActivity) return -1;
-          if (!aHasActivity && bHasActivity) return 1;
-
-          // 都有操作或都没有操作时，按净分从大到小排序
-          return b.netScore - a.netScore;
-        });
-        break;
-      case 'deposit':
-        sorted = sorted.sort((a, b) => b.depositTotal - a.depositTotal);
-        break;
-      case 'luck':
-        // 运势榜可以根据一些随机因素或者其他逻辑
-        sorted = sorted.sort((a, b) => a.netScore - b.netScore);
-        break;
-    }
-
-    return sorted;
-  }, [gameId, isLoading, lastUpdated, leaderboardType, getGameParticipantBalances, getGameParticipants]);
-
-  // 使用 useMemo 格式化最后更新时间
-  const formattedLastUpdated = useMemo(() => {
-    if (!lastUpdated) return '';
-    const hours = lastUpdated.getHours().toString().padStart(2, '0');
-    const minutes = lastUpdated.getMinutes().toString().padStart(2, '0');
-    const seconds = lastUpdated.getSeconds().toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
-  }, [lastUpdated]);
 
   // 获取前三名用于领奖台展示
   const topThree = useMemo((): LeaderboardItemWithRank[] => {
@@ -186,14 +160,9 @@ const LeaderboardPage: React.FC = () => {
     return result;
   }, [leaderboard]);
 
-  // 榜单切换
-  const handleTabChange = useCallback((type: LeaderboardType) => {
-    setLeaderboardType(type);
-  }, []);
-
   // 如果未认证，不渲染内容（会自动跳转）
   if (!isAuthenticated) {
-    return <View />;
+    return <View/>;
   }
 
   if (isLoading) {
@@ -211,17 +180,14 @@ const LeaderboardPage: React.FC = () => {
           <Text className='back-icon'>←</Text>
         </View>
         <View className='header-center'>
-          <Text className='title'>🏆 排行榜</Text>
-          {lastUpdated && (
-            <Text className='update-time'>更新于 {formattedLastUpdated}</Text>
-          )}
+          <Text className='title'>🏆 净分排行榜</Text>
         </View>
         <View className='header-right'/>
       </View>
 
       <ScrollView className='content' scrollY>
-        {/* 领奖台区域 - 只在净分榜显示 */}
-        {leaderboardType === 'net' && topThree.length > 0 && (
+        {/* 领奖台区域 */}
+        {topThree.length > 0 && (
           <View className='podium-section'>
             <View className='podium'>
               {topThree.map((item) => {
@@ -236,10 +202,7 @@ const LeaderboardPage: React.FC = () => {
                     <Text className='podium-avatar'>👤</Text>
                     <Text className='podium-name'>{item.name}</Text>
                     <Text className='podium-score'>
-                      {leaderboardType === 'net'
-                        ? (item.netScore >= 0 ? '+' : '') + item.netScore.toLocaleString()
-                        : item.depositTotal.toLocaleString()
-                      }
+                      {(item.netScore >= 0 ? '+' : '') + item.netScore.toLocaleString()}
                     </Text>
                     <View className='podium-platform'>
                       <Text>{item.rank}</Text>
@@ -250,28 +213,6 @@ const LeaderboardPage: React.FC = () => {
             </View>
           </View>
         )}
-
-        {/* 榜单切换 Tab */}
-        <View className='leaderboard-tabs'>
-          <View
-            className={`tab-item ${leaderboardType === 'net' ? 'active' : ''}`}
-            onClick={() => handleTabChange('net')}
-          >
-            净分排行
-          </View>
-          <View
-            className={`tab-item ${leaderboardType === 'deposit' ? 'active' : ''}`}
-            onClick={() => handleTabChange('deposit')}
-          >
-            存分榜
-          </View>
-          <View
-            className={`tab-item ${leaderboardType === 'luck' ? 'active' : ''}`}
-            onClick={() => handleTabChange('luck')}
-          >
-            运势
-          </View>
-        </View>
 
         {/* 排行榜列表 */}
         {leaderboard.length > 0 ? (
@@ -301,9 +242,7 @@ const LeaderboardPage: React.FC = () => {
                   <Text className='stat-value'>{item.withdrawTotal.toLocaleString()}</Text>
                 </View>
                 <View className='stat'>
-                  <Text className='stat-label'>
-                    {leaderboardType === 'net' ? '净分' : leaderboardType === 'deposit' ? '存分' : '净分'}
-                  </Text>
+                  <Text className='stat-label'>净分</Text>
                   <Text className={`stat-value ${item.netScore >= 0 ? 'positive' : 'negative'}`}>
                     {item.netScore >= 0 ? '+' : ''}{item.netScore.toLocaleString()}
                   </Text>
