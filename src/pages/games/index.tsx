@@ -9,6 +9,7 @@ import {useLoadMore} from '../../hooks';
 import {gameApi} from '../../services/api';
 import type {GameResponse} from '../../models/service';
 import type {Game} from '../../store/mockData';
+import {transformGameListFromApi} from '../../models';
 import './index.less';
 
 type FilterType = 'all' | 'joined' | 'created' | 'recent';
@@ -70,18 +71,7 @@ const GamesPage: React.FC = () => {
 
   // 将 API 返回的数据转换为前端 Game 格式
   const allGames = useMemo((): Game[] => {
-    return rawGames.map((g) => ({
-      id: String(g.id),
-      name: g.name,
-      creatorId: String(g.creatorId),
-      creatorName: g.creatorName || '创建者',
-      status: g.status as 'pending' | 'ongoing' | 'ended',
-      participantCount: g.playerCount,
-      description: g.description,
-      startTime: g.startTime,
-      endTime: g.endTime,
-      isJoined: g.isJoined,
-    }));
+    return transformGameListFromApi(rawGames);
   }, [rawGames]);
 
   // filterType 变化时更新参数

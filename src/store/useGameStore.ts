@@ -2,6 +2,7 @@ import {useCallback, useEffect} from 'react';
 import {gameApi} from '../services/api';
 import {Game} from './mockData';
 import {AppState} from './types';
+import {transformGameFromApi, transformGameListFromApi} from '../models';
 
 interface UseGameStoreOptions {
   state: AppState;
@@ -22,18 +23,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
   const loadGame = useCallback(async (gameId: string) => {
     try {
       const g: any = await gameApi.getGame(gameId);
-      const game: Game = {
-        id: String(g.id),
-        name: g.name,
-        creatorId: String(g.creatorId),
-        creatorName: g.creatorName || '创建者',
-        status: g.status as 'pending' | 'ongoing' | 'ended',
-        participantCount: g.playerCount,
-        description: g.description,
-        startTime: g.startTime,
-        endTime: g.endTime,
-        isJoined: g.isJoined,
-      };
+      const game: Game = transformGameFromApi(g);
       setState((prev) => {
         const gameIndex = prev.games.findIndex(g => g.id === gameId);
         let newGames: Game[];
@@ -57,18 +47,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
     setLoading(true);
     try {
       const response: any = await gameApi.getGames();
-      const games: Game[] = response.list.map((g: any) => ({
-        id: String(g.id),
-        name: g.name,
-        creatorId: String(g.creatorId),
-        creatorName: g.creatorName || '创建者',
-        status: g.status as 'pending' | 'ongoing' | 'ended',
-        participantCount: g.playerCount,
-        description: g.description,
-        startTime: g.startTime,
-        endTime: g.endTime,
-        isJoined: g.isJoined,
-      }));
+      const games: Game[] = transformGameListFromApi(response.list);
       setState((prev) => ({...prev, games}));
     } catch (error) {
       console.error('加载游戏列表失败:', error);
@@ -82,18 +61,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
     setLoading(true);
     try {
       const response: any = await gameApi.getMyGames(status ? {status} : undefined);
-      const games: Game[] = response.list.map((g: any) => ({
-        id: String(g.id),
-        name: g.name,
-        creatorId: String(g.creatorId),
-        creatorName: g.creatorName || '创建者',
-        status: g.status as 'pending' | 'ongoing' | 'ended',
-        participantCount: g.playerCount,
-        description: g.description,
-        startTime: g.startTime,
-        endTime: g.endTime,
-        isJoined: g.isJoined,
-      }));
+      const games: Game[] = transformGameListFromApi(response.list);
       setState((prev) => ({...prev, games}));
     } catch (error) {
       console.error('加载我的游戏失败:', error);
@@ -165,17 +133,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
           startTime: game.startTime,
         });
 
-        const gameData: Game = {
-          id: String(newGame.id),
-          name: newGame.name,
-          creatorId: String(newGame.creatorId),
-          creatorName: newGame.creatorName,
-          status: newGame.status as 'pending' | 'ongoing' | 'ended',
-          participantCount: newGame.playerCount || 0,
-          description: newGame.description,
-          startTime: newGame.startTime,
-          endTime: newGame.endTime,
-        };
+        const gameData: Game = transformGameFromApi(newGame);
 
         setState((prev) => ({
           ...prev,

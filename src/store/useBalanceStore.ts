@@ -2,6 +2,7 @@ import {useCallback} from 'react';
 import {transactionApi} from '../services/api';
 import {User, UserGameBalance} from './mockData';
 import {AppState} from './types';
+import {transformUserGameBalanceFromApi, transformUserGameBalanceListFromApi, transformParticipantsFromBalances} from '../models';
 
 interface UseBalanceStoreOptions {
   state: AppState;
@@ -14,16 +15,7 @@ export function useBalanceStore({state, setState, setLoading}: UseBalanceStoreOp
   const loadUserBalance = useCallback(async (gameId: string) => {
     try {
       const balance: any = await transactionApi.getUserBalance(gameId);
-      const userBalance: UserGameBalance = {
-        userId: String(balance.userId),
-        gameId: String(balance.gameId),
-        userName: balance.userName,
-        depositTotal: balance.totalDeposit,
-        withdrawTotal: balance.totalWithdraw,
-        currentBalance: balance.currentBalance,
-        isBalanced: balance.balanceStatus === 'balanced',
-        lastTransactionTime: new Date().toISOString(),
-      };
+      const userBalance: UserGameBalance = transformUserGameBalanceFromApi(balance);
 
       setState((prev) => {
         const newBalances = prev.userGameBalances.filter(
@@ -71,23 +63,10 @@ export function useBalanceStore({state, setState, setLoading}: UseBalanceStoreOp
     }
     try {
       const participants: any[] = await transactionApi.getGameParticipants(gameId);
-      const balances: UserGameBalance[] = participants.map((p: any) => ({
-        userId: String(p.userId),
-        gameId: String(p.gameId),
-        userName: p.userName,
-        depositTotal: p.totalDeposit,
-        withdrawTotal: p.totalWithdraw,
-        currentBalance: p.currentBalance,
-        isBalanced: p.balanceStatus === 'balanced',
-        lastTransactionTime: new Date().toISOString(),
-      }));
+      const balances: UserGameBalance[] = transformUserGameBalanceListFromApi(participants);
 
       // 同时更新参与者信息
-      const gameParticipants: User[] = participants.map((p: any) => ({
-        id: String(p.userId),
-        name: p.userName || '未知用户',
-        avatar: '👤',
-      }));
+      const gameParticipants: User[] = transformParticipantsFromBalances(participants);
 
       setState((prev) => {
         const newBalances = prev.userGameBalances.filter((b) => b.gameId !== gameId);
