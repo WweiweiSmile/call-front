@@ -138,6 +138,13 @@ const MyGamesPage: React.FC = () => {
     <View className='my-games-page'>
       <View className='header'>
         <Text className='title'>我的场次</Text>
+        <View
+          className='history-btn'
+          onClick={() => Taro.navigateTo({ url: '/pages/history/index' })}
+          data-testid="btn-my-games-history"
+        >
+          <Text className='history-icon'>📜</Text>
+        </View>
       </View>
 
       {/* 筛选标签 */}
