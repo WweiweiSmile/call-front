@@ -2,6 +2,7 @@ import {useCallback} from 'react';
 import {transactionApi} from '../services/api';
 import {Transaction} from './mockData';
 import {AppState} from './types';
+import {transformTransactionListFromApi} from '../models';
 
 interface UseTransactionStoreOptions {
   state: AppState;
@@ -22,20 +23,7 @@ export function useTransactionStore({
   const loadGameTransactions = useCallback(async (gameId: string, userId?: string) => {
     try {
       const response: any = await transactionApi.getGameTransactions(gameId, {userId});
-      const transactions: Transaction[] = response.list.map((t: any) => ({
-        id: String(t.id),
-        userId: String(t.userId),
-        userName: t.userName || '用户',
-        gameId: String(t.gameId),
-        operatorId: String(t.operatorId),
-        operatorName: t.operatorName || '操作人',
-        isProxy: t.operatorType === 'proxy',
-        type: t.transType as 'deposit' | 'withdraw',
-        amount: t.amount,
-        balanceAfter: t.balanceAfter,
-        remark: t.remark,
-        createdAt: t.createdAt,
-      }));
+      const transactions: Transaction[] = transformTransactionListFromApi(response.list);
 
       setState((prev) => {
         const newTransactions = prev.transactions.filter((t) => t.gameId !== gameId);
