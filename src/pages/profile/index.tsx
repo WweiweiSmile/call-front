@@ -119,6 +119,14 @@ const ProfilePage: React.FC = () => {
 
         <View className='menu-section'>
           <Cell
+            title='📜 历史战绩'
+            isLink
+            onClick={() => {
+              Taro.navigateTo({ url: '/pages/history/index' });
+            }}
+            data-testid="btn-history"
+          />
+          <Cell
             title='⚙️ 设置'
             onClick={() => {}}
           />

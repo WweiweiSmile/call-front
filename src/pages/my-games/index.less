@@ -14,6 +14,9 @@
     padding: 16px;
     background: @bg-secondary;
     border-bottom: 1px solid @border-color;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 
     .title {
       font-size: 20px;
@@ -23,6 +26,22 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+    }
+
+    .history-btn {
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: fade(@primary, 10%);
+      transition: all @duration-fast ease;
+
+      &:active {
+        background: fade(@primary, 20%);
+        transform: scale(0.95);
+      }
+
+      .history-icon {
+        font-size: 18px;
+      }
     }
   }
 
