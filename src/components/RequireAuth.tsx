@@ -10,7 +10,7 @@ interface RequireAuthProps {
 // Hook 版本，用于在页面组件中使用
 export function useRequireAuth() {
   const router = useRouter();
-  const {state: authState} = useAuthStore();
+  const {isAuthenticated} = useAuthStore();
 
   // 白名单页面，不需要登录就可以访问
   const whitelist = ['/pages/login/index'];
@@ -23,7 +23,7 @@ export function useRequireAuth() {
     }
 
     // 如果没有登录，跳转到登录页面
-    if (!authState.isAuthenticated) {
+    if (!isAuthenticated) {
       // 获取当前页面的完整路径作为 redirectUri
       let redirectUri = '';
       try {
@@ -45,10 +45,10 @@ export function useRequireAuth() {
         url: `/pages/login/index?redirectUri=${redirectUri}`,
       });
     }
-  }, [authState.isAuthenticated, currentPath, router.params]);
+  }, [isAuthenticated, currentPath, router.params]);
 
   return {
-    isAuthenticated: authState.isAuthenticated,
+    isAuthenticated: isAuthenticated,
     isWhitelisted: whitelist.includes(currentPath),
   };
 }
@@ -56,7 +56,7 @@ export function useRequireAuth() {
 // 组件版本
 function RequireAuth({children}: RequireAuthProps) {
   const router = useRouter();
-  const {state: authState} = useAuthStore();
+  const {isAuthenticated} = useAuthStore();
 
   // 白名单页面，不需要登录就可以访问
   const whitelist = ['/pages/login/index'];
@@ -69,7 +69,7 @@ function RequireAuth({children}: RequireAuthProps) {
     }
 
     // 如果没有登录，跳转到登录页面
-    if (!authState.isAuthenticated) {
+    if (!isAuthenticated) {
       // 获取当前页面的完整路径作为 redirectUri
       let redirectUri = '';
       try {
@@ -91,10 +91,10 @@ function RequireAuth({children}: RequireAuthProps) {
         url: `/pages/login/index?redirectUri=${redirectUri}`,
       });
     }
-  }, [authState.isAuthenticated, currentPath, router.params]);
+  }, [isAuthenticated, currentPath, router.params]);
 
   // 如果在白名单中，或者已经登录，渲染子组件
-  if (whitelist.includes(currentPath) || authState.isAuthenticated) {
+  if (whitelist.includes(currentPath) || isAuthenticated) {
     return <>{children}</>;
   }
 

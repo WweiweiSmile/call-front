@@ -17,12 +17,12 @@ interface FormValues {
 const CreateGamePage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
   const {createGame} = useAppStore();
-  const {state: authState} = useAuthStore();
+  const {user} = useAuthStore();
   const [form] = Form.useForm() as [FormInstance];
   const [startTime, setStartTime] = useState<Date | null>(null);
 
   const handleSubmit = useCallback(async (values: FormValues) => {
-    if (!values.name?.trim() || !authState.user || !startTime) {
+    if (!values.name?.trim() || !user || !startTime) {
       if (!values.name?.trim()) {
         Toast.show('create-game-toast', {content: '请输入游戏名称'});
       }
@@ -43,10 +43,10 @@ const CreateGamePage: React.FC = () => {
     } catch (error: any) {
       Toast.show('create-game-toast', {content: error.message || '创建失败'});
     }
-  }, [authState.user, createGame, startTime]);
+  }, [user, createGame, startTime]);
 
   // 如果未认证，不渲染内容（会自动跳转）
-  if (!isAuthenticated || !authState.user) {
+  if (!isAuthenticated || !user) {
     return <View/>;
   }
 

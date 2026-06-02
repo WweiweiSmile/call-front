@@ -16,11 +16,11 @@ const ProfilePage: React.FC = () => {
     getGameTransactions,
     state,
   } = useAppStore();
-  const { state: authState, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
 
   const [visible, setVisible] = useState(false);
 
-  const currentUser = authState.user;
+  const currentUser = user;
   const userGames = currentUser ? getUserGames(currentUser.id) : [];
   const userCreatedGames = currentUser ? getUserCreatedGames(currentUser.id) : [];
 

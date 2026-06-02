@@ -32,7 +32,7 @@ const GamesPage: React.FC = () => {
     joinGame,
     setCurrentGameId
   } = useAppStore();
-  const {state: authState} = useAuthStore();
+  const {user} = useAuthStore();
 
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -128,7 +128,7 @@ const GamesPage: React.FC = () => {
     });
   }, [allGames]);
 
-  const currentUser = authState.user;
+  const currentUser = user;
 
   // 获取用户参与的游戏
   const getUserGames = useCallback((currentUserId: string) => {

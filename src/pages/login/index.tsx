@@ -15,7 +15,7 @@ interface FormValues {
 
 function LoginPage() {
   const router = useRouter();
-  const {login, register, state} = useAuthStore();
+  const {login, register, isLoading} = useAuthStore();
   const [mode, setMode] = useState<ModeType>('login');
   const [form] = Form.useForm();
 
@@ -132,7 +132,7 @@ function LoginPage() {
             <Button
               type="primary"
               size="large"
-              loading={state.isLoading}
+              loading={isLoading}
               block
               htmlType="submit"
               data-testid="btn-submit"

@@ -22,7 +22,7 @@ interface HistoryGameItem {
 
 const HistoryPage: React.FC = () => {
   const { isAuthenticated } = useRequireAuth();
-  const { state: authState } = useAuthStore();
+  const { user } = useAuthStore();
 
   // 使用 useLoadMore 管理历史游戏列表数据
   const {
@@ -88,7 +88,7 @@ const HistoryPage: React.FC = () => {
     };
   }, [historyGames]);
 
-  const currentUser = authState.user;
+  const currentUser = user;
 
   // 页面显示时刷新数据
   useDidShow(() => {

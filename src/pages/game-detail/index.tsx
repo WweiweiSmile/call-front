@@ -155,12 +155,12 @@ const GameDetailPage: React.FC = () => {
     loadGame,
     joinGame,
   } = useAppStore();
-  const {state: authState} = useAuthStore();
+  const {user} = useAuthStore();
 
   // 从 URL 参数获取 gameId
   const gameIdFromUrl = router.params?.gameId as string | undefined;
   const gameId = gameIdFromUrl || state.currentGameId || '';
-  const currentUser = authState.user;
+  const currentUser = user;
 
   const [viewMode, setViewMode] = useState<ViewMode>('self');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);

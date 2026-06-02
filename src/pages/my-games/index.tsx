@@ -30,7 +30,7 @@ const MyGamesPage: React.FC = () => {
     getUserBalance,
     setCurrentGameId,
   } = useAppStore();
-  const {state: authState} = useAuthStore();
+  const {user} = useAuthStore();
 
   const [filterType, setFilterType] = useState<FilterType>('all');
 
@@ -72,7 +72,7 @@ const MyGamesPage: React.FC = () => {
     refresh();
   });
 
-  const currentUser = authState.user;
+  const currentUser = user;
 
   // 如果未认证，不渲染内容（会自动跳转）
   if (!isAuthenticated || !currentUser) {

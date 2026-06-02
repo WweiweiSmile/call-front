@@ -2,7 +2,7 @@
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DatePicker } from './date-picker';
 export { default as BottomTabBar } from './BottomTabBar';
-export { default as RequireAuth } from './RequireAuth';
+export { default as RequireAuth, useRequireAuth } from './RequireAuth';
 
 // 新增的通用组件
 export { default as Loading } from './Loading';
