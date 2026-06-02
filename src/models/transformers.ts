@@ -21,6 +21,9 @@ export function transformGameFromApi(apiGame: GameResponse): FrontendGame {
     startTime: apiGame.startTime,
     endTime: apiGame.endTime,
     isJoined: apiGame.isJoined,
+    userTotalDeposit: apiGame.userTotalDeposit,
+    userTotalWithdraw: apiGame.userTotalWithdraw,
+    userNetScore: apiGame.userNetScore,
   };
 }
 
