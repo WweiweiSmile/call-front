@@ -31,6 +31,9 @@ export interface GameResponse {
   createdAt: string;
   isCreator?: boolean;
   isJoined?: boolean;
+  userTotalDeposit?: number;
+  userTotalWithdraw?: number;
+  userNetScore?: number;
 }
 
 // 游戏列表响应

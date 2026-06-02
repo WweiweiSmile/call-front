@@ -21,6 +21,9 @@ export interface FrontendGame {
   endTime?: string;
   description?: string;
   isJoined?: boolean;
+  userTotalDeposit?: number;
+  userTotalWithdraw?: number;
+  userNetScore?: number;
 }
 
 // 前端使用的用户余额类型（ID 为 string）

@@ -1,26 +1,27 @@
-import React, { useCallback, useMemo, useState, useEffect } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { ScrollView, Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
-import { useAppStore } from '../../store';
+import dayjs from 'dayjs';
 import { useAuthStore } from '../../store/auth';
 import { useRequireAuth } from '../../components/RequireAuth';
 import { useLoadMore } from '../../hooks';
 import { gameApi } from '../../services/api';
 import type { GameResponse } from '../../models/service';
-import type { Game, UserGameBalance } from '../../store/mockData';
 import { transformGameListFromApi } from '../../models';
 import './index.less';
 
-interface HistoryGameItem extends Game {
-  netScore?: number;
+interface HistoryGameItem {
+  id: string;
+  name: string;
+  participantCount: number;
+  startTime?: string;
+  endTime?: string;
+  status: string;
+  userNetScore?: number;
 }
 
 const HistoryPage: React.FC = () => {
   const { isAuthenticated } = useRequireAuth();
-  const {
-    getUserBalance,
-    state,
-  } = useAppStore();
   const { state: authState } = useAuthStore();
 
   // 使用 useLoadMore 管理历史游戏列表数据
@@ -44,18 +45,19 @@ const HistoryPage: React.FC = () => {
     }
   );
 
-  // 转换游戏数据并计算净分
+  // 转换游戏数据 - 直接使用 API 返回的数据
   const historyGames = useMemo((): HistoryGameItem[] => {
     const games = transformGameListFromApi(rawGames);
-    return games.map(game => {
-      const balance = currentUser ? getUserBalance(game.id, currentUser.id) : undefined;
-      const netScore = balance ? balance.depositTotal - balance.withdrawTotal : undefined;
-      return {
-        ...game,
-        netScore,
-      };
-    });
-  }, [rawGames, getUserBalance, currentUser]);
+    return games.map(game => ({
+      id: game.id,
+      name: game.name,
+      participantCount: game.participantCount,
+      startTime: game.startTime,
+      endTime: game.endTime,
+      status: game.status,
+      userNetScore: game.userNetScore,
+    }));
+  }, [rawGames]);
 
   // 计算累计输赢
   const totalStats = useMemo(() => {
@@ -65,11 +67,11 @@ const HistoryPage: React.FC = () => {
     let drawCount = 0;
 
     historyGames.forEach(game => {
-      if (game.netScore !== undefined) {
-        totalNetScore += game.netScore;
-        if (game.netScore > 0) {
+      if (game.userNetScore !== undefined) {
+        totalNetScore += game.userNetScore;
+        if (game.userNetScore > 0) {
           winCount++;
-        } else if (game.netScore < 0) {
+        } else if (game.userNetScore < 0) {
           loseCount++;
         } else {
           drawCount++;
@@ -214,15 +216,15 @@ const HistoryPage: React.FC = () => {
                   </Text>
                   {game.startTime && (
                     <Text className='game-time'>
-                      {game.startTime}
+                      {dayjs(game.startTime).format('YYYY年MM月DD日 HH:mm:ss')}
                     </Text>
                   )}
                 </View>
                 <View className='game-score'>
-                  {game.netScore !== undefined ? (
+                  {game.userNetScore !== undefined ? (
                     <>
-                      <Text className={`score-value ${game.netScore >= 0 ? 'positive' : 'negative'}`}>
-                        {game.netScore >= 0 ? '+' : ''}{game.netScore.toLocaleString()}
+                      <Text className={`score-value ${game.userNetScore >= 0 ? 'positive' : 'negative'}`}>
+                        {game.userNetScore >= 0 ? '+' : ''}{game.userNetScore.toLocaleString()}
                       </Text>
                       <Text className='score-label'>净分</Text>
                     </>
