@@ -3,7 +3,7 @@ import { ScrollView, Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import dayjs from 'dayjs';
 import { useAuthStore } from '../../store/auth';
-import { useRequireAuth } from '../../components/RequireAuth';
+import { useRequireAuth, Loading, PageHeader, EmptyState, LoadMore, HistoryGameCard } from '../../components';
 import { useLoadMore } from '../../hooks';
 import { gameApi } from '../../services/api';
 import type { GameResponse } from '../../models/service';
@@ -119,38 +119,23 @@ const HistoryPage: React.FC = () => {
 
   if (loading) {
     return (
-      <View className='history-page loading-page'>
-        <View className='loading-container'>
-          <View className='loading-spinner'>
-            <View className='spinner-ring'></View>
-            <View className='spinner-ring'></View>
-            <View className='spinner-ring'></View>
-          </View>
-          <View className='loading-pulse'>
-            <Text className='loading-text'>加载中</Text>
-            <View className='loading-dots'>
-              <View className='dot'></View>
-              <View className='dot'></View>
-              <View className='dot'></View>
-            </View>
-          </View>
-          <Text className='loading-subtitle'>正在获取历史战绩...</Text>
-        </View>
+      <View className='history-page'>
+        <Loading
+          text='加载中'
+          subtitle='正在获取历史战绩...'
+          fullPage
+        />
       </View>
     );
   }
 
   return (
     <View className='history-page'>
-      <View className='header'>
-        <View className='header-left' onClick={() => Taro.navigateBack()} data-testid="btn-history-back">
-          <Text className='back-icon'>←</Text>
-        </View>
-        <View className='header-center'>
-          <Text className='title'>历史战绩</Text>
-        </View>
-        <View className='header-right'/>
-      </View>
+      <PageHeader
+        title='历史战绩'
+        showBack
+        theme='light'
+      />
 
       <ScrollView
         className='content'
@@ -203,61 +188,34 @@ const HistoryPage: React.FC = () => {
           <Text className='section-title'>📜 历史游戏</Text>
           {historyGames.length > 0 ? (
             historyGames.map((game) => (
-              <View
+              <HistoryGameCard
                 key={game.id}
-                className='history-game-card'
+                name={game.name}
+                participantCount={game.participantCount}
+                gameTime={game.startTime ? dayjs(game.startTime).format('YYYY年MM月DD日 HH:mm:ss') : undefined}
+                userNetScore={game.userNetScore}
                 onClick={() => handleGameClick(game.id)}
-                data-testid={`history-game-card-${game.id}`}
-              >
-                <View className='game-main-info'>
-                  <Text className='game-name'>🎮 {game.name}</Text>
-                  <Text className='game-participants'>
-                    参与人数: {game.participantCount}人
-                  </Text>
-                  {game.startTime && (
-                    <Text className='game-time'>
-                      {dayjs(game.startTime).format('YYYY年MM月DD日 HH:mm:ss')}
-                    </Text>
-                  )}
-                </View>
-                <View className='game-score'>
-                  {game.userNetScore !== undefined ? (
-                    <>
-                      <Text className={`score-value ${game.userNetScore >= 0 ? 'positive' : 'negative'}`}>
-                        {game.userNetScore >= 0 ? '+' : ''}{game.userNetScore.toLocaleString()}
-                      </Text>
-                      <Text className='score-label'>净分</Text>
-                    </>
-                  ) : (
-                    <Text className='score-value no-score'>-</Text>
-                  )}
-                </View>
-              </View>
+                testId={`history-game-card-${game.id}`}
+              />
             ))
           ) : (
-            <View className='empty-state'>
-              <Text className='empty-icon'>🎯</Text>
-              <Text className='empty-text'>暂无历史战绩</Text>
-              <Text className='empty-subtext'>快去参与游戏吧</Text>
-            </View>
+            <EmptyState
+              icon='🎯'
+              text='暂无历史战绩'
+              subtext='快去参与游戏吧'
+              theme='light'
+            />
           )}
         </View>
 
-        {/* 加载更多提示 */}
-        {hasMore && (
-          <View className='load-more'>
-            <Text className='load-more-text'>
-              {loading ? '加载中...' : '上拉加载更多'}
-            </Text>
-          </View>
-        )}
+        {/* 加载更多 */}
+        <LoadMore
+          hasMore={hasMore}
+          loading={loading}
+          theme='light'
+        />
 
-        {/* 没有更多数据 */}
-        {!hasMore && historyGames.length > 0 && (
-          <View className='load-more'>
-            <Text className='load-more-text'>没有更多数据了</Text>
-          </View>
-        )}
+        {/* 只有当没有更多且有数据时才显示没有更多（已在 LoadMore 组件中处理） */}
       </ScrollView>
     </View>
   );

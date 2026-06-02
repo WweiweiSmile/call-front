@@ -1,0 +1,55 @@
+// ============================================
+// EmptyState 空状态组件 - 样式
+// ============================================
+
+@import '../../styles/theme.less';
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+
+  .empty-icon {
+    margin-bottom: 16px;
+
+    .icon-text {
+      font-size: 64px;
+      display: block;
+    }
+  }
+
+  .empty-text {
+    font-size: 16px;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .empty-subtext {
+    font-size: 14px;
+    display: block;
+  }
+
+  // 深色主题
+  &.dark {
+    .empty-text {
+      color: @text-tertiary;
+    }
+
+    .empty-subtext {
+      color: @text-tertiary;
+    }
+  }
+
+  // 浅色主题
+  &.light {
+    .empty-text {
+      color: #8C8C8C;
+    }
+
+    .empty-subtext {
+      color: #BFBFBF;
+    }
+  }
+}

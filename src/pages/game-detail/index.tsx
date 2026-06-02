@@ -5,8 +5,7 @@ import Taro, {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth} from '../../components/RequireAuth';
-import ConfirmDialog from '../../components/ConfirmDialog';
+import {useRequireAuth, Loading, PageHeader, ConfirmDialog} from '../../components';
 import type {Game, User as UserType, UserGameBalance} from '../../store/mockData';
 import './index.less';
 
@@ -434,23 +433,12 @@ const GameDetailPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View className='game-detail-page loading-page'>
-        <View className='loading-container'>
-          <View className='loading-spinner'>
-            <View className='spinner-ring'></View>
-            <View className='spinner-ring'></View>
-            <View className='spinner-ring'></View>
-          </View>
-          <View className='loading-pulse'>
-            <Text className='loading-text'>加载中</Text>
-            <View className='loading-dots'>
-              <View className='dot'></View>
-              <View className='dot'></View>
-              <View className='dot'></View>
-            </View>
-          </View>
-          <Text className='loading-subtitle'>正在获取游戏数据...</Text>
-        </View>
+      <View className='game-detail-page'>
+        <Loading
+          text='加载中'
+          subtitle='正在获取游戏数据...'
+          fullPage
+        />
       </View>
     );
   }
@@ -485,25 +473,20 @@ const GameDetailPage: React.FC = () => {
   return (
     <View className='game-detail-page'>
       <Toast id="game-detail-toast"/>
-      <View className='header'>
-        <View className='header-left' onClick={(e) => {
-          e.stopPropagation();
-          Taro.redirectTo({url: '/pages/index/index'})
-        }} data-testid="btn-game-detail-back">
-          <Text className='back-icon'>←</Text>
-        </View>
-        <View className='header-center'>
-          <Text className='title'>{game.name}</Text>
-          <Text className='creator'>
-            👤 {isCreator ? '我创建的游戏' : `创建者: ${game.creatorName}`}
-          </Text>
-        </View>
-        <View className='header-right'>
-          {isCreator && (
+      <PageHeader
+        title={game.name}
+        subtitle={`👤 ${isCreator ? '我创建的游戏' : `创建者: ${game.creatorName}`}`}
+        showBack
+        onBack={(e) => {
+          e?.stopPropagation?.();
+          Taro.redirectTo({url: '/pages/index/index'});
+        }}
+        rightContent={
+          isCreator ? (
             <Text className='share-icon' onClick={handleShare}>分享</Text>
-          )}
-        </View>
-      </View>
+          ) : null
+        }
+      />
 
       {isCreator && (
         <View className='mode-switch'>
