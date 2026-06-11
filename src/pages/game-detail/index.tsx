@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {ScrollView, Text, View} from '@tarojs/components';
+import {Input, ScrollView, Text, View} from '@tarojs/components';
 import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
@@ -53,8 +53,18 @@ const OperationPopup: React.FC<OperationPopupProps> = (props) => {
   } = props
   const isDeposit = type === 'deposit';
   const title = viewMode === 'manage' ? (isDeposit ? '代理存分' : '代理取分') : (isDeposit ? '存分' : '取分');
-  const buttonType = isDeposit ? 'success' : 'warning';
-  const buttonText = isDeposit ? '确认存分' : '确认取分';
+  const popupTheme = isDeposit ? 'popup-deposit' : 'popup-withdraw';
+  const headerIcon = isDeposit ? '💰' : '💵';
+  const [amountFocused, setAmountFocused] = useState(false);
+
+  // 格式化千分位显示
+  const formatThousands = (val: string) => {
+    const num = parseInt(val) || 0;
+    if (val === '' || val === '0') return '0';
+    return num.toLocaleString();
+  };
+
+  const buttonText = isDeposit ? `确认存分 +${formatThousands(amount)}` : `确认取分 -${formatThousands(amount)}`;
 
   const newBalance = useMemo(() => {
     if (!balance) return 0;
@@ -66,9 +76,14 @@ const OperationPopup: React.FC<OperationPopupProps> = (props) => {
 
   return (
     <Popup visible={visible} position='bottom' onClose={onClose}>
-      <View className='operation-popup'>
-        <Text className='popup-title'>{title}</Text>
+      <View className={`operation-popup ${popupTheme}`}>
+        {/* 主题化头部 */}
+        <View className='popup-header'>
+          <Text className='popup-header-icon'>{headerIcon}</Text>
+          <Text className='popup-title'>{title}</Text>
+        </View>
 
+        {/* 信息区 */}
         <View className='popup-info'>
           <Text className='info-row'>游戏: {game.name}</Text>
           <Text className='info-row'>
@@ -79,16 +94,31 @@ const OperationPopup: React.FC<OperationPopupProps> = (props) => {
           )}
         </View>
 
-        <View className='amount-input-section'>
-          <NutInput
+        {/* 金额输入 - 大尺寸千分位显示 */}
+        <View className={`amount-input-section ${amountFocused ? 'focused' : ''}`}>
+          <View
+            className='amount-display'
+            onClick={() => setAmountFocused(true)}
+          >
+            <Text className='amount-display-value'>
+              {amount && parseInt(amount) > 0 ? formatThousands(amount) : '0'}
+            </Text>
+            <Text className='amount-display-hint'>
+              {`点击输入${isDeposit ? '存分' : '取分'}数量`}
+            </Text>
+          </View>
+          <Input
+            className='amount-hidden-input'
             type='number'
-            placeholder={`输入${isDeposit ? '存分' : '取分'}数量`}
-            value={amount}
-            onChange={onAmountChange}
+            focus={amountFocused}
+            value={amount === '0' ? '' : amount}
+            onInput={(e) => onAmountChange(e.detail.value)}
+            onBlur={() => setAmountFocused(false)}
             data-testid={`input-${type}-amount`}
           />
         </View>
 
+        {/* 快捷金额 */}
         <View className='quick-amounts'>
           <Text className='quick-label'>快捷输入:</Text>
           <View className='quick-buttons'>
@@ -97,6 +127,7 @@ const OperationPopup: React.FC<OperationPopupProps> = (props) => {
                 key={num}
                 type='default'
                 size='small'
+                className='quick-btn'
                 onClick={() => onAmountChange(num.toString())}
                 data-testid={`btn-quick-${type}-${num}`}
               >
@@ -106,13 +137,24 @@ const OperationPopup: React.FC<OperationPopupProps> = (props) => {
           </View>
         </View>
 
+        {/* 余额预览 */}
         {balance && (
           <View className='balance-preview'>
-            <Text>当前余额: {balance.currentBalance.toLocaleString()}</Text>
-            <Text>{isDeposit ? '存分' : '取分'}后余额: {newBalance.toLocaleString()}</Text>
+            <View className='preview-row'>
+              <Text className='preview-label'>当前余额</Text>
+              <Text className='preview-value'>{balance.currentBalance.toLocaleString()}</Text>
+            </View>
+            <View className='preview-arrow'>
+              <Text className='preview-arrow-icon'>↓</Text>
+            </View>
+            <View className='preview-row preview-result'>
+              <Text className='preview-label'>{isDeposit ? '存分后' : '取分后'}余额</Text>
+              <Text className='preview-value'>{newBalance.toLocaleString()}</Text>
+            </View>
           </View>
         )}
 
+        {/* 备注 */}
         <View className='remark-section'>
           <NutInput
             placeholder='备注 (选填)'
@@ -122,11 +164,16 @@ const OperationPopup: React.FC<OperationPopupProps> = (props) => {
           />
         </View>
 
+        {/* 操作按钮 */}
         <View className='popup-actions'>
           <Button type='default' onClick={onClose} data-testid={`btn-${type}-cancel`}>
             取消
           </Button>
-          <Button type={buttonType} onClick={onConfirm} data-testid={`btn-${type}-confirm`}>
+          <Button
+            type={isDeposit ? 'success' : 'danger'}
+            onClick={onConfirm}
+            data-testid={`btn-${type}-confirm`}
+          >
             {buttonText}
           </Button>
         </View>
@@ -163,7 +210,7 @@ const GameDetailPage: React.FC = () => {
   const currentUser = user;
 
   const [viewMode, setViewMode] = useState<ViewMode>('self');
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [operationTargetUserId, setOperationTargetUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const pollingTimerRef = useRef<number | null>(null);
 
@@ -331,21 +378,20 @@ const GameDetailPage: React.FC = () => {
 
   const getDisplayUser = useCallback((): DisplayUser | null => {
     if (viewMode === 'self' && currentUser) {
-      // 将 AuthUser 转换为兼容类型
       return {
         id: currentUser.id,
         name: currentUser.nickname || currentUser.username,
       };
     }
-    if (selectedUserId) {
+    if (operationTargetUserId) {
       const participants = getGameParticipants(gameId) || [];
-      const participant = participants.find((u) => u.id === selectedUserId);
+      const participant = participants.find((u) => u.id === operationTargetUserId);
       if (participant) {
         return participant as DisplayUser;
       }
     }
     return null;
-  }, [viewMode, selectedUserId, currentUser, gameId, getGameParticipants]);
+  }, [viewMode, operationTargetUserId, currentUser, gameId, getGameParticipants]);
 
   const displayUser = getDisplayUser();
   const balance = (displayUser ? getUserBalance(gameId, displayUser.id) : null) ?? null;
@@ -376,15 +422,21 @@ const GameDetailPage: React.FC = () => {
     setRemark('');
   }, []);
 
-  // 打开存分弹窗
-  const openDepositPopup = useCallback(() => {
+  // 打开存分弹窗（可传入目标用户ID用于代理操作）
+  const openDepositPopup = useCallback((targetUserId?: string) => {
     resetPopupForm();
+    if (targetUserId) {
+      setOperationTargetUserId(targetUserId);
+    }
     setShowDepositPopup(true);
   }, [resetPopupForm]);
 
-  // 打开取分弹窗
-  const openWithdrawPopup = useCallback(() => {
+  // 打开取分弹窗（可传入目标用户ID用于代理操作）
+  const openWithdrawPopup = useCallback((targetUserId?: string) => {
     resetPopupForm();
+    if (targetUserId) {
+      setOperationTargetUserId(targetUserId);
+    }
     setShowWithdrawPopup(true);
   }, [resetPopupForm]);
 
@@ -397,7 +449,7 @@ const GameDetailPage: React.FC = () => {
     }
 
     try {
-      const targetUserId = viewMode === 'manage' && selectedUserId ? selectedUserId : undefined;
+      const targetUserId = viewMode === 'manage' && operationTargetUserId ? operationTargetUserId : undefined;
       const operation = type === 'deposit' ? deposit : withdraw;
       await operation(gameId, numAmount, currentUser?.id || '', targetUserId, remark);
 
@@ -411,7 +463,7 @@ const GameDetailPage: React.FC = () => {
     } catch (error: any) {
       Toast.show('game-detail-toast', {content: error.message || `${type === 'deposit' ? '存分' : '取分'}失败`});
     }
-  }, [amount, viewMode, selectedUserId, gameId, currentUser?.id, remark, deposit, withdraw, resetPopupForm]);
+  }, [amount, viewMode, operationTargetUserId, gameId, currentUser?.id, remark, deposit, withdraw, resetPopupForm]);
 
   const handleDeposit = useCallback(() => handleOperation('deposit'), [handleOperation]);
   const handleWithdraw = useCallback(() => handleOperation('withdraw'), [handleOperation]);
@@ -420,7 +472,7 @@ const GameDetailPage: React.FC = () => {
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
     if (mode === 'self') {
-      setSelectedUserId(null);
+      setOperationTargetUserId(null);
     }
   }, []);
 
@@ -507,8 +559,8 @@ const GameDetailPage: React.FC = () => {
         </View>
       )}
 
-      {/* 余额卡片 */}
-      {balance && (
+      {/* 自查看模式：个人余额卡片 */}
+      {viewMode === 'self' && balance && (
         <View className='balance-card'>
           <Text className='card-title'>场次积分状态</Text>
           <View className='balance-stats'>
@@ -536,27 +588,32 @@ const GameDetailPage: React.FC = () => {
         </View>
       )}
 
-      {/* 操作按钮 */}
-      {isCreator && viewMode === 'manage' && selectedUserId && !isGameEnded && (
-        <View className='action-buttons-section'>
-          <Button
-            type='success'
-            size='large'
-            block
-            onClick={openDepositPopup}
-            data-testid="btn-deposit"
+      {/* 管理模式：整体概览卡片（上移） */}
+      {isCreator && viewMode === 'manage' && overallBalance && (
+        <View className='overall-balance-card'>
+          <Text className='overall-balance-title'>场次概览</Text>
+          <View className='overall-balance-stats'>
+            <View className='overall-stat-item'>
+              <Text className='overall-stat-label'>总存分</Text>
+              <Text className='overall-stat-value'>{overallBalance.totalDeposit.toLocaleString()}</Text>
+            </View>
+            <View className='overall-stat-item'>
+              <Text className='overall-stat-label'>总取分</Text>
+              <Text className='overall-stat-value'>{overallBalance.totalWithdraw.toLocaleString()}</Text>
+            </View>
+            <View className='overall-stat-item'>
+              <Text className='overall-stat-label'>参与人数</Text>
+              <Text className='overall-stat-value'>{overallBalance.participantCount}人</Text>
+            </View>
+          </View>
+          <View
+            className={`overall-balance-status ${overallBalance.allBalanced ? 'balanced' : 'unbalanced'}`}
           >
-            💰 存分
-          </Button>
-          <Button
-            type='warning'
-            size='large'
-            block
-            onClick={openWithdrawPopup}
-            data-testid="btn-withdraw"
-          >
-            💵 取分
-          </Button>
+            {overallBalance.allBalanced ? '✓ 所有人平衡' : '⚠ 有人不平衡'}
+            <Text className='overall-balance-desc'>
+              ({overallBalance.allBalanced ? '总存分 - 总取分 = 0' : '总存分 - 总取分 ≠ 0'})
+            </Text>
+          </View>
         </View>
       )}
 
@@ -569,7 +626,7 @@ const GameDetailPage: React.FC = () => {
             return (
               <View
                 key={participant?.id || Math.random().toString()}
-                className={`participant-card ${selectedUserId === participant?.id ? 'selected' : ''}`}
+                className='participant-card'
               >
                 <View className='participant-info'>
                   <Text className='participant-name'>👤 {participant?.name || '未知用户'}</Text>
@@ -585,52 +642,34 @@ const GameDetailPage: React.FC = () => {
                   )}
                 </View>
                 {!isGameEnded && (
-                  <Button
-                    type='primary'
-                    size='small'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (participant?.id) {
-                        setSelectedUserId(participant.id);
-                      }
-                    }}
-                    data-testid={`btn-proxy-${participant?.id}`}
-                  >
-                    代理操作
-                  </Button>
+                  <View className='participant-actions'>
+                    <Button
+                      type='success'
+                      size='small'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDepositPopup(participant?.id);
+                      }}
+                      data-testid={`btn-deposit-${participant?.id}`}
+                    >
+                      💰 存分
+                    </Button>
+                    <Button
+                      type='warning'
+                      size='small'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openWithdrawPopup(participant?.id);
+                      }}
+                      data-testid={`btn-withdraw-${participant?.id}`}
+                    >
+                      💵 取分
+                    </Button>
+                  </View>
                 )}
               </View>
             );
           })}
-
-          {/* 整体平衡状态显示 */}
-          {overallBalance && (
-            <View className='overall-balance-card'>
-              <Text className='overall-balance-title'>整体平衡状态</Text>
-              <View className='overall-balance-stats'>
-                <View className='overall-stat-item'>
-                  <Text className='overall-stat-label'>总存分</Text>
-                  <Text className='overall-stat-value'>{overallBalance.totalDeposit.toLocaleString()}</Text>
-                </View>
-                <View className='overall-stat-item'>
-                  <Text className='overall-stat-label'>总取分</Text>
-                  <Text className='overall-stat-value'>{overallBalance.totalWithdraw.toLocaleString()}</Text>
-                </View>
-                <View className='overall-stat-item'>
-                  <Text className='overall-stat-label'>平衡人数</Text>
-                  <Text className='overall-stat-value'>{overallBalance.participantCount}人</Text>
-                </View>
-              </View>
-              <View
-                className={`overall-balance-status ${overallBalance.allBalanced ? 'balanced' : 'unbalanced'}`}
-              >
-                {overallBalance.allBalanced ? '✓ 所有人平衡' : '⚠ 有人不平衡'}
-                <Text className='overall-balance-desc'>
-                  ({overallBalance.allBalanced ? '总存分 - 总取分 = 0' : '总存分 - 总取分 ≠ 0'})
-                </Text>
-              </View>
-            </View>
-          )}
         </View>
       )}
 
