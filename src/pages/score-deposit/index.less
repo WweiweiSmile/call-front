@@ -1,0 +1,201 @@
+// ============================================
+// 存分页面 - 样式
+// ============================================
+
+@import '../../styles/theme.less';
+
+.score-deposit-page {
+  min-height: 100vh;
+  background: @bg-primary;
+
+  .operation-content {
+    padding: 0 16px 32px;
+
+    // 信息区
+    .info-section {
+      background: @bg-secondary;
+      border-radius: @radius-lg;
+      padding: 14px;
+      margin-bottom: 20px;
+      border: 1px solid @border-color;
+
+      .info-row {
+        font-size: 14px;
+        color: @text-primary;
+        margin-bottom: 6px;
+        display: block;
+      }
+    }
+
+    // 金额输入 - 大尺寸千分位显示
+    .amount-input-section {
+      margin-bottom: 16px;
+      position: relative;
+
+      .amount-display {
+        background: @bg-secondary;
+        border: 2px solid @border-color;
+        border-radius: @radius-lg;
+        padding: 24px 20px;
+        text-align: center;
+        transition: border-color @duration-fast ease;
+
+        .amount-display-value {
+          font-size: 40px;
+          font-weight: 700;
+          color: @text-primary;
+          display: block;
+          line-height: 1.2;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: 1px;
+        }
+
+        .amount-display-hint {
+          font-size: 13px;
+          color: @text-tertiary;
+          display: block;
+          margin-top: 8px;
+        }
+      }
+
+      &.focused {
+        .amount-display {
+          border-color: @primary;
+        }
+      }
+
+      .amount-hidden-input {
+        position: fixed;
+        left: -9999px;
+        top: -9999px;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+      }
+    }
+
+    // 快捷金额
+    .quick-amounts {
+      margin-bottom: 16px;
+
+      .quick-label {
+        font-size: 14px;
+        color: @text-secondary;
+        margin-bottom: 10px;
+        display: block;
+      }
+
+      .quick-buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+
+        .quick-btn {
+          flex: 0 0 calc(33.333% - 6px);
+          background: @bg-tertiary;
+          font-weight: 600;
+          border-color: @success;
+          color: @success;
+
+          &:active {
+            background: fade(@success, 10%);
+          }
+        }
+      }
+    }
+
+    // 余额预览
+    .balance-preview {
+      background: fade(@success, 8%);
+      border: 1px solid fade(@success, 25%);
+      border-radius: @radius-lg;
+      padding: 16px;
+      margin-bottom: 16px;
+
+      .preview-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .preview-label {
+          font-size: 14px;
+          color: @text-secondary;
+        }
+
+        .preview-value {
+          font-size: 18px;
+          font-weight: 700;
+          color: @text-primary;
+        }
+      }
+
+      .preview-arrow {
+        text-align: center;
+        padding: 4px 0;
+
+        .preview-arrow-icon {
+          font-size: 18px;
+          font-weight: bold;
+          color: @success;
+        }
+      }
+
+      .preview-result {
+        .preview-value {
+          font-size: 22px;
+          color: @success;
+        }
+      }
+    }
+
+    // 备注
+    .remark-section {
+      margin-bottom: 24px;
+    }
+
+    // 操作按钮
+    .operation-actions {
+      display: flex;
+      gap: 12px;
+
+      .nut-button {
+        flex: 1;
+      }
+    }
+  }
+
+  // NutUI 组件深色主题覆盖
+  :global {
+    .nut-input {
+      background: @bg-tertiary;
+      border-radius: @radius-md;
+      border: 1px solid @border-color;
+      color: @text-primary;
+
+      .nut-input__value {
+        color: @text-primary;
+      }
+
+      .nut-input__placeholder {
+        color: @text-tertiary;
+      }
+
+      &.nut-input--focus {
+        border-color: @primary;
+        box-shadow: 0 0 0 2px fade(@primary, 30%);
+      }
+    }
+  }
+
+  // 错误状态
+  .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 16px;
+    color: @text-secondary;
+    font-size: 16px;
+  }
+}

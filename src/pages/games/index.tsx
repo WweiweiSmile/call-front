@@ -4,7 +4,7 @@ import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useDidShow} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth} from '../../components/RequireAuth';
+import {useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard} from '../../components';
 import {useLoadMore} from '../../hooks';
 import {gameApi} from '../../services/api';
 import type {GameResponse} from '../../models/service';
@@ -19,13 +19,20 @@ interface GamesFilterParams {
   filterType?: FilterType;
 }
 
+const FILTER_TABS = [
+  { value: 'all', label: '全部' },
+  { value: 'joined', label: '我参与的' },
+  { value: 'created', label: '我创建的' },
+  { value: 'recent', label: '最近玩过' },
+];
+
 const GamesPage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
   const {
     joinGame,
     setCurrentGameId
   } = useAppStore();
-  const {state: authState} = useAuthStore();
+  const {user} = useAuthStore();
 
   const [searchText, setSearchText] = useState('');
   const [filterType, setFilterType] = useState<FilterType>('all');
@@ -121,7 +128,7 @@ const GamesPage: React.FC = () => {
     });
   }, [allGames]);
 
-  const currentUser = authState.user;
+  const currentUser = user;
 
   // 获取用户参与的游戏
   const getUserGames = useCallback((currentUserId: string) => {
@@ -261,32 +268,11 @@ const GamesPage: React.FC = () => {
       </View>
 
       {/* 筛选标签 */}
-      <View className='filter-tabs'>
-        <View
-          className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
-          onClick={() => handleFilterChange('all')}
-        >
-          全部
-        </View>
-        <View
-          className={`filter-tab ${filterType === 'joined' ? 'active' : ''}`}
-          onClick={() => handleFilterChange('joined')}
-        >
-          我参与的
-        </View>
-        <View
-          className={`filter-tab ${filterType === 'created' ? 'active' : ''}`}
-          onClick={() => handleFilterChange('created')}
-        >
-          我创建的
-        </View>
-        <View
-          className={`filter-tab ${filterType === 'recent' ? 'active' : ''}`}
-          onClick={() => handleFilterChange('recent')}
-        >
-          最近玩过
-        </View>
-      </View>
+      <FilterTabs
+        tabs={FILTER_TABS}
+        activeValue={filterType}
+        onChange={handleFilterChange}
+      />
 
       <ScrollView
         className='content'
@@ -305,31 +291,17 @@ const GamesPage: React.FC = () => {
               const isCreator = game.creatorId === currentUser.id;
 
               return (
-                <View
+                <GameCard
                   key={game.id}
-                  className={`game-card ${!hasJoined && !isCreator ? 'not-joined' : ''}`}
+                  name={game.name}
+                  creatorName={game.creatorName}
+                  participantCount={game.participantCount}
+                  isJoined={hasJoined}
+                  isCreator={isCreator}
                   onClick={() => handleGameCardClick(game)}
-                >
-                  <View className='game-info'>
-                    <Text className='game-name'>🎮 {game.name}</Text>
-                    <Text className='game-creator'>
-                      👤 创建者: {game.creatorName}
-                    </Text>
-                    <Text className='game-participants'>
-                      参与人数: {game.participantCount}人
-                    </Text>
-                  </View>
-                  <Button
-                    type={hasJoined ? 'primary' : 'success'}
-                    size='small'
-                    onClick={(e) => handleGameButtonClick(e, game)}
-                    data-testid={`btn-game-action-${game.id}`}
-                  >
-                    {isCreator
-                      ? (hasJoined ? '管理 →' : '加入游戏 →')
-                      : (hasJoined ? '进入 →' : '立即加入 →')}
-                  </Button>
-                </View>
+                  onButtonClick={(e) => handleGameButtonClick(e, game)}
+                  testId={`btn-game-action-${game.id}`}
+                />
               );
             })}
           </View>
@@ -339,52 +311,31 @@ const GamesPage: React.FC = () => {
           <View className='section'>
             <Text className='section-title'>⏰ 即将开始的游戏</Text>
             {filteredPendingGames.map((game) => (
-              <View key={game.id} className='game-card'>
-                <View className='game-info'>
-                  <Text className='game-name'>🎮 {game.name}</Text>
-                  <Text className='game-creator'>
-                    👤 创建者: {game.creatorName}
-                  </Text>
-                  {game.startTime && (
-                    <Text className='game-time'>
-                      开始时间: {game.startTime}
-                    </Text>
-                  )}
-                </View>
-                <Button
-                  type='default'
-                  size='small'
-                  onClick={() => handleJoinGame(game.id)}
-                  data-testid={`btn-reserve-${game.id}`}
-                >
-                  预约提醒
-                </Button>
-              </View>
+              <GameCard
+                key={game.id}
+                name={game.name}
+                creatorName={game.creatorName}
+                startTime={game.startTime}
+                buttonText='预约提醒'
+                buttonType='default'
+                onButtonClick={() => handleJoinGame(game.id)}
+                testId={`btn-reserve-${game.id}`}
+              />
             ))}
           </View>
         )}
 
-        {/* 加载更多提示 */}
-        {hasMore && (
-          <View className='load-more'>
-            <Text className='load-more-text'>
-              {loading ? '加载中...' : '上拉加载更多'}
-            </Text>
-          </View>
-        )}
-
-        {/* 没有更多数据 */}
-        {!hasMore && allGames.length > 0 && (
-          <View className='load-more'>
-            <Text className='load-more-text'>没有更多数据了</Text>
-          </View>
-        )}
+        {/* 加载更多 */}
+        <LoadMore
+          hasMore={hasMore}
+          loading={loading}
+        />
 
         {/* 空状态 */}
         {filteredOngoingGames.length === 0 && filteredPendingGames.length === 0 && !loading && (
-          <View className='empty-state'>
-            <Text className='empty-text'>暂无相关游戏</Text>
-          </View>
+          <EmptyState
+            text='暂无相关游戏'
+          />
         )}
       </ScrollView>
     </View>

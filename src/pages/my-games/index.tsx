@@ -1,10 +1,9 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { View, Text, ScrollView } from '@tarojs/components';
-import { Button } from '@nutui/nutui-react-taro';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
-import { useRequireAuth } from '../../components/RequireAuth';
+import { useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard } from '../../components';
 import { useLoadMore } from '../../hooks';
 import { gameApi } from '../../services/api';
 import type { GameResponse } from '../../models/service';
@@ -18,13 +17,20 @@ interface MyGamesFilterParams {
   status?: string;
 }
 
+const FILTER_TABS = [
+  { value: 'all', label: '全部' },
+  { value: 'ongoing', label: '进行中' },
+  { value: 'ended', label: '已结束' },
+  { value: 'recent', label: '最近玩过' },
+];
+
 const MyGamesPage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
   const {
     getUserBalance,
     setCurrentGameId,
   } = useAppStore();
-  const {state: authState} = useAuthStore();
+  const {user} = useAuthStore();
 
   const [filterType, setFilterType] = useState<FilterType>('all');
 
@@ -66,7 +72,7 @@ const MyGamesPage: React.FC = () => {
     refresh();
   });
 
-  const currentUser = authState.user;
+  const currentUser = user;
 
   // 如果未认证，不渲染内容（会自动跳转）
   if (!isAuthenticated || !currentUser) {
@@ -77,45 +83,6 @@ const MyGamesPage: React.FC = () => {
     setCurrentGameId(gameId);
     Taro.navigateTo({ url: `/pages/game-detail/index?gameId=${gameId}` });
   }, [setCurrentGameId]);
-
-  const renderGameCard = useCallback((game: Game) => {
-    const balance = getUserBalance(game.id, currentUser.id);
-    const isCreator = game.creatorId === currentUser.id;
-
-    return (
-      <View
-        key={game.id}
-        className='game-card'
-        onClick={() => handleEnterGame(game.id)}
-        data-testid={`my-game-card-${game.id}`}
-      >
-        <View className='game-info'>
-          <Text className='game-name'>🎮 {game.name}</Text>
-          <Text className='game-creator'>
-            👤 {isCreator ? '我创建的' : `创建者: ${game.creatorName}`}
-          </Text>
-          {balance && (
-          <View className='balance-section'>
-            <Text className='balance'>当前余额: {balance.currentBalance.toLocaleString()}</Text>
-            <View
-              className={`balance-status ${balance.isBalanced ? 'balanced' : 'unbalanced'}`}
-            >
-              {balance.isBalanced ? '✓ 平衡' : '⚠ 不平衡'}
-            </View>
-          </View>
-          )}
-          {!balance && isCreator && (
-          <Text className='participants'>
-            当前人数: {game.participantCount}人
-          </Text>
-          )}
-        </View>
-        <Button type='primary' size='small' data-testid={`btn-my-game-enter-${game.id}`}>
-          {isCreator ? '管理 →' : '进入 →'}
-        </Button>
-      </View>
-    );
-  }, [currentUser.id, getUserBalance, handleEnterGame]);
 
   // 切换筛选标签
   const handleFilterChange = useCallback((type: FilterType) => {
@@ -148,32 +115,11 @@ const MyGamesPage: React.FC = () => {
       </View>
 
       {/* 筛选标签 */}
-      <View className='filter-tabs'>
-        <View
-          className={`filter-tab ${filterType === 'all' ? 'active' : ''}`}
-          onClick={() => handleFilterChange('all')}
-        >
-          全部
-        </View>
-        <View
-          className={`filter-tab ${filterType === 'ongoing' ? 'active' : ''}`}
-          onClick={() => handleFilterChange('ongoing')}
-        >
-          进行中
-        </View>
-        <View
-          className={`filter-tab ${filterType === 'ended' ? 'active' : ''}`}
-          onClick={() => handleFilterChange('ended')}
-        >
-          已结束
-        </View>
-        <View
-          className={`filter-tab ${filterType === 'recent' ? 'active' : ''}`}
-          onClick={() => handleFilterChange('recent')}
-        >
-          最近玩过
-        </View>
-      </View>
+      <FilterTabs
+        tabs={FILTER_TABS}
+        activeValue={filterType}
+        onChange={handleFilterChange}
+      />
 
       <ScrollView
         className='content'
@@ -186,28 +132,38 @@ const MyGamesPage: React.FC = () => {
       >
         {games.length > 0 ? (
           <>
-            {games.map(renderGameCard)}
+            {games.map((game) => {
+              const balance = getUserBalance(game.id, currentUser.id);
+              const isCreator = game.creatorId === currentUser.id;
 
-            {/* 加载更多提示 */}
-            {hasMore && (
-              <View className='load-more'>
-                <Text className='load-more-text'>
-                  {loading ? '加载中...' : '上拉加载更多'}
-                </Text>
-              </View>
-            )}
+              return (
+                <GameCard
+                  key={game.id}
+                  name={game.name}
+                  creatorName={game.creatorName}
+                  participantCount={!balance && isCreator ? game.participantCount : undefined}
+                  isJoined
+                  isCreator={isCreator}
+                  balance={balance ? {
+                    currentBalance: balance.currentBalance,
+                    isBalanced: balance.isBalanced,
+                  } : null}
+                  onClick={() => handleEnterGame(game.id)}
+                  testId={`my-game-card-${game.id}`}
+                />
+              );
+            })}
 
-            {/* 没有更多数据 */}
-            {!hasMore && games.length > 0 && (
-              <View className='load-more'>
-                <Text className='load-more-text'>没有更多数据了</Text>
-              </View>
-            )}
+            {/* 加载更多 */}
+            <LoadMore
+              hasMore={hasMore}
+              loading={loading}
+            />
           </>
         ) : (
-          <View className='empty-state'>
-            <Text className='empty-text'>暂无相关场次</Text>
-          </View>
+          <EmptyState
+            text='暂无相关场次'
+          />
         )}
       </ScrollView>
     </View>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { create } from 'zustand';
 import Taro from '@tarojs/taro';
 import { authApi } from '../services/api';
 
@@ -16,6 +16,15 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+}
+
+// Auth Store Actions
+interface AuthActions {
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (username: string, password: string, nickname?: string) => Promise<boolean>;
+  logout: () => void;
+  getCurrentUser: () => User | null;
+  getToken: () => string | null;
 }
 
 // 从本地存储获取 token
@@ -57,32 +66,17 @@ const clearStorage = () => {
   }
 };
 
-// 认证 Hook
-export function useAuthStore() {
-  const [state, setState] = useState<AuthState>({
-    user: getUserFromStorage(),
-    token: getTokenFromStorage(),
-    isAuthenticated: !!getTokenFromStorage(),
-    isLoading: false,
-  });
+type AuthStore = AuthState & AuthActions;
 
-  // 初始化时检查登录状态
-  useEffect(() => {
-    const token = getTokenFromStorage();
-    const user = getUserFromStorage();
-    if (token && user) {
-      setState({
-        user,
-        token,
-        isAuthenticated: true,
-        isLoading: false,
-      });
-    }
-  }, []);
+// 创建 Zustand Store
+export const useAuthStore = create<AuthStore>((set, get) => ({
+  user: getUserFromStorage(),
+  token: getTokenFromStorage(),
+  isAuthenticated: !!getTokenFromStorage(),
+  isLoading: false,
 
-  // 登录
-  const login = useCallback(async (username: string, password: string) => {
-    setState((prev) => ({ ...prev, isLoading: true }));
+  login: async (username: string, password: string) => {
+    set({ isLoading: true });
     try {
       const response: any = await authApi.login({ username, password });
       const user: User = {
@@ -91,26 +85,25 @@ export function useAuthStore() {
         nickname: response.user.nickname,
         avatar: response.user.avatar,
       };
-      
+
       saveToStorage(response.token, user);
-      
-      setState({
+
+      set({
         user,
         token: response.token,
         isAuthenticated: true,
         isLoading: false,
       });
-      
+
       return true;
     } catch (error) {
-      setState((prev) => ({ ...prev, isLoading: false }));
+      set({ isLoading: false });
       throw error;
     }
-  }, []);
+  },
 
-  // 注册
-  const register = useCallback(async (username: string, password: string, nickname?: string) => {
-    setState((prev) => ({ ...prev, isLoading: true }));
+  register: async (username: string, password: string, nickname?: string) => {
+    set({ isLoading: true });
     try {
       const response: any = await authApi.register({ username, password, nickname });
       const user: User = {
@@ -119,46 +112,34 @@ export function useAuthStore() {
         nickname: response.user.nickname,
         avatar: response.user.avatar,
       };
-      
+
       saveToStorage(response.token, user);
-      
-      setState({
+
+      set({
         user,
         token: response.token,
         isAuthenticated: true,
         isLoading: false,
       });
-      
+
       return true;
     } catch (error) {
-      setState((prev) => ({ ...prev, isLoading: false }));
+      set({ isLoading: false });
       throw error;
     }
-  }, []);
+  },
 
-  // 登出
-  const logout = useCallback(() => {
+  logout: () => {
     clearStorage();
-    setState({
+    set({
       user: null,
       token: null,
       isAuthenticated: false,
       isLoading: false,
     });
-  }, []);
+  },
 
-  // 获取当前用户
-  const getCurrentUser = useCallback(() => state.user, [state.user]);
+  getCurrentUser: () => get().user,
 
-  // 获取 token
-  const getToken = useCallback(() => state.token, [state.token]);
-
-  return {
-    state,
-    login,
-    register,
-    logout,
-    getCurrentUser,
-    getToken,
-  };
-}
+  getToken: () => get().token,
+}));

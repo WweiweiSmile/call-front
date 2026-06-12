@@ -1,0 +1,30 @@
+// ============================================
+// LoadMore 加载更多组件 - 样式
+// ============================================
+
+@import '../../styles/theme.less';
+
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+
+  .load-more-text {
+    font-size: 14px;
+  }
+
+  // 深色主题
+  &.dark {
+    .load-more-text {
+      color: @text-tertiary;
+    }
+  }
+
+  // 浅色主题
+  &.light {
+    .load-more-text {
+      color: #8C8C8C;
+    }
+  }
+}

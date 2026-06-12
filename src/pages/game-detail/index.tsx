@@ -1,140 +1,21 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ScrollView, Text, View} from '@tarojs/components';
-import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
+import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth} from '../../components/RequireAuth';
-import ConfirmDialog from '../../components/ConfirmDialog';
-import type {Game, User as UserType, UserGameBalance} from '../../store/mockData';
+import {useRequireAuth, Loading, PageHeader, ConfirmDialog} from '../../components';
+import type {Game, User as UserType} from '../../store/mockData';
 import './index.less';
 
 type ViewMode = 'self' | 'manage';
-type OperationType = 'deposit' | 'withdraw';
 
 // 兼容两种 User 类型的接口
 interface DisplayUser {
   id: string;
   name: string;
 }
-
-interface OperationPopupProps {
-  visible: boolean;
-  type: OperationType;
-  viewMode: ViewMode;
-  game: Game;
-  displayUser: DisplayUser | null | undefined;
-  balance: UserGameBalance | null;
-  amount: string;
-  remark: string;
-  quickAmounts: number[];
-  onClose: () => void;
-  onAmountChange: (value: string) => void;
-  onRemarkChange: (value: string) => void;
-  onConfirm: () => void;
-}
-
-// 提取存分/取分弹窗组件
-const OperationPopup: React.FC<OperationPopupProps> = (props) => {
-  const {
-    visible,
-    type,
-    viewMode,
-    game,
-    displayUser,
-    balance,
-    amount,
-    remark,
-    quickAmounts,
-    onClose,
-    onAmountChange,
-    onRemarkChange,
-    onConfirm,
-  } = props
-  const isDeposit = type === 'deposit';
-  const title = viewMode === 'manage' ? (isDeposit ? '代理存分' : '代理取分') : (isDeposit ? '存分' : '取分');
-  const buttonType = isDeposit ? 'success' : 'warning';
-  const buttonText = isDeposit ? '确认存分' : '确认取分';
-
-  const newBalance = useMemo(() => {
-    if (!balance) return 0;
-    const numAmount = parseInt(amount) || 0;
-    return isDeposit
-      ? balance.currentBalance + numAmount
-      : balance.currentBalance - numAmount;
-  }, [balance, amount, isDeposit]);
-
-  return (
-    <Popup visible={visible} position='bottom' onClose={onClose}>
-      <View className='operation-popup'>
-        <Text className='popup-title'>{title}</Text>
-
-        <View className='popup-info'>
-          <Text className='info-row'>游戏: {game.name}</Text>
-          <Text className='info-row'>
-            操作: {viewMode === 'manage' ? '代理操作' : '自主操作'}
-          </Text>
-          {viewMode === 'manage' && displayUser && (
-            <Text className='info-row'>用户: {displayUser.name}</Text>
-          )}
-        </View>
-
-        <View className='amount-input-section'>
-          <NutInput
-            type='number'
-            placeholder={`输入${isDeposit ? '存分' : '取分'}数量`}
-            value={amount}
-            onChange={onAmountChange}
-            data-testid={`input-${type}-amount`}
-          />
-        </View>
-
-        <View className='quick-amounts'>
-          <Text className='quick-label'>快捷输入:</Text>
-          <View className='quick-buttons'>
-            {quickAmounts.map((num) => (
-              <Button
-                key={num}
-                type='default'
-                size='small'
-                onClick={() => onAmountChange(num.toString())}
-                data-testid={`btn-quick-${type}-${num}`}
-              >
-                {isDeposit ? '+' : '-'}{num}
-              </Button>
-            ))}
-          </View>
-        </View>
-
-        {balance && (
-          <View className='balance-preview'>
-            <Text>当前余额: {balance.currentBalance.toLocaleString()}</Text>
-            <Text>{isDeposit ? '存分' : '取分'}后余额: {newBalance.toLocaleString()}</Text>
-          </View>
-        )}
-
-        <View className='remark-section'>
-          <NutInput
-            placeholder='备注 (选填)'
-            value={remark}
-            onChange={onRemarkChange}
-            data-testid={`input-${isDeposit ? 'withdraw' : 'deposit'}-remark`}
-          />
-        </View>
-
-        <View className='popup-actions'>
-          <Button type='default' onClick={onClose} data-testid={`btn-${type}-cancel`}>
-            取消
-          </Button>
-          <Button type={buttonType} onClick={onConfirm} data-testid={`btn-${type}-confirm`}>
-            {buttonText}
-          </Button>
-        </View>
-      </View>
-    </Popup>
-  );
-};
 
 const GameDetailPage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
@@ -145,8 +26,6 @@ const GameDetailPage: React.FC = () => {
     getGameParticipants,
     getGameParticipantBalances,
     getGameTransactions,
-    deposit,
-    withdraw,
     endGame,
     setCurrentGameId,
     loadUserBalance,
@@ -156,29 +35,21 @@ const GameDetailPage: React.FC = () => {
     loadGame,
     joinGame,
   } = useAppStore();
-  const {state: authState} = useAuthStore();
+  const {user} = useAuthStore();
 
   // 从 URL 参数获取 gameId
   const gameIdFromUrl = router.params?.gameId as string | undefined;
   const gameId = gameIdFromUrl || state.currentGameId || '';
-  const currentUser = authState.user;
+  const currentUser = user;
 
   const [viewMode, setViewMode] = useState<ViewMode>('self');
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const pollingTimerRef = useRef<number | null>(null);
-
-  // 存分/取分弹窗状态
-  const [showDepositPopup, setShowDepositPopup] = useState(false);
-  const [showWithdrawPopup, setShowWithdrawPopup] = useState(false);
-  const [amount, setAmount] = useState('0');
-  const [remark, setRemark] = useState('');
 
   // 结束游戏确认弹窗状态
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [endGameLoading, setEndGameLoading] = useState(false);
 
-  const quickAmounts = [100, 500, 1000, 5000];
   const inviteGameId = router.params?.inviteGameId as string | undefined;
 
   // 分享功能
@@ -332,21 +203,14 @@ const GameDetailPage: React.FC = () => {
 
   const getDisplayUser = useCallback((): DisplayUser | null => {
     if (viewMode === 'self' && currentUser) {
-      // 将 AuthUser 转换为兼容类型
       return {
         id: currentUser.id,
         name: currentUser.nickname || currentUser.username,
       };
     }
-    if (selectedUserId) {
-      const participants = getGameParticipants(gameId) || [];
-      const participant = participants.find((u) => u.id === selectedUserId);
-      if (participant) {
-        return participant as DisplayUser;
-      }
-    }
+    // 管理模式：不筛选特定用户，展示全部交易记录
     return null;
-  }, [viewMode, selectedUserId, currentUser, gameId, getGameParticipants]);
+  }, [viewMode, currentUser]);
 
   const displayUser = getDisplayUser();
   const balance = (displayUser ? getUserBalance(gameId, displayUser.id) : null) ?? null;
@@ -371,58 +235,44 @@ const GameDetailPage: React.FC = () => {
     };
   }, [gameId, getGameParticipantBalances]);
 
-  // 重置弹窗表单
-  const resetPopupForm = useCallback(() => {
-    setAmount('0');
-    setRemark('');
-  }, []);
-
-  // 打开存分弹窗
-  const openDepositPopup = useCallback(() => {
-    resetPopupForm();
-    setShowDepositPopup(true);
-  }, [resetPopupForm]);
-
-  // 打开取分弹窗
-  const openWithdrawPopup = useCallback(() => {
-    resetPopupForm();
-    setShowWithdrawPopup(true);
-  }, [resetPopupForm]);
-
-  // 提取通用的操作处理逻辑
-  const handleOperation = useCallback(async (type: OperationType) => {
-    const numAmount = parseInt(amount) || 0;
-    if (numAmount <= 0) {
-      Toast.show('game-detail-toast', {content: `请输入有效的${type === 'deposit' ? '存分' : '取分'}数量`});
-      return;
+  // 导航到存分页面
+  const navigateToDeposit = useCallback((targetUserId?: string, targetUserName?: string) => {
+    const g = state.games.find((g) => g.id === gameId);
+    let url = `/pages/score-deposit/index?gameId=${gameId}&viewMode=${viewMode}&gameName=${encodeURIComponent(g?.name || '')}`;
+    if (targetUserId) {
+      url += `&targetUserId=${targetUserId}`;
     }
-
-    try {
-      const targetUserId = viewMode === 'manage' && selectedUserId ? selectedUserId : undefined;
-      const operation = type === 'deposit' ? deposit : withdraw;
-      await operation(gameId, numAmount, currentUser?.id || '', targetUserId, remark);
-
-      if (type === 'deposit') {
-        setShowDepositPopup(false);
-      } else {
-        setShowWithdrawPopup(false);
-      }
-      resetPopupForm();
-      Toast.show('game-detail-toast', {content: `${type === 'deposit' ? '存分' : '取分'}成功`});
-    } catch (error: any) {
-      Toast.show('game-detail-toast', {content: error.message || `${type === 'deposit' ? '存分' : '取分'}失败`});
+    if (targetUserName) {
+      url += `&targetUserName=${encodeURIComponent(targetUserName)}`;
     }
-  }, [amount, viewMode, selectedUserId, gameId, currentUser?.id, remark, deposit, withdraw, resetPopupForm]);
+    Taro.navigateTo({url});
+  }, [gameId, viewMode, state.games]);
 
-  const handleDeposit = useCallback(() => handleOperation('deposit'), [handleOperation]);
-  const handleWithdraw = useCallback(() => handleOperation('withdraw'), [handleOperation]);
+  // 导航到取分页面
+  const navigateToWithdraw = useCallback((targetUserId?: string, targetUserName?: string) => {
+    const g = state.games.find((g) => g.id === gameId);
+    let url = `/pages/score-withdraw/index?gameId=${gameId}&viewMode=${viewMode}&gameName=${encodeURIComponent(g?.name || '')}`;
+    if (targetUserId) {
+      url += `&targetUserId=${targetUserId}`;
+    }
+    if (targetUserName) {
+      url += `&targetUserName=${encodeURIComponent(targetUserName)}`;
+    }
+    Taro.navigateTo({url});
+  }, [gameId, viewMode, state.games]);
+
+  // 导航到操作记录页面
+  const navigateToTransactionRecords = useCallback(() => {
+    let url = `/pages/transaction-records/index?gameId=${gameId}&viewMode=${viewMode}`;
+    if (displayUser) {
+      url += `&userId=${displayUser.id}`;
+    }
+    Taro.navigateTo({url});
+  }, [gameId, viewMode, displayUser]);
 
   // 切换视图模式
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
-    if (mode === 'self') {
-      setSelectedUserId(null);
-    }
   }, []);
 
   // ========== 条件返回从这里开始 ==========
@@ -434,23 +284,12 @@ const GameDetailPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <View className='game-detail-page loading-page'>
-        <View className='loading-container'>
-          <View className='loading-spinner'>
-            <View className='spinner-ring'></View>
-            <View className='spinner-ring'></View>
-            <View className='spinner-ring'></View>
-          </View>
-          <View className='loading-pulse'>
-            <Text className='loading-text'>加载中</Text>
-            <View className='loading-dots'>
-              <View className='dot'></View>
-              <View className='dot'></View>
-              <View className='dot'></View>
-            </View>
-          </View>
-          <Text className='loading-subtitle'>正在获取游戏数据...</Text>
-        </View>
+      <View className='game-detail-page'>
+        <Loading
+          text='加载中'
+          subtitle='正在获取游戏数据...'
+          fullPage
+        />
       </View>
     );
   }
@@ -485,25 +324,20 @@ const GameDetailPage: React.FC = () => {
   return (
     <View className='game-detail-page'>
       <Toast id="game-detail-toast"/>
-      <View className='header'>
-        <View className='header-left' onClick={(e) => {
-          e.stopPropagation();
-          Taro.redirectTo({url: '/pages/index/index'})
-        }} data-testid="btn-game-detail-back">
-          <Text className='back-icon'>←</Text>
-        </View>
-        <View className='header-center'>
-          <Text className='title'>{game.name}</Text>
-          <Text className='creator'>
-            👤 {isCreator ? '我创建的游戏' : `创建者: ${game.creatorName}`}
-          </Text>
-        </View>
-        <View className='header-right'>
-          {isCreator && (
+      <PageHeader
+        title={game.name}
+        subtitle={`👤 ${isCreator ? '我创建的游戏' : `创建者: ${game.creatorName}`}`}
+        showBack
+        onBack={(e) => {
+          e?.stopPropagation?.();
+          Taro.redirectTo({url: '/pages/index/index'});
+        }}
+        rightContent={
+          isCreator ? (
             <Text className='share-icon' onClick={handleShare}>分享</Text>
-          )}
-        </View>
-      </View>
+          ) : null
+        }
+      />
 
       {isCreator && (
         <View className='mode-switch'>
@@ -524,8 +358,8 @@ const GameDetailPage: React.FC = () => {
         </View>
       )}
 
-      {/* 余额卡片 */}
-      {balance && (
+      {/* 自查看模式：个人余额卡片 */}
+      {viewMode === 'self' && balance && (
         <View className='balance-card'>
           <Text className='card-title'>场次积分状态</Text>
           <View className='balance-stats'>
@@ -553,27 +387,32 @@ const GameDetailPage: React.FC = () => {
         </View>
       )}
 
-      {/* 操作按钮 */}
-      {isCreator && viewMode === 'manage' && selectedUserId && !isGameEnded && (
-        <View className='action-buttons-section'>
-          <Button
-            type='success'
-            size='large'
-            block
-            onClick={openDepositPopup}
-            data-testid="btn-deposit"
+      {/* 管理模式：整体概览卡片（上移） */}
+      {isCreator && viewMode === 'manage' && overallBalance && (
+        <View className='overall-balance-card'>
+          <Text className='overall-balance-title'>场次概览</Text>
+          <View className='overall-balance-stats'>
+            <View className='overall-stat-item'>
+              <Text className='overall-stat-label'>总存分</Text>
+              <Text className='overall-stat-value'>{overallBalance.totalDeposit.toLocaleString()}</Text>
+            </View>
+            <View className='overall-stat-item'>
+              <Text className='overall-stat-label'>总取分</Text>
+              <Text className='overall-stat-value'>{overallBalance.totalWithdraw.toLocaleString()}</Text>
+            </View>
+            <View className='overall-stat-item'>
+              <Text className='overall-stat-label'>参与人数</Text>
+              <Text className='overall-stat-value'>{overallBalance.participantCount}人</Text>
+            </View>
+          </View>
+          <View
+            className={`overall-balance-status ${overallBalance.allBalanced ? 'balanced' : 'unbalanced'}`}
           >
-            💰 存分
-          </Button>
-          <Button
-            type='warning'
-            size='large'
-            block
-            onClick={openWithdrawPopup}
-            data-testid="btn-withdraw"
-          >
-            💵 取分
-          </Button>
+            {overallBalance.allBalanced ? '✓ 所有人平衡' : '⚠ 有人不平衡'}
+            <Text className='overall-balance-desc'>
+              ({overallBalance.allBalanced ? '总存分 - 总取分 = 0' : '总存分 - 总取分 ≠ 0'})
+            </Text>
+          </View>
         </View>
       )}
 
@@ -586,7 +425,7 @@ const GameDetailPage: React.FC = () => {
             return (
               <View
                 key={participant?.id || Math.random().toString()}
-                className={`participant-card ${selectedUserId === participant?.id ? 'selected' : ''}`}
+                className='participant-card'
               >
                 <View className='participant-info'>
                   <Text className='participant-name'>👤 {participant?.name || '未知用户'}</Text>
@@ -602,52 +441,34 @@ const GameDetailPage: React.FC = () => {
                   )}
                 </View>
                 {!isGameEnded && (
-                  <Button
-                    type='primary'
-                    size='small'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (participant?.id) {
-                        setSelectedUserId(participant.id);
-                      }
-                    }}
-                    data-testid={`btn-proxy-${participant?.id}`}
-                  >
-                    代理操作
-                  </Button>
+                  <View className='participant-actions'>
+                    <Button
+                      type='success'
+                      size='small'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateToDeposit(participant?.id, participant?.name);
+                      }}
+                      data-testid={`btn-deposit-${participant?.id}`}
+                    >
+                      💰 存分
+                    </Button>
+                    <Button
+                      type='warning'
+                      size='small'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigateToWithdraw(participant?.id, participant?.name);
+                      }}
+                      data-testid={`btn-withdraw-${participant?.id}`}
+                    >
+                      💵 取分
+                    </Button>
+                  </View>
                 )}
               </View>
             );
           })}
-
-          {/* 整体平衡状态显示 */}
-          {overallBalance && (
-            <View className='overall-balance-card'>
-              <Text className='overall-balance-title'>整体平衡状态</Text>
-              <View className='overall-balance-stats'>
-                <View className='overall-stat-item'>
-                  <Text className='overall-stat-label'>总存分</Text>
-                  <Text className='overall-stat-value'>{overallBalance.totalDeposit.toLocaleString()}</Text>
-                </View>
-                <View className='overall-stat-item'>
-                  <Text className='overall-stat-label'>总取分</Text>
-                  <Text className='overall-stat-value'>{overallBalance.totalWithdraw.toLocaleString()}</Text>
-                </View>
-                <View className='overall-stat-item'>
-                  <Text className='overall-stat-label'>平衡人数</Text>
-                  <Text className='overall-stat-value'>{overallBalance.participantCount}人</Text>
-                </View>
-              </View>
-              <View
-                className={`overall-balance-status ${overallBalance.allBalanced ? 'balanced' : 'unbalanced'}`}
-              >
-                {overallBalance.allBalanced ? '✓ 所有人平衡' : '⚠ 有人不平衡'}
-                <Text className='overall-balance-desc'>
-                  ({overallBalance.allBalanced ? '总存分 - 总取分 = 0' : '总存分 - 总取分 ≠ 0'})
-                </Text>
-              </View>
-            </View>
-          )}
         </View>
       )}
 
@@ -712,7 +533,7 @@ const GameDetailPage: React.FC = () => {
       <View className='transactions-section'>
         <Text className='section-title'>交易记录</Text>
         <ScrollView className='transactions-list' scrollY>
-          {(transactions || []).map((tx) => (
+          {(transactions || []).slice(0, 3).map((tx) => (
             <View key={tx?.id || Math.random().toString()} className='transaction-item'>
               <Text className='tx-time'>⏰ {tx?.createdAt ? dayjs(tx.createdAt).format('YYYY-MM-DD HH:mm:ss') : ''}</Text>
               <View className='tx-main'>
@@ -729,41 +550,20 @@ const GameDetailPage: React.FC = () => {
             </View>
           ))}
         </ScrollView>
+        {(transactions || []).length > 3 && (
+          <View className='show-more-section'>
+            <Button
+              type='primary'
+              size='small'
+              className='show-more-btn'
+              onClick={navigateToTransactionRecords}
+              data-testid='btn-show-more-transactions'
+            >
+              显示更多
+            </Button>
+          </View>
+        )}
       </View>
-
-      {/* 存分弹窗 */}
-      <OperationPopup
-        visible={showDepositPopup}
-        type="deposit"
-        viewMode={viewMode}
-        game={game}
-        displayUser={displayUser}
-        balance={balance}
-        amount={amount}
-        remark={remark}
-        quickAmounts={quickAmounts}
-        onClose={() => setShowDepositPopup(false)}
-        onAmountChange={setAmount}
-        onRemarkChange={setRemark}
-        onConfirm={handleDeposit}
-      />
-
-      {/* 取分弹窗 */}
-      <OperationPopup
-        visible={showWithdrawPopup}
-        type="withdraw"
-        viewMode={viewMode}
-        game={game}
-        displayUser={displayUser}
-        balance={balance}
-        amount={amount}
-        remark={remark}
-        quickAmounts={quickAmounts}
-        onClose={() => setShowWithdrawPopup(false)}
-        onAmountChange={setAmount}
-        onRemarkChange={setRemark}
-        onConfirm={handleWithdraw}
-      />
 
       {/* 结束游戏确认弹窗 */}
       <ConfirmDialog

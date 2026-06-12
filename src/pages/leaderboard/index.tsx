@@ -31,7 +31,7 @@ const LeaderboardPage: React.FC = () => {
     getGameParticipants,
     loadGameParticipantBalances,
   } = useAppStore();
-  const {state: authState} = useAuthStore();
+  const {user} = useAuthStore();
 
   const gameId = router.params?.gameId as string;
   const [isLoading, setIsLoading] = useState(true);
@@ -45,18 +45,18 @@ const LeaderboardPage: React.FC = () => {
 
   // 加载数据的函数
   const loadData = useCallback(async (showLoading = true) => {
-    if (gameId && authState.user) {
+    if (gameId && user) {
       await loadGameParticipantBalances(gameId);
       if (showLoading) {
         setIsLoading(false);
       }
       setLastUpdated(new Date());
     }
-  }, [gameId, authState.user, loadGameParticipantBalances]);
+  }, [gameId, user, loadGameParticipantBalances]);
 
   // 初始加载和设置轮询
   useEffect(() => {
-    if (!gameId || !authState.user) {
+    if (!gameId || !user) {
       return;
     }
 
@@ -80,7 +80,7 @@ const LeaderboardPage: React.FC = () => {
         pollingTimerRef.current = null;
       }
     };
-  }, [gameId, authState.user, loadData]);
+  }, [gameId, user, loadData]);
 
   // 当数据加载完成后，触发领奖台动画
   useEffect(() => {
@@ -220,14 +220,14 @@ const LeaderboardPage: React.FC = () => {
             <View
               key={item.userId}
               className={`leaderboard-card top-${index + 1} ${
-                authState.user?.id === item.userId ? 'current-user' : ''
+                user?.id === item.userId ? 'current-user' : ''
               }`}
             >
               <View className='card-left'>
                 <Text className={`rank rank-${index + 1}`}>{index + 1}</Text>
                 <View className='user-info'>
                   <Text className='name'>{item.name}</Text>
-                  {authState.user?.id === item.userId && (
+                  {user?.id === item.userId && (
                     <Text className='self-tag'>我</Text>
                   )}
                 </View>
