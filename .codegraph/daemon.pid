@@ -1,6 +1,6 @@
 {
-  "pid": 15272,
-  "version": "0.9.8",
-  "socketPath": "\\\\.\\pipe\\codegraph-0d833acbcca0479e",
-  "startedAt": 1780406351094
+  "pid": 31476,
+  "version": "0.9.9",
+  "socketPath": "/Users/weiweigod/codes/call-front/.codegraph/daemon.sock",
+  "startedAt": 1781213614149
 }

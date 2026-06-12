@@ -1,186 +1,21 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {Input, ScrollView, Text, View} from '@tarojs/components';
-import {Button, Input as NutInput, Popup, Toast} from '@nutui/nutui-react-taro';
+import {ScrollView, Text, View} from '@tarojs/components';
+import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import {useRequireAuth, Loading, PageHeader, ConfirmDialog} from '../../components';
-import type {Game, User as UserType, UserGameBalance} from '../../store/mockData';
+import type {Game, User as UserType} from '../../store/mockData';
 import './index.less';
 
 type ViewMode = 'self' | 'manage';
-type OperationType = 'deposit' | 'withdraw';
 
 // 兼容两种 User 类型的接口
 interface DisplayUser {
   id: string;
   name: string;
 }
-
-interface OperationPopupProps {
-  visible: boolean;
-  type: OperationType;
-  viewMode: ViewMode;
-  game: Game;
-  displayUser: DisplayUser | null | undefined;
-  balance: UserGameBalance | null;
-  amount: string;
-  remark: string;
-  quickAmounts: number[];
-  onClose: () => void;
-  onAmountChange: (value: string) => void;
-  onRemarkChange: (value: string) => void;
-  onConfirm: () => void;
-}
-
-// 提取存分/取分弹窗组件
-const OperationPopup: React.FC<OperationPopupProps> = (props) => {
-  const {
-    visible,
-    type,
-    viewMode,
-    game,
-    displayUser,
-    balance,
-    amount,
-    remark,
-    quickAmounts,
-    onClose,
-    onAmountChange,
-    onRemarkChange,
-    onConfirm,
-  } = props
-  const isDeposit = type === 'deposit';
-  const title = viewMode === 'manage' ? (isDeposit ? '代理存分' : '代理取分') : (isDeposit ? '存分' : '取分');
-  const popupTheme = isDeposit ? 'popup-deposit' : 'popup-withdraw';
-  const headerIcon = isDeposit ? '💰' : '💵';
-  const [amountFocused, setAmountFocused] = useState(false);
-
-  // 格式化千分位显示
-  const formatThousands = (val: string) => {
-    const num = parseInt(val) || 0;
-    if (val === '' || val === '0') return '0';
-    return num.toLocaleString();
-  };
-
-  const buttonText = isDeposit ? `确认存分 +${formatThousands(amount)}` : `确认取分 -${formatThousands(amount)}`;
-
-  const newBalance = useMemo(() => {
-    if (!balance) return 0;
-    const numAmount = parseInt(amount) || 0;
-    return isDeposit
-      ? balance.currentBalance + numAmount
-      : balance.currentBalance - numAmount;
-  }, [balance, amount, isDeposit]);
-
-  return (
-    <Popup visible={visible} position='bottom' onClose={onClose}>
-      <View className={`operation-popup ${popupTheme}`}>
-        {/* 主题化头部 */}
-        <View className='popup-header'>
-          <Text className='popup-header-icon'>{headerIcon}</Text>
-          <Text className='popup-title'>{title}</Text>
-        </View>
-
-        {/* 信息区 */}
-        <View className='popup-info'>
-          <Text className='info-row'>游戏: {game.name}</Text>
-          <Text className='info-row'>
-            操作: {viewMode === 'manage' ? '代理操作' : '自主操作'}
-          </Text>
-          {viewMode === 'manage' && displayUser && (
-            <Text className='info-row'>用户: {displayUser.name}</Text>
-          )}
-        </View>
-
-        {/* 金额输入 - 大尺寸千分位显示 */}
-        <View className={`amount-input-section ${amountFocused ? 'focused' : ''}`}>
-          <View
-            className='amount-display'
-            onClick={() => setAmountFocused(true)}
-          >
-            <Text className='amount-display-value'>
-              {amount && parseInt(amount) > 0 ? formatThousands(amount) : '0'}
-            </Text>
-            <Text className='amount-display-hint'>
-              {`点击输入${isDeposit ? '存分' : '取分'}数量`}
-            </Text>
-          </View>
-          <Input
-            className='amount-hidden-input'
-            type='number'
-            focus={amountFocused}
-            value={amount === '0' ? '' : amount}
-            onInput={(e) => onAmountChange(e.detail.value)}
-            onBlur={() => setAmountFocused(false)}
-            data-testid={`input-${type}-amount`}
-          />
-        </View>
-
-        {/* 快捷金额 */}
-        <View className='quick-amounts'>
-          <Text className='quick-label'>快捷输入:</Text>
-          <View className='quick-buttons'>
-            {quickAmounts.map((num) => (
-              <Button
-                key={num}
-                type='default'
-                size='small'
-                className='quick-btn'
-                onClick={() => onAmountChange(num.toString())}
-                data-testid={`btn-quick-${type}-${num}`}
-              >
-                {isDeposit ? '+' : '-'}{num}
-              </Button>
-            ))}
-          </View>
-        </View>
-
-        {/* 余额预览 */}
-        {balance && (
-          <View className='balance-preview'>
-            <View className='preview-row'>
-              <Text className='preview-label'>当前余额</Text>
-              <Text className='preview-value'>{balance.currentBalance.toLocaleString()}</Text>
-            </View>
-            <View className='preview-arrow'>
-              <Text className='preview-arrow-icon'>↓</Text>
-            </View>
-            <View className='preview-row preview-result'>
-              <Text className='preview-label'>{isDeposit ? '存分后' : '取分后'}余额</Text>
-              <Text className='preview-value'>{newBalance.toLocaleString()}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* 备注 */}
-        <View className='remark-section'>
-          <NutInput
-            placeholder='备注 (选填)'
-            value={remark}
-            onChange={onRemarkChange}
-            data-testid={`input-${isDeposit ? 'withdraw' : 'deposit'}-remark`}
-          />
-        </View>
-
-        {/* 操作按钮 */}
-        <View className='popup-actions'>
-          <Button type='default' onClick={onClose} data-testid={`btn-${type}-cancel`}>
-            取消
-          </Button>
-          <Button
-            type={isDeposit ? 'success' : 'danger'}
-            onClick={onConfirm}
-            data-testid={`btn-${type}-confirm`}
-          >
-            {buttonText}
-          </Button>
-        </View>
-      </View>
-    </Popup>
-  );
-};
 
 const GameDetailPage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
@@ -191,8 +26,6 @@ const GameDetailPage: React.FC = () => {
     getGameParticipants,
     getGameParticipantBalances,
     getGameTransactions,
-    deposit,
-    withdraw,
     endGame,
     setCurrentGameId,
     loadUserBalance,
@@ -210,21 +43,13 @@ const GameDetailPage: React.FC = () => {
   const currentUser = user;
 
   const [viewMode, setViewMode] = useState<ViewMode>('self');
-  const [operationTargetUserId, setOperationTargetUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const pollingTimerRef = useRef<number | null>(null);
-
-  // 存分/取分弹窗状态
-  const [showDepositPopup, setShowDepositPopup] = useState(false);
-  const [showWithdrawPopup, setShowWithdrawPopup] = useState(false);
-  const [amount, setAmount] = useState('0');
-  const [remark, setRemark] = useState('');
 
   // 结束游戏确认弹窗状态
   const [showEndGameConfirm, setShowEndGameConfirm] = useState(false);
   const [endGameLoading, setEndGameLoading] = useState(false);
 
-  const quickAmounts = [100, 500, 1000, 5000];
   const inviteGameId = router.params?.inviteGameId as string | undefined;
 
   // 分享功能
@@ -383,15 +208,9 @@ const GameDetailPage: React.FC = () => {
         name: currentUser.nickname || currentUser.username,
       };
     }
-    if (operationTargetUserId) {
-      const participants = getGameParticipants(gameId) || [];
-      const participant = participants.find((u) => u.id === operationTargetUserId);
-      if (participant) {
-        return participant as DisplayUser;
-      }
-    }
+    // 管理模式：不筛选特定用户，展示全部交易记录
     return null;
-  }, [viewMode, operationTargetUserId, currentUser, gameId, getGameParticipants]);
+  }, [viewMode, currentUser]);
 
   const displayUser = getDisplayUser();
   const balance = (displayUser ? getUserBalance(gameId, displayUser.id) : null) ?? null;
@@ -416,64 +235,35 @@ const GameDetailPage: React.FC = () => {
     };
   }, [gameId, getGameParticipantBalances]);
 
-  // 重置弹窗表单
-  const resetPopupForm = useCallback(() => {
-    setAmount('0');
-    setRemark('');
-  }, []);
-
-  // 打开存分弹窗（可传入目标用户ID用于代理操作）
-  const openDepositPopup = useCallback((targetUserId?: string) => {
-    resetPopupForm();
+  // 导航到存分页面
+  const navigateToDeposit = useCallback((targetUserId?: string, targetUserName?: string) => {
+    const g = state.games.find((g) => g.id === gameId);
+    let url = `/pages/score-deposit/index?gameId=${gameId}&viewMode=${viewMode}&gameName=${encodeURIComponent(g?.name || '')}`;
     if (targetUserId) {
-      setOperationTargetUserId(targetUserId);
+      url += `&targetUserId=${targetUserId}`;
     }
-    setShowDepositPopup(true);
-  }, [resetPopupForm]);
+    if (targetUserName) {
+      url += `&targetUserName=${encodeURIComponent(targetUserName)}`;
+    }
+    Taro.navigateTo({url});
+  }, [gameId, viewMode, state.games]);
 
-  // 打开取分弹窗（可传入目标用户ID用于代理操作）
-  const openWithdrawPopup = useCallback((targetUserId?: string) => {
-    resetPopupForm();
+  // 导航到取分页面
+  const navigateToWithdraw = useCallback((targetUserId?: string, targetUserName?: string) => {
+    const g = state.games.find((g) => g.id === gameId);
+    let url = `/pages/score-withdraw/index?gameId=${gameId}&viewMode=${viewMode}&gameName=${encodeURIComponent(g?.name || '')}`;
     if (targetUserId) {
-      setOperationTargetUserId(targetUserId);
+      url += `&targetUserId=${targetUserId}`;
     }
-    setShowWithdrawPopup(true);
-  }, [resetPopupForm]);
-
-  // 提取通用的操作处理逻辑
-  const handleOperation = useCallback(async (type: OperationType) => {
-    const numAmount = parseInt(amount) || 0;
-    if (numAmount <= 0) {
-      Toast.show('game-detail-toast', {content: `请输入有效的${type === 'deposit' ? '存分' : '取分'}数量`});
-      return;
+    if (targetUserName) {
+      url += `&targetUserName=${encodeURIComponent(targetUserName)}`;
     }
-
-    try {
-      const targetUserId = viewMode === 'manage' && operationTargetUserId ? operationTargetUserId : undefined;
-      const operation = type === 'deposit' ? deposit : withdraw;
-      await operation(gameId, numAmount, currentUser?.id || '', targetUserId, remark);
-
-      if (type === 'deposit') {
-        setShowDepositPopup(false);
-      } else {
-        setShowWithdrawPopup(false);
-      }
-      resetPopupForm();
-      Toast.show('game-detail-toast', {content: `${type === 'deposit' ? '存分' : '取分'}成功`});
-    } catch (error: any) {
-      Toast.show('game-detail-toast', {content: error.message || `${type === 'deposit' ? '存分' : '取分'}失败`});
-    }
-  }, [amount, viewMode, operationTargetUserId, gameId, currentUser?.id, remark, deposit, withdraw, resetPopupForm]);
-
-  const handleDeposit = useCallback(() => handleOperation('deposit'), [handleOperation]);
-  const handleWithdraw = useCallback(() => handleOperation('withdraw'), [handleOperation]);
+    Taro.navigateTo({url});
+  }, [gameId, viewMode, state.games]);
 
   // 切换视图模式
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
-    if (mode === 'self') {
-      setOperationTargetUserId(null);
-    }
   }, []);
 
   // ========== 条件返回从这里开始 ==========
@@ -648,7 +438,7 @@ const GameDetailPage: React.FC = () => {
                       size='small'
                       onClick={(e) => {
                         e.stopPropagation();
-                        openDepositPopup(participant?.id);
+                        navigateToDeposit(participant?.id, participant?.name);
                       }}
                       data-testid={`btn-deposit-${participant?.id}`}
                     >
@@ -659,7 +449,7 @@ const GameDetailPage: React.FC = () => {
                       size='small'
                       onClick={(e) => {
                         e.stopPropagation();
-                        openWithdrawPopup(participant?.id);
+                        navigateToWithdraw(participant?.id, participant?.name);
                       }}
                       data-testid={`btn-withdraw-${participant?.id}`}
                     >
@@ -752,40 +542,6 @@ const GameDetailPage: React.FC = () => {
           ))}
         </ScrollView>
       </View>
-
-      {/* 存分弹窗 */}
-      <OperationPopup
-        visible={showDepositPopup}
-        type="deposit"
-        viewMode={viewMode}
-        game={game}
-        displayUser={displayUser}
-        balance={balance}
-        amount={amount}
-        remark={remark}
-        quickAmounts={quickAmounts}
-        onClose={() => setShowDepositPopup(false)}
-        onAmountChange={setAmount}
-        onRemarkChange={setRemark}
-        onConfirm={handleDeposit}
-      />
-
-      {/* 取分弹窗 */}
-      <OperationPopup
-        visible={showWithdrawPopup}
-        type="withdraw"
-        viewMode={viewMode}
-        game={game}
-        displayUser={displayUser}
-        balance={balance}
-        amount={amount}
-        remark={remark}
-        quickAmounts={quickAmounts}
-        onClose={() => setShowWithdrawPopup(false)}
-        onAmountChange={setAmount}
-        onRemarkChange={setRemark}
-        onConfirm={handleWithdraw}
-      />
 
       {/* 结束游戏确认弹窗 */}
       <ConfirmDialog
