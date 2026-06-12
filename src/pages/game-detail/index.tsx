@@ -261,6 +261,15 @@ const GameDetailPage: React.FC = () => {
     Taro.navigateTo({url});
   }, [gameId, viewMode, state.games]);
 
+  // 导航到操作记录页面
+  const navigateToTransactionRecords = useCallback(() => {
+    let url = `/pages/transaction-records/index?gameId=${gameId}&viewMode=${viewMode}`;
+    if (displayUser) {
+      url += `&userId=${displayUser.id}`;
+    }
+    Taro.navigateTo({url});
+  }, [gameId, viewMode, displayUser]);
+
   // 切换视图模式
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
@@ -524,7 +533,7 @@ const GameDetailPage: React.FC = () => {
       <View className='transactions-section'>
         <Text className='section-title'>交易记录</Text>
         <ScrollView className='transactions-list' scrollY>
-          {(transactions || []).map((tx) => (
+          {(transactions || []).slice(0, 3).map((tx) => (
             <View key={tx?.id || Math.random().toString()} className='transaction-item'>
               <Text className='tx-time'>⏰ {tx?.createdAt ? dayjs(tx.createdAt).format('YYYY-MM-DD HH:mm:ss') : ''}</Text>
               <View className='tx-main'>
@@ -541,6 +550,19 @@ const GameDetailPage: React.FC = () => {
             </View>
           ))}
         </ScrollView>
+        {(transactions || []).length > 3 && (
+          <View className='show-more-section'>
+            <Button
+              type='primary'
+              size='small'
+              className='show-more-btn'
+              onClick={navigateToTransactionRecords}
+              data-testid='btn-show-more-transactions'
+            >
+              显示更多
+            </Button>
+          </View>
+        )}
       </View>
 
       {/* 结束游戏确认弹窗 */}

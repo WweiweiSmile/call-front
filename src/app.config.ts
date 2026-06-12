@@ -11,6 +11,7 @@ export default defineAppConfig({
     'pages/create-game/index',
     'pages/leaderboard/index',
     'pages/history/index',
+    'pages/transaction-records/index',
   ],
   entryPagePath: 'pages/login/index',
   window: {
