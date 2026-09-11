@@ -7,6 +7,7 @@ export default defineAppConfig({
     'pages/game-detail/index',
     'pages/score-deposit/index',
     'pages/score-withdraw/index',
+    'pages/chip-count/index',
     'pages/profile/index',
     'pages/create-game/index',
     'pages/leaderboard/index',

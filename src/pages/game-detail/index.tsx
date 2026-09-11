@@ -261,6 +261,11 @@ const GameDetailPage: React.FC = () => {
     Taro.navigateTo({url});
   }, [gameId, viewMode, state.games]);
 
+  // 导航到归分页面（筹码计算器）
+  const navigateToChipCount = useCallback(() => {
+    Taro.navigateTo({url: '/pages/chip-count/index'});
+  }, []);
+
   // 导航到操作记录页面
   const navigateToTransactionRecords = useCallback(() => {
     let url = `/pages/transaction-records/index?gameId=${gameId}&viewMode=${viewMode}`;
@@ -509,23 +514,40 @@ const GameDetailPage: React.FC = () => {
         </>
       )}
 
-      {/* 查看自己模式下的排行榜按钮 */}
+      {/* 查看自己模式下的操作按钮组 */}
       {(!isCreator || viewMode === 'self') && (
-        <View className='leaderboard-button-section'>
-          <Button
-            type='primary'
-            size='large'
-            block
-            onClick={() => {
-              Taro.navigateTo({
-                url: `/pages/leaderboard/index?gameId=${gameId}`,
-              });
-            }}
-            data-testid="btn-view-leaderboard"
-          >
-            🏆 查看排行榜
-          </Button>
-        </View>
+        <>
+          {/* 归分按钮 */}
+          <View className='chip-count-button-section'>
+            <Button
+              type='default'
+              size='large'
+              block
+              className='chip-count-btn'
+              onClick={navigateToChipCount}
+              data-testid="btn-chip-count"
+            >
+              🧮 归分
+            </Button>
+          </View>
+
+          {/* 去排行榜按钮 */}
+          <View className='leaderboard-button-section'>
+            <Button
+              type='primary'
+              size='large'
+              block
+              onClick={() => {
+                Taro.navigateTo({
+                  url: `/pages/leaderboard/index?gameId=${gameId}`,
+                });
+              }}
+              data-testid="btn-view-leaderboard"
+            >
+              🏆 查看排行榜
+            </Button>
+          </View>
+        </>
       )}
 
 

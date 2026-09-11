@@ -1,0 +1,221 @@
+// ============================================
+// 归分页面 - 样式
+// ============================================
+
+@import '../../styles/theme.less';
+
+.chip-count-page {
+  min-height: 100vh;
+  background: @bg-primary;
+  // 给底部固定汇总条留出空间
+  padding-bottom: 140px;
+  box-sizing: border-box;
+
+  .chip-count-content {
+    padding: 16px;
+  }
+
+  .intro-section {
+    background: @bg-secondary;
+    border-radius: @radius-lg;
+    border: 1px solid @border-color;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+
+    .intro-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: @text-primary;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .intro-desc {
+      font-size: 13px;
+      color: @text-secondary;
+      display: block;
+      line-height: 1.5;
+    }
+  }
+
+  // 筹码网格
+  .chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .chip-card {
+      flex: 0 0 calc(50% - 6px);
+      box-sizing: border-box;
+      background: @bg-secondary;
+      border: 1px solid @border-color;
+      border-radius: @radius-lg;
+      box-shadow: @shadow-sm;
+      padding: 16px 12px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    // 筹码外观
+    .chip-face {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: @shadow-sm;
+
+      // 白色虚线内圈，模拟筹码边缘
+      &::after {
+        content: '';
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        right: 5px;
+        bottom: 5px;
+        border-radius: 50%;
+        border: 1px dashed rgba(255, 255, 255, 0.7);
+      }
+
+      .chip-value {
+        position: relative;
+        z-index: 1;
+        font-size: 15px;
+        font-weight: 700;
+        color: #ffffff;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+
+    .chip-unit {
+      font-size: 12px;
+      color: @text-tertiary;
+      margin: 8px 0 10px;
+    }
+
+    // 个数输入
+    .count-stepper {
+      display: flex;
+      align-items: center;
+      width: 100%;
+      border: 1px solid @border-color;
+      border-radius: @radius-md;
+      background: @bg-tertiary;
+      overflow: hidden;
+
+      .stepper-btn {
+        flex: 0 0 34px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 600;
+        color: @primary;
+
+        &:active {
+          background: fade(@primary, 12%);
+        }
+
+        &.disabled {
+          color: @text-tertiary;
+          opacity: 0.5;
+        }
+      }
+
+      .count-input {
+        flex: 1;
+        min-width: 0;
+        height: 36px;
+        line-height: 36px;
+        text-align: center;
+        font-size: 16px;
+        font-weight: 600;
+        color: @text-primary;
+        background: @bg-secondary;
+        border-left: 1px solid @border-color;
+        border-right: 1px solid @border-color;
+        font-variant-numeric: tabular-nums;
+
+        &::placeholder {
+          color: @text-tertiary;
+          font-weight: 400;
+        }
+      }
+    }
+
+    .chip-subtotal {
+      font-size: 13px;
+      color: @text-tertiary;
+      margin-top: 10px;
+      font-variant-numeric: tabular-nums;
+
+      &.active {
+        color: @success;
+        font-weight: 600;
+      }
+    }
+  }
+
+  // 底部汇总条
+  .summary-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px calc(12px + constant(safe-area-inset-bottom));
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    background: @bg-secondary;
+    border-top: 1px solid @border-color;
+    box-shadow: @shadow-lg;
+
+    .summary-stats {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      min-width: 0;
+
+      .summary-item {
+        flex: 1;
+        text-align: center;
+        min-width: 0;
+
+        .summary-label {
+          font-size: 12px;
+          color: @text-tertiary;
+          display: block;
+          margin-bottom: 2px;
+        }
+
+        .summary-value {
+          font-size: 18px;
+          font-weight: 700;
+          color: @text-primary;
+          font-variant-numeric: tabular-nums;
+
+          &.amount {
+            color: @primary;
+          }
+        }
+      }
+
+      .summary-divider {
+        width: 1px;
+        height: 28px;
+        background: @border-color;
+      }
+    }
+
+    .reset-btn {
+      flex: 0 0 auto;
+      min-width: 72px;
+    }
+  }
+}

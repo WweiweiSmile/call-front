@@ -392,6 +392,23 @@
     margin-bottom: 16px;
   }
 
+  // 归分按钮
+  .chip-count-button-section {
+    padding: 0 16px;
+    margin-bottom: 12px;
+
+    .chip-count-btn {
+      background: @bg-secondary;
+      border-color: @primary;
+      color: @primary;
+      font-weight: 600;
+
+      &:active {
+        background: fade(@primary, 8%);
+      }
+    }
+  }
+
   .transactions-section {
     margin: 0 16px;
 
