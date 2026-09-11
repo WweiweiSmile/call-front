@@ -39,7 +39,7 @@ const ScoreWithdrawPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
 
-  const quickAmounts = [100, 500, 1000, 5000];
+  const quickAmounts = [500, 1000, 2000];
 
   // 加载游戏数据
   useEffect(() => {
@@ -100,6 +100,11 @@ const ScoreWithdrawPage: React.FC = () => {
     return balance.currentBalance - numAmount;
   }, [balance, amount]);
 
+  // 快捷输入：在当前金额基础上累加
+  const handleQuickAmount = useCallback((num: number) => {
+    setAmount((prev) => ((parseInt(prev) || 0) + num).toString());
+  }, []);
+
   const buttonText = `确认取分 -${formatThousands(amount)}`;
 
   // 确认取分
@@ -132,7 +137,7 @@ const ScoreWithdrawPage: React.FC = () => {
   if (pageLoading) {
     return (
       <View className='score-operation-page score-withdraw-page'>
-        <PageHeader title='取分' showBack />
+        <PageHeader title={displayUser?.name || '取分'} showBack />
         <Loading text='加载中' subtitle='正在获取数据...' fullPage />
       </View>
     );
@@ -141,7 +146,7 @@ const ScoreWithdrawPage: React.FC = () => {
   return (
     <View className='score-operation-page score-withdraw-page'>
       <Toast id='score-withdraw-toast' />
-      <PageHeader title='取分' showBack />
+      <PageHeader title={displayUser?.name || '取分'} showBack />
 
       <View className='operation-content'>
         {/* 信息区 */}
@@ -189,7 +194,7 @@ const ScoreWithdrawPage: React.FC = () => {
                 type='default'
                 size='small'
                 className='quick-btn'
-                onClick={() => setAmount(num.toString())}
+                onClick={() => handleQuickAmount(num)}
                 data-testid={`btn-quick-withdraw-${num}`}
               >
                 -{num}
