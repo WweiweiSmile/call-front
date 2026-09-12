@@ -28,6 +28,8 @@
   }
 
   .page-layout-bottom {
+    // app.less 里的全局 * { box-sizing } 在 H5 产物中不生效，需显式声明
+    box-sizing: border-box;
     background: @bg-secondary;
     // 底部安全区统一在这里处理，消费者不再各写一份
     padding-bottom: constant(safe-area-inset-bottom);
