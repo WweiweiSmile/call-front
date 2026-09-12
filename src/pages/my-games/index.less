@@ -10,38 +10,19 @@
   flex-direction: column;
   background: @bg-primary;
 
-  .header {
-    padding: 16px;
-    background: @bg-secondary;
-    border-bottom: 1px solid @border-color;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+  .history-btn {
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: fade(@primary, 10%);
+    transition: all @duration-fast ease;
 
-    .title {
-      font-size: 20px;
-      font-weight: 700;
-      color: @text-primary;
-      background: @gradient-primary;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    &:active {
+      background: fade(@primary, 20%);
+      transform: scale(0.95);
     }
 
-    .history-btn {
-      padding: 8px 12px;
-      border-radius: 8px;
-      background: fade(@primary, 10%);
-      transition: all @duration-fast ease;
-
-      &:active {
-        background: fade(@primary, 20%);
-        transform: scale(0.95);
-      }
-
-      .history-icon {
-        font-size: 18px;
-      }
+    .history-icon {
+      font-size: 18px;
     }
   }
 

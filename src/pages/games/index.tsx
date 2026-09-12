@@ -4,7 +4,7 @@ import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useDidShow} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard} from '../../components';
+import {useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard, TabHeader} from '../../components';
 import {useLoadMore} from '../../hooks';
 import {gameApi} from '../../services/api';
 import type {GameResponse} from '../../models/service';
@@ -245,17 +245,19 @@ const GamesPage: React.FC = () => {
   return (
     <View className='games-page'>
       <Toast id="games-toast"/>
-      <View className='header'>
-        <Text className='title'>Call游戏管理</Text>
-        <Button
-          type='primary'
-          size='small'
-          onClick={() => Taro.navigateTo({url: '/pages/create-game/index'})}
-          data-testid="btn-create-game"
-        >
-          +创建游戏
-        </Button>
-      </View>
+      <TabHeader
+        title='Call游戏管理'
+        actions={
+          <Button
+            type='primary'
+            size='small'
+            onClick={() => Taro.navigateTo({url: '/pages/create-game/index'})}
+            data-testid="btn-create-game"
+          >
+            +创建游戏
+          </Button>
+        }
+      />
 
       <View className='search-box'>
         <Input

@@ -1,0 +1,36 @@
+// ============================================
+// TabHeader 底部 Tab 页通用头部 - 样式
+// 左：页面标题  右：页面操作
+// ============================================
+
+@import '../../styles/theme.less';
+
+.tab-header {
+  width: 100%;
+  height: 56px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  background: @bg-secondary;
+  border-bottom: 1px solid @border-color;
+  flex-shrink: 0;
+
+  .title {
+    font-size: 20px;
+    font-weight: 700;
+    color: @text-primary;
+    background: @gradient-primary;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+}

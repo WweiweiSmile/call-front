@@ -5,6 +5,7 @@ import { Cell, Button, Dialog } from '@nutui/nutui-react-taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
 import { useRequireAuth } from '../../components/RequireAuth';
+import TabHeader from '../../components/TabHeader';
 import type { Transaction, UserGameBalance } from '../../store/mockData';
 import './index.less';
 
@@ -78,9 +79,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <View className='profile-page'>
-      <View className='header'>
-        <Text className='title'>个人中心</Text>
-      </View>
+      <TabHeader title='个人中心' />
 
       <ScrollView className='content-wrapper' scrollY>
         <View className='user-info-card'>

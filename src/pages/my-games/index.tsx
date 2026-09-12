@@ -3,7 +3,7 @@ import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
-import { useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard } from '../../components';
+import { useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard, TabHeader } from '../../components';
 import { useLoadMore } from '../../hooks';
 import { gameApi } from '../../services/api';
 import type { GameResponse } from '../../models/service';
@@ -103,16 +103,18 @@ const MyGamesPage: React.FC = () => {
 
   return (
     <View className='my-games-page'>
-      <View className='header'>
-        <Text className='title'>我的场次</Text>
-        <View
-          className='history-btn'
-          onClick={() => Taro.navigateTo({ url: '/pages/history/index' })}
-          data-testid="btn-my-games-history"
-        >
-          <Text className='history-icon'>📜</Text>
-        </View>
-      </View>
+      <TabHeader
+        title='我的场次'
+        actions={
+          <View
+            className='history-btn'
+            onClick={() => Taro.navigateTo({ url: '/pages/history/index' })}
+            data-testid="btn-my-games-history"
+          >
+            <Text className='history-icon'>📜</Text>
+          </View>
+        }
+      />
 
       {/* 筛选标签 */}
       <FilterTabs
