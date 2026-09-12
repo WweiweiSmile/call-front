@@ -1,10 +1,10 @@
 import React, {useCallback, useMemo, useState} from 'react';
-import {Input, ScrollView, View} from '@tarojs/components';
+import {Input, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useDidShow} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth, LoadMore, EmptyState, GameCard, TabHeader} from '../../components';
+import {useRequireAuth, LoadMore, EmptyState, GameCard, TabHeader, PageLayout} from '../../components';
 import {useLoadMore} from '../../hooks';
 import {gameApi} from '../../services/api';
 import type {GameResponse} from '../../models/service';
@@ -12,7 +12,12 @@ import type {Game} from '../../store/mockData';
 import {transformGameListFromApi} from '../../models';
 import './index.less';
 
-const GamesPage: React.FC = () => {
+interface GamesPageProps {
+  /** 底部导航栏，由 pages/index 渲染后传入（tab 状态与它同源） */
+  bottom?: React.ReactNode;
+}
+
+const GamesPage: React.FC<GamesPageProps> = ({bottom}) => {
   const {isAuthenticated} = useRequireAuth();
   const {
     joinGame,
@@ -117,41 +122,44 @@ const GamesPage: React.FC = () => {
   }
 
   return (
-    <View className='games-page'>
-      <Toast id="games-toast"/>
-      <TabHeader
-        title='Call游戏管理'
-        actions={
-          <Button
-            type='primary'
-            size='small'
-            onClick={() => Taro.navigateTo({url: '/pages/create-game/index'})}
-            data-testid="btn-create-game"
-          >
-            +创建游戏
-          </Button>
-        }
-      />
+    <PageLayout
+      className='games-page'
+      contentClassName='content'
+      header={
+        <>
+          <Toast id="games-toast"/>
+          <TabHeader
+            title='Call游戏管理'
+            actions={
+              <Button
+                type='primary'
+                size='small'
+                onClick={() => Taro.navigateTo({url: '/pages/create-game/index'})}
+                data-testid="btn-create-game"
+              >
+                +创建游戏
+              </Button>
+            }
+          />
 
-      <View className='search-box'>
-        <Input
-          className='search-input'
-          placeholder='搜索游戏名称...'
-          value={searchText}
-          onInput={(e) => setSearchText(e.detail.value)}
-          data-testid="input-search"
-        />
-      </View>
-
-      <ScrollView
-        className='content'
-        scrollY
-        refresherEnabled
-        refresherTriggered={refreshing}
-        onRefresherRefresh={handleRefresh}
-        onScrollToLower={handleScrollToLower}
-        lowerThreshold={100}
-      >
+          <View className='search-box'>
+            <Input
+              className='search-input'
+              placeholder='搜索游戏名称...'
+              value={searchText}
+              onInput={(e) => setSearchText(e.detail.value)}
+              data-testid="input-search"
+            />
+          </View>
+        </>
+      }
+      bottom={bottom}
+      refresherEnabled
+      refresherTriggered={refreshing}
+      onRefresherRefresh={handleRefresh}
+      onScrollToLower={handleScrollToLower}
+      lowerThreshold={100}
+    >
         <View className='section'>
           {filteredGames.map((game) => {
             const hasJoined = game.isJoined;
@@ -186,8 +194,7 @@ const GamesPage: React.FC = () => {
             text='暂无相关游戏'
           />
         )}
-      </ScrollView>
-    </View>
+    </PageLayout>
   );
 };
 

@@ -8,6 +8,7 @@ export { default as RequireAuth, useRequireAuth } from './RequireAuth';
 export { default as Loading } from './Loading';
 export { default as PageHeader } from './PageHeader';
 export { default as TabHeader } from './TabHeader';
+export { default as PageLayout } from './PageLayout';
 export { default as EmptyState } from './EmptyState';
 export { default as FilterTabs } from './FilterTabs';
 export { default as LoadMore } from './LoadMore';

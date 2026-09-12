@@ -4,12 +4,14 @@
 
 @import '../../styles/theme.less';
 
-.score-withdraw-page {
-  min-height: 100vh;
+// 覆盖 PageLayout 的默认背景（双类名提特异性）
+.page-layout.score-withdraw-page {
   background: fade(@danger, 5%);
+}
 
+.score-withdraw-page {
   .operation-content {
-    padding: 0 16px 32px;
+    padding: 16px;
 
     // 信息区
     .info-section {
@@ -150,17 +152,17 @@
 
     // 备注
     .remark-section {
-      margin-bottom: 24px;
+      margin-bottom: 0;
     }
+  }
 
-    // 操作按钮
-    .operation-actions {
-      display: flex;
-      gap: 12px;
+  // 操作按钮（由 PageLayout 的 bottom 区域承载）
+  .operation-actions {
+    display: flex;
+    gap: 12px;
 
-      .nut-button {
-        flex: 1;
-      }
+    .nut-button {
+      flex: 1;
     }
   }
 

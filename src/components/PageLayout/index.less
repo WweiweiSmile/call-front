@@ -1,0 +1,36 @@
+// ============================================
+// PageLayout 三区域页面布局 - 样式
+// 顶部 / 内容 / 底部，只有内容区滚动
+// ============================================
+
+@import '../../styles/theme.less';
+
+.page-layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  // 页面可用双类名覆盖，如 .page-layout.score-deposit-page
+  background: @bg-primary;
+
+  .page-layout-header,
+  .page-layout-bottom {
+    flex-shrink: 0;
+  }
+
+  .page-layout-content {
+    flex: 1;
+    // flex item 默认 min-height: auto 会被内容撑开导致不滚动
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    box-sizing: border-box;
+  }
+
+  .page-layout-bottom {
+    background: @bg-secondary;
+    // 底部安全区统一在这里处理，消费者不再各写一份
+    padding-bottom: constant(safe-area-inset-bottom);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

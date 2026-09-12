@@ -4,7 +4,7 @@ import {Button, Input as NutInput, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth, Loading, PageHeader} from '../../components';
+import {useRequireAuth, Loading, PageHeader, PageLayout} from '../../components';
 import type {UserGameBalance} from '../../store/mockData';
 import './index.less';
 
@@ -136,19 +136,41 @@ const ScoreWithdrawPage: React.FC = () => {
 
   if (pageLoading) {
     return (
-      <View className='score-operation-page score-withdraw-page'>
-        <PageHeader title={displayUser?.name || '取分'} showBack />
+      <PageLayout
+        className='score-operation-page score-withdraw-page'
+        header={<PageHeader title={displayUser?.name || '取分'} showBack />}
+      >
         <Loading text='加载中' subtitle='正在获取数据...' fullPage />
-      </View>
+      </PageLayout>
     );
   }
 
   return (
-    <View className='score-operation-page score-withdraw-page'>
-      <Toast id='score-withdraw-toast' />
-      <PageHeader title={displayUser?.name || '取分'} showBack />
-
-      <View className='operation-content'>
+    <PageLayout
+      className='score-operation-page score-withdraw-page'
+      contentClassName='operation-content'
+      header={
+        <>
+          <Toast id='score-withdraw-toast' />
+          <PageHeader title={displayUser?.name || '取分'} showBack />
+        </>
+      }
+      bottom={
+        <View className='operation-actions'>
+          <Button type='default' onClick={() => Taro.navigateBack()} data-testid='btn-withdraw-cancel'>
+            取消
+          </Button>
+          <Button
+            type='danger'
+            onClick={handleConfirm}
+            loading={isSubmitting}
+            data-testid='btn-withdraw-confirm'
+          >
+            {buttonText}
+          </Button>
+        </View>
+      }
+    >
         {/* 信息区 */}
         <View className='info-section'>
           <Text className='info-row'>游戏: {gameName || '未知'}</Text>
@@ -229,23 +251,7 @@ const ScoreWithdrawPage: React.FC = () => {
             data-testid='input-withdraw-remark'
           />
         </View>
-
-        {/* 操作按钮 */}
-        <View className='operation-actions'>
-          <Button type='default' onClick={() => Taro.navigateBack()} data-testid='btn-withdraw-cancel'>
-            取消
-          </Button>
-          <Button
-            type='danger'
-            onClick={handleConfirm}
-            loading={isSubmitting}
-            data-testid='btn-withdraw-confirm'
-          >
-            {buttonText}
-          </Button>
-        </View>
-      </View>
-    </View>
+    </PageLayout>
   );
 };
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
-import { useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard, TabHeader } from '../../components';
+import { useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard, TabHeader, PageLayout } from '../../components';
 import { useLoadMore } from '../../hooks';
 import { gameApi } from '../../services/api';
 import type { GameResponse } from '../../models/service';
@@ -23,7 +23,12 @@ const FILTER_TABS = [
   { value: 'ended', label: '已结束' },
 ];
 
-const MyGamesPage: React.FC = () => {
+interface MyGamesPageProps {
+  /** 底部导航栏，由 pages/index 渲染后传入（tab 状态与它同源） */
+  bottom?: React.ReactNode;
+}
+
+const MyGamesPage: React.FC<MyGamesPageProps> = ({bottom}) => {
   const {isAuthenticated} = useRequireAuth();
   const {
     getUserBalance,
@@ -101,36 +106,39 @@ const MyGamesPage: React.FC = () => {
   }, [hasMore, loading, loadMore]);
 
   return (
-    <View className='my-games-page'>
-      <TabHeader
-        title='我的场次'
-        actions={
-          <View
-            className='history-btn'
-            onClick={() => Taro.navigateTo({ url: '/pages/history/index' })}
-            data-testid="btn-my-games-history"
-          >
-            <Text className='history-icon'>📜</Text>
-          </View>
-        }
-      />
+    <PageLayout
+      className='my-games-page'
+      contentClassName='content'
+      header={
+        <>
+          <TabHeader
+            title='我的场次'
+            actions={
+              <View
+                className='history-btn'
+                onClick={() => Taro.navigateTo({ url: '/pages/history/index' })}
+                data-testid="btn-my-games-history"
+              >
+                <Text className='history-icon'>📜</Text>
+              </View>
+            }
+          />
 
-      {/* 筛选标签 */}
-      <FilterTabs
-        tabs={FILTER_TABS}
-        activeValue={filterType}
-        onChange={handleFilterChange}
-      />
-
-      <ScrollView
-        className='content'
-        scrollY
-        refresherEnabled
-        refresherTriggered={refreshing}
-        onRefresherRefresh={handleRefresh}
-        onScrollToLower={handleScrollToLower}
-        lowerThreshold={100}
-      >
+          {/* 筛选标签 */}
+          <FilterTabs
+            tabs={FILTER_TABS}
+            activeValue={filterType}
+            onChange={handleFilterChange}
+          />
+        </>
+      }
+      bottom={bottom}
+      refresherEnabled
+      refresherTriggered={refreshing}
+      onRefresherRefresh={handleRefresh}
+      onScrollToLower={handleScrollToLower}
+      lowerThreshold={100}
+    >
         {games.length > 0 ? (
           <>
             {games.map((game) => {
@@ -166,8 +174,7 @@ const MyGamesPage: React.FC = () => {
             text='暂无相关场次'
           />
         )}
-      </ScrollView>
-    </View>
+    </PageLayout>
   );
 };
 

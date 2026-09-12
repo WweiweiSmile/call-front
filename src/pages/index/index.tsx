@@ -1,4 +1,3 @@
-import React, {useMemo} from 'react';
 import {View} from '@tarojs/components';
 import {ConfigProvider} from '@nutui/nutui-react-taro';
 import zhCN from '@nutui/nutui-react-taro/dist/locales/zh-CN';
@@ -8,15 +7,12 @@ import BottomTabBar from '../../components/BottomTabBar';
 import GamesPage from '../games/index';
 import MyGamesPage from '../my-games/index';
 import ProfilePage from '../profile/index';
-import './index.less';
 
 type TabType = 'games' | 'my' | 'profile';
 
 function Index() {
   const {isAuthenticated} = useRequireAuth();
   const {state: appState, setCurrentTab} = useAppStore();
-
-  console.log('appState---->', appState)
 
   // 使用 store 中的 currentTab，默认值为 'games'
   const currentTab: TabType = appState.currentTab || 'games';
@@ -25,30 +21,31 @@ function Index() {
     setCurrentTab(tab);
   };
 
-  const renderContent = useMemo(() => {
-    switch (currentTab) {
-      case 'games':
-        return <GamesPage/>;
-      case 'my':
-        return <MyGamesPage/>;
-      case 'profile':
-        return <ProfilePage/>;
-      default:
-        return <GamesPage/>;
-    }
-  }, [currentTab]);
-
   // 如果未认证，不渲染内容（会自动跳转）
   if (!isAuthenticated) {
     return <View />;
   }
 
+  // 底栏由这里渲染并回传给各 Tab 页：
+  // useAppStore 是组件级 state（非共享），只有与 currentTab 同源的这里才能改动它
+  const tabBar = <BottomTabBar currentTab={currentTab} onTabChange={handleTabChange}/>;
+
+  const renderContent = () => {
+    switch (currentTab) {
+      case 'games':
+        return <GamesPage bottom={tabBar}/>;
+      case 'my':
+        return <MyGamesPage bottom={tabBar}/>;
+      case 'profile':
+        return <ProfilePage bottom={tabBar}/>;
+      default:
+        return <GamesPage bottom={tabBar}/>;
+    }
+  };
+
   return (
     <ConfigProvider locale={zhCN}>
-      <View className='main-container'>
-        {renderContent}
-        <BottomTabBar currentTab={currentTab} onTabChange={handleTabChange}/>
-      </View>
+      {renderContent()}
     </ConfigProvider>
   );
 }

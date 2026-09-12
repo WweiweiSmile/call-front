@@ -5,12 +5,6 @@
 @import '../../styles/theme.less';
 
 .chip-count-page {
-  min-height: 100vh;
-  background: @bg-primary;
-  // 给底部固定汇总条留出空间
-  padding-bottom: 140px;
-  box-sizing: border-box;
-
   .chip-count-content {
     padding: 16px;
   }
@@ -160,18 +154,12 @@
     }
   }
 
-  // 底部汇总条
+  // 底部汇总条（由 PageLayout 的 bottom 区域承载，安全区已由布局统一处理）
   .summary-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 10;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 12px 16px calc(12px + constant(safe-area-inset-bottom));
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+    padding: 12px 16px;
     background: @bg-secondary;
     border-top: 1px solid @border-color;
     box-shadow: @shadow-lg;

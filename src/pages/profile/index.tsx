@@ -1,15 +1,21 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { Cell, Button, Dialog } from '@nutui/nutui-react-taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
 import { useRequireAuth } from '../../components/RequireAuth';
 import TabHeader from '../../components/TabHeader';
+import PageLayout from '../../components/PageLayout';
 import type { Transaction, UserGameBalance } from '../../store/mockData';
 import './index.less';
 
-const ProfilePage: React.FC = () => {
+interface ProfilePageProps {
+  /** 底部导航栏，由 pages/index 渲染后传入（tab 状态与它同源） */
+  bottom?: React.ReactNode;
+}
+
+const ProfilePage: React.FC<ProfilePageProps> = ({bottom}) => {
   const {isAuthenticated} = useRequireAuth();
   const {
     getUserGames,
@@ -78,10 +84,23 @@ const ProfilePage: React.FC = () => {
   }
 
   return (
-    <View className='profile-page'>
-      <TabHeader title='个人中心' />
-
-      <ScrollView className='content-wrapper' scrollY>
+    <PageLayout
+      className='profile-page'
+      contentClassName='content-wrapper'
+      header={
+        <>
+          <TabHeader title='个人中心' />
+          <Dialog
+            visible={visible}
+            title="确认登出"
+            content="确定要退出登录吗？"
+            onCancel={() => setVisible(false)}
+            onConfirm={handleConfirmLogout}
+          />
+        </>
+      }
+      bottom={bottom}
+    >
         <View className='user-info-card'>
           <View className='avatar'>{currentUser.avatar || '👤'}</View>
           <View className='user-details'>
@@ -150,16 +169,7 @@ const ProfilePage: React.FC = () => {
             退出登录
           </Button>
         </View>
-      </ScrollView>
-
-      <Dialog
-        visible={visible}
-        title="确认登出"
-        content="确定要退出登录吗？"
-        onCancel={() => setVisible(false)}
-        onConfirm={handleConfirmLogout}
-      />
-    </View>
+    </PageLayout>
   );
 };
 

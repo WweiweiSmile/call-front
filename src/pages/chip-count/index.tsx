@@ -1,7 +1,7 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {Input, Text, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
-import {useRequireAuth, PageHeader} from '../../components';
+import {useRequireAuth, PageHeader, PageLayout} from '../../components';
 import './index.less';
 
 // 筹码面值配置：调整或新增面值只需改这里，页面会自动渲染
@@ -62,11 +62,40 @@ const ChipCountPage: React.FC = () => {
   }
 
   return (
-    <View className='chip-count-page'>
-      <Toast id='chip-count-toast' />
-      <PageHeader title='归分' showBack />
-
-      <View className='chip-count-content'>
+    <PageLayout
+      className='chip-count-page'
+      contentClassName='chip-count-content'
+      header={
+        <>
+          <Toast id='chip-count-toast' />
+          <PageHeader title='归分' showBack />
+        </>
+      }
+      bottom={
+        <View className='summary-bar'>
+          <View className='summary-stats'>
+            <View className='summary-item'>
+              <Text className='summary-label'>总个数</Text>
+              <Text className='summary-value'>{totalCount.toLocaleString()}</Text>
+            </View>
+            <View className='summary-divider' />
+            <View className='summary-item'>
+              <Text className='summary-label'>总分</Text>
+              <Text className='summary-value amount'>{totalAmount.toLocaleString()}</Text>
+            </View>
+          </View>
+          <Button
+            type='default'
+            size='small'
+            className='reset-btn'
+            onClick={handleReset}
+            data-testid='btn-chip-reset'
+          >
+            重置
+          </Button>
+        </View>
+      }
+    >
         <View className='intro-section'>
           <Text className='intro-title'>筹码归分</Text>
           <Text className='intro-desc'>
@@ -118,32 +147,7 @@ const ChipCountPage: React.FC = () => {
             );
           })}
         </View>
-      </View>
-
-      {/* 底部汇总条 */}
-      <View className='summary-bar'>
-        <View className='summary-stats'>
-          <View className='summary-item'>
-            <Text className='summary-label'>总个数</Text>
-            <Text className='summary-value'>{totalCount.toLocaleString()}</Text>
-          </View>
-          <View className='summary-divider' />
-          <View className='summary-item'>
-            <Text className='summary-label'>总分</Text>
-            <Text className='summary-value amount'>{totalAmount.toLocaleString()}</Text>
-          </View>
-        </View>
-        <Button
-          type='default'
-          size='small'
-          className='reset-btn'
-          onClick={handleReset}
-          data-testid='btn-chip-reset'
-        >
-          重置
-        </Button>
-      </View>
-    </View>
+    </PageLayout>
   );
 };
 
