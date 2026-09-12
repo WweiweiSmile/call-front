@@ -14,7 +14,7 @@ interface HistoryGameItem {
   id: string;
   name: string;
   participantCount: number;
-  startTime?: string;
+  createdAt?: string;
   endTime?: string;
   status: string;
   userNetScore?: number;
@@ -52,7 +52,7 @@ const HistoryPage: React.FC = () => {
       id: game.id,
       name: game.name,
       participantCount: game.participantCount,
-      startTime: game.startTime,
+      createdAt: game.createdAt,
       endTime: game.endTime,
       status: game.status,
       userNetScore: game.userNetScore,
@@ -192,7 +192,7 @@ const HistoryPage: React.FC = () => {
                 key={game.id}
                 name={game.name}
                 participantCount={game.participantCount}
-                gameTime={game.startTime ? dayjs(game.startTime).format('YYYY年MM月DD日 HH:mm:ss') : undefined}
+                gameTime={game.createdAt ? dayjs(game.createdAt).format('YYYY年MM月DD日 HH:mm:ss') : undefined}
                 userNetScore={game.userNetScore}
                 onClick={() => handleGameClick(game.id)}
                 testId={`history-game-card-${game.id}`}

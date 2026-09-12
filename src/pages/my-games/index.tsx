@@ -11,7 +11,7 @@ import type { Game } from '../../store/mockData';
 import { transformGameListFromApi } from '../../models';
 import './index.less';
 
-type FilterType = 'all' | 'ongoing' | 'ended' | 'recent';
+type FilterType = 'all' | 'ongoing' | 'ended';
 
 interface MyGamesFilterParams {
   status?: string;
@@ -21,7 +21,6 @@ const FILTER_TABS = [
   { value: 'all', label: '全部' },
   { value: 'ongoing', label: '进行中' },
   { value: 'ended', label: '已结束' },
-  { value: 'recent', label: '最近玩过' },
 ];
 
 const MyGamesPage: React.FC = () => {
@@ -63,7 +62,7 @@ const MyGamesPage: React.FC = () => {
 
   // filterType 变化时更新参数并刷新
   useEffect(() => {
-    const statusParam = filterType === 'all' || filterType === 'recent' ? undefined : filterType;
+    const statusParam = filterType === 'all' ? undefined : filterType;
     setParams({ status: statusParam });
   }, [filterType, setParams]);
 

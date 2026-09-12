@@ -9,7 +9,6 @@ import type {ListResponse} from './common';
 export interface CreateGameRequest {
   name: string;
   description?: string;
-  startTime?: string;
 }
 
 // 加入游戏请求
@@ -25,7 +24,6 @@ export interface GameResponse {
   creatorId: number;
   creatorName?: string;
   status: string;
-  startTime: string;
   endTime?: string;
   playerCount: number;
   createdAt: string;

@@ -1,4 +1,4 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback} from 'react';
 import {Text, View} from '@tarojs/components';
 import {Button, Form, Input as NutInput, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
@@ -7,7 +7,6 @@ import {useAuthStore} from '../../store/auth';
 import {useRequireAuth} from '../../components/RequireAuth';
 import type {FormInstance} from '@nutui/nutui-react-taro/dist/types/packages/form/types';
 import './index.less';
-import CustomDatePicker from "../../components/date-picker";
 
 interface FormValues {
   name: string;
@@ -19,16 +18,10 @@ const CreateGamePage: React.FC = () => {
   const {createGame} = useAppStore();
   const {user} = useAuthStore();
   const [form] = Form.useForm() as [FormInstance];
-  const [startTime, setStartTime] = useState<Date | null>(null);
 
   const handleSubmit = useCallback(async (values: FormValues) => {
-    if (!values.name?.trim() || !user || !startTime) {
-      if (!values.name?.trim()) {
-        Toast.show('create-game-toast', {content: '请输入游戏名称'});
-      }
-      if (!startTime) {
-        Toast.show('create-game-toast', {content: '请选择开始时间'});
-      }
+    if (!values.name?.trim() || !user) {
+      Toast.show('create-game-toast', {content: '请输入游戏名称'});
       return;
     }
 
@@ -36,14 +29,13 @@ const CreateGamePage: React.FC = () => {
       await createGame({
         name: values.name,
         description: values.description || '',
-        startTime: startTime.toISOString(),
       });
       Toast.show('create-game-toast', {content: '创建成功'});
       await Taro.navigateBack();
     } catch (error: any) {
       Toast.show('create-game-toast', {content: error.message || '创建失败'});
     }
-  }, [user, createGame, startTime]);
+  }, [user, createGame]);
 
   // 如果未认证，不渲染内容（会自动跳转）
   if (!isAuthenticated || !user) {
@@ -77,13 +69,6 @@ const CreateGamePage: React.FC = () => {
           </Form.Item>
           <Form.Item label='游戏描述 (选填)' name='description'>
             <NutInput type='textarea' placeholder='请输入游戏描述' data-testid="input-game-description"/>
-          </Form.Item>
-          <Form.Item label='开始时间' name="startTime" required>
-            <CustomDatePicker
-              type={'datetime'}
-              value={startTime}
-              onChange={(date) => setStartTime(date)}
-            />
           </Form.Item>
           <Form.Item>
             <Button type='primary' size='large' block nativeType='submit' data-testid="btn-create-game-submit">

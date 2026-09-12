@@ -3,7 +3,8 @@
 // 对应后端: models/game.go
 // ============================================
 
-export type GameStatus = 'pending' | 'ongoing' | 'ended';
+// 创建即进行中，只有创建者结束游戏后才变为 ended
+export type GameStatus = 'ongoing' | 'ended';
 
 export interface Game {
   id: number;
@@ -11,7 +12,6 @@ export interface Game {
   description: string;
   creator_id: number;
   status: string;
-  start_time: string | null;
   end_time: string | null;
   player_count: number;
   created_at: string;

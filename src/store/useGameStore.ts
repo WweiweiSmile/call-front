@@ -73,43 +73,6 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
   // 获取游戏列表（优先使用已加载的数据）
   const getGames = useCallback(() => state.games, [state.games]);
 
-  // 获取进行中的游戏
-  const getOngoingGames = useCallback(() => {
-    const now = state.currentTime;
-    return state.games.filter((g) => {
-      // 如果状态已经是ongoing，直接返回
-      if (g.status === 'ongoing') return true;
-      // 如果状态是pending但开始时间已到，也视为进行中
-      if (g.status === 'pending' && g.startTime) {
-        try {
-          const startTime = new Date(g.startTime);
-          return startTime <= now;
-        } catch {
-          return false;
-        }
-      }
-      return false;
-    });
-  }, [state.games, state.currentTime]);
-
-  // 获取即将开始的游戏
-  const getPendingGames = useCallback(() => {
-    const now = state.currentTime;
-    return state.games.filter((g) => {
-      // 如果状态是pending且开始时间未到，返回true
-      if (g.status === 'pending') {
-        if (!g.startTime) return true;
-        try {
-          const startTime = new Date(g.startTime);
-          return startTime > now;
-        } catch {
-          return true;
-        }
-      }
-      return false;
-    });
-  }, [state.games, state.currentTime]);
-
   // 获取用户参与的游戏
   const getUserGames = useCallback((currentUserId: string) => {
     return state.games.filter((g) => {
@@ -130,7 +93,6 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
         const newGame: any = await gameApi.createGame({
           name: game.name,
           description: game.description,
-          startTime: game.startTime,
         });
 
         const gameData: Game = transformGameFromApi(newGame);
@@ -162,7 +124,7 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
           ...prev,
           games: prev.games.map((g) =>
             g.id === gameId
-              ? {...g, participantCount: g.participantCount + 1, status: 'ongoing' as const, isJoined: true}
+              ? {...g, participantCount: g.participantCount + 1, isJoined: true}
               : g
           ),
         }));
@@ -208,8 +170,6 @@ export function useGameStore({state, setState, setLoading}: UseGameStoreOptions)
     loadGames,
     loadMyGames,
     getGames,
-    getOngoingGames,
-    getPendingGames,
     getUserGames,
     getUserCreatedGames,
     createGame,

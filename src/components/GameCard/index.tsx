@@ -15,10 +15,8 @@ interface GameCardProps {
   creatorName?: string;
   /** 参与人数 */
   participantCount?: number;
-  /** 开始时间 */
-  startTime?: string;
-  /** 游戏状态 */
-  status?: 'pending' | 'ongoing' | 'ended';
+  /** 创建时间（创建即开始，等价于开局时间） */
+  createdAt?: string;
   /** 是否已经加入 */
   isJoined?: boolean;
   /** 是否是创建者 */
@@ -43,8 +41,7 @@ const GameCard: React.FC<GameCardProps> = ({
   name,
   creatorName,
   participantCount,
-  startTime,
-  status,
+  createdAt,
   isJoined = false,
   isCreator = false,
   balance,
@@ -85,9 +82,9 @@ const GameCard: React.FC<GameCardProps> = ({
             参与人数: {participantCount}人
           </Text>
         )}
-        {startTime && (
+        {createdAt && (
           <Text className='game-time'>
-            开始时间: {startTime}
+            创建时间: {createdAt}
           </Text>
         )}
         {balance && (

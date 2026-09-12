@@ -15,9 +15,10 @@ export interface FrontendGame {
   name: string;
   creatorId: string;
   creatorName: string;
-  status: 'pending' | 'ongoing' | 'ended';
+  status: 'ongoing' | 'ended';
   participantCount: number;
-  startTime?: string;
+  /** 创建时间（创建即开始，等价于开局时间） */
+  createdAt?: string;
   endTime?: string;
   description?: string;
   isJoined?: boolean;

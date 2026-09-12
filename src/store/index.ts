@@ -65,8 +65,6 @@ export function useAppStore() {
 
     // 游戏相关
     getGames: gameStore.getGames,
-    getOngoingGames: gameStore.getOngoingGames,
-    getPendingGames: gameStore.getPendingGames,
     getUserGames: gameStore.getUserGames,
     getUserCreatedGames: gameStore.getUserCreatedGames,
     createGame: gameStore.createGame,
