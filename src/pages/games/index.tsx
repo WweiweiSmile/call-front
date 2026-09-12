@@ -165,7 +165,7 @@ const GamesPage: React.FC = () => {
                 participantCount={game.participantCount}
                 isJoined={hasJoined}
                 isCreator={isCreator}
-                createdAt={game.createdAt}
+                description={game.description}
                 onClick={() => handleGameCardClick(game)}
                 onButtonClick={(e) => handleGameButtonClick(e, game)}
                 testId={`btn-game-action-${game.id}`}

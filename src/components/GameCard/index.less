@@ -33,10 +33,19 @@
 
     .game-creator,
     .game-participants,
-    .game-time {
+    .game-description {
       font-size: 14px;
       margin-bottom: 4px;
       display: block;
+    }
+
+    .game-description {
+      // 描述为自由文本，限制两行避免卡片被撑高
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-all;
     }
 
     .balance-section {
@@ -89,7 +98,7 @@
 
       .game-creator,
       .game-participants,
-      .game-time {
+      .game-description {
         color: @text-secondary;
       }
 
@@ -115,7 +124,7 @@
 
       .game-creator,
       .game-participants,
-      .game-time {
+      .game-description {
         color: #8C8C8C;
       }
 
