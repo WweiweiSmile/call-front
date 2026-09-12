@@ -1,10 +1,10 @@
 import React, {useCallback, useEffect, useState} from 'react';
-import {ScrollView, Text, View} from '@tarojs/components';
+import {Text, View} from '@tarojs/components';
 import Taro, {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {transactionApi} from '../../services/api';
 import {transformTransactionListFromApi} from '../../models';
-import {useRequireAuth, Loading, PageHeader} from '../../components';
+import {useRequireAuth, Loading, PageHeader, PageLayout} from '../../components';
 import type {FrontendTransaction} from '../../models/types';
 import './index.less';
 
@@ -58,9 +58,21 @@ const TransactionRecordsPage: React.FC = () => {
   }
 
   return (
-    <View className='transaction-records-page'>
-      <PageHeader title='操作记录' showBack />
-
+    <PageLayout
+      className='transaction-records-page'
+      contentClassName='records-list'
+      header={
+        <>
+          <PageHeader title='操作记录' showBack />
+          {/* 条数信息固定在顶部，不随列表滚动 */}
+          {!pageLoading && !loadError && transactions.length > 0 && (
+            <View className='total-info'>
+              <Text className='total-text'>共 {total} 条操作记录</Text>
+            </View>
+          )}
+        </>
+      }
+    >
       {pageLoading ? (
         <Loading text='加载中' subtitle='正在获取操作记录...' fullPage />
       ) : loadError ? (
@@ -74,10 +86,6 @@ const TransactionRecordsPage: React.FC = () => {
         </View>
       ) : (
         <>
-          <View className='total-info'>
-            <Text className='total-text'>共 {total} 条操作记录</Text>
-          </View>
-          <ScrollView className='records-list' scrollY>
             {transactions.map((tx) => (
               <View key={tx.id} className='record-item'>
                 <Text className='record-time'>
@@ -99,10 +107,9 @@ const TransactionRecordsPage: React.FC = () => {
                 </View>
               </View>
             ))}
-          </ScrollView>
         </>
       )}
-    </View>
+    </PageLayout>
   );
 };
 

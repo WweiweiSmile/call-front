@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo } from 'react';
-import { ScrollView, Text, View } from '@tarojs/components';
+import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import dayjs from 'dayjs';
 import { useAuthStore } from '../../store/auth';
-import { useRequireAuth, Loading, PageHeader, EmptyState, LoadMore, HistoryGameCard } from '../../components';
+import { useRequireAuth, Loading, PageHeader, PageLayout, EmptyState, LoadMore, HistoryGameCard } from '../../components';
 import { useLoadMore } from '../../hooks';
 import { gameApi } from '../../services/api';
 import type { GameResponse } from '../../models/service';
@@ -130,22 +130,22 @@ const HistoryPage: React.FC = () => {
   }
 
   return (
-    <View className='history-page'>
-      <PageHeader
-        title='历史战绩'
-        showBack
-        theme='light'
-      />
-
-      <ScrollView
-        className='content'
-        scrollY
-        refresherEnabled
-        refresherTriggered={refreshing}
-        onRefresherRefresh={handleRefresh}
-        onScrollToLower={handleScrollToLower}
-        lowerThreshold={100}
-      >
+    <PageLayout
+      className='history-page'
+      contentClassName='content'
+      header={
+        <PageHeader
+          title='历史战绩'
+          showBack
+          theme='light'
+        />
+      }
+      refresherEnabled
+      refresherTriggered={refreshing}
+      onRefresherRefresh={handleRefresh}
+      onScrollToLower={handleScrollToLower}
+      lowerThreshold={100}
+    >
         {/* 累计统计卡片 */}
         <View className='stats-card'>
           <Text className='stats-title'>📊 累计输赢</Text>
@@ -216,8 +216,7 @@ const HistoryPage: React.FC = () => {
         />
 
         {/* 只有当没有更多且有数据时才显示没有更多（已在 LoadMore 组件中处理） */}
-      </ScrollView>
-    </View>
+    </PageLayout>
   );
 };
 

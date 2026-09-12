@@ -1,10 +1,10 @@
 import React, {useCallback} from 'react';
-import {Text, View} from '@tarojs/components';
+import {View} from '@tarojs/components';
 import {Button, Form, Input as NutInput, Toast} from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth} from '../../components/RequireAuth';
+import {useRequireAuth, PageHeader, PageLayout} from '../../components';
 import type {FormInstance} from '@nutui/nutui-react-taro/dist/types/packages/form/types';
 import './index.less';
 
@@ -43,19 +43,16 @@ const CreateGamePage: React.FC = () => {
   }
 
   return (
-    <View className='create-game-page'>
-      <Toast id="create-game-toast"/>
-      <View className='header'>
-        <View className='header-left' onClick={() => Taro.navigateBack()} data-testid="btn-back">
-          <Text className='back-icon'>←</Text>
-        </View>
-        <View className='header-center'>
-          <Text className='title'>创建游戏</Text>
-        </View>
-        <View className='header-right'/>
-      </View>
-
-      <View className='content'>
+    <PageLayout
+      className='create-game-page'
+      contentClassName='content'
+      header={
+        <>
+          <Toast id="create-game-toast"/>
+          <PageHeader title='创建游戏' showBack />
+        </>
+      }
+    >
         <Form
           form={form}
           onFinish={handleSubmit}
@@ -76,8 +73,7 @@ const CreateGamePage: React.FC = () => {
             </Button>
           </Form.Item>
         </Form>
-      </View>
-    </View>
+    </PageLayout>
   );
 };
 

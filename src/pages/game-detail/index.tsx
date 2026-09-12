@@ -5,7 +5,7 @@ import Taro, {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth, Loading, PageHeader, ConfirmDialog} from '../../components';
+import {useRequireAuth, Loading, PageHeader, PageLayout, ConfirmDialog} from '../../components';
 import type {Game, User as UserType} from '../../store/mockData';
 import './index.less';
 
@@ -327,41 +327,48 @@ const GameDetailPage: React.FC = () => {
   }
 
   return (
-    <View className='game-detail-page'>
-      <Toast id="game-detail-toast"/>
-      <PageHeader
-        title={game.name}
-        subtitle={`👤 ${isCreator ? '我创建的游戏' : `创建者: ${game.creatorName}`}`}
-        showBack
-        onBack={(e) => {
-          e?.stopPropagation?.();
-          Taro.redirectTo({url: '/pages/index/index'});
-        }}
-        rightContent={
-          isCreator ? (
-            <Text className='share-icon' onClick={handleShare}>分享</Text>
-          ) : null
-        }
-      />
+    <PageLayout
+      className='game-detail-page'
+      contentClassName='game-detail-content'
+      header={
+        <>
+          <Toast id="game-detail-toast"/>
+          <PageHeader
+            title={game.name}
+            subtitle={`👤 ${isCreator ? '我创建的游戏' : `创建者: ${game.creatorName}`}`}
+            showBack
+            onBack={(e) => {
+              e?.stopPropagation?.();
+              Taro.redirectTo({url: '/pages/index/index'});
+            }}
+            rightContent={
+              isCreator ? (
+                <Text className='share-icon' onClick={handleShare}>分享</Text>
+              ) : null
+            }
+          />
 
-      {isCreator && (
-        <View className='mode-switch'>
-          <View
-            className={`mode-item ${viewMode === 'self' ? 'active' : ''}`}
-            onClick={() => handleViewModeChange('self')}
-            data-testid="btn-mode-self"
-          >
-            查看自己
-          </View>
-          <View
-            className={`mode-item ${viewMode === 'manage' ? 'active' : ''}`}
-            onClick={() => handleViewModeChange('manage')}
-            data-testid="btn-mode-manage"
-          >
-            管理参与者
-          </View>
-        </View>
-      )}
+          {isCreator && (
+            <View className='mode-switch'>
+              <View
+                className={`mode-item ${viewMode === 'self' ? 'active' : ''}`}
+                onClick={() => handleViewModeChange('self')}
+                data-testid="btn-mode-self"
+              >
+                查看自己
+              </View>
+              <View
+                className={`mode-item ${viewMode === 'manage' ? 'active' : ''}`}
+                onClick={() => handleViewModeChange('manage')}
+                data-testid="btn-mode-manage"
+              >
+                管理参与者
+              </View>
+            </View>
+          )}
+        </>
+      }
+    >
 
       {/* 自查看模式：个人余额卡片 */}
       {viewMode === 'self' && balance && (
@@ -612,7 +619,7 @@ const GameDetailPage: React.FC = () => {
           }
         }}
       />
-    </View>
+    </PageLayout>
   );
 };
 

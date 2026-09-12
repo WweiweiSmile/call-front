@@ -1,9 +1,9 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {ScrollView, Text, View} from '@tarojs/components';
-import Taro, {useRouter} from '@tarojs/taro';
+import {Text, View} from '@tarojs/components';
+import {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth} from '../../components/RequireAuth';
+import {useRequireAuth, PageHeader, PageLayout} from '../../components';
 import type {User, UserGameBalance} from '../../store/mockData';
 import './index.less';
 
@@ -38,10 +38,6 @@ const LeaderboardPage: React.FC = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [showPodiumAnimation, setShowPodiumAnimation] = useState(false);
   const pollingTimerRef = useRef<number | null>(null);
-
-  const handleBack = useCallback(() => {
-    Taro.navigateBack();
-  }, []);
 
   // 加载数据的函数
   const loadData = useCallback(async (showLoading = true) => {
@@ -174,18 +170,11 @@ const LeaderboardPage: React.FC = () => {
   }
 
   return (
-    <View className='leaderboard-page'>
-      <View className='header'>
-        <View className='header-left' onClick={handleBack} data-testid="btn-leaderboard-back">
-          <Text className='back-icon'>←</Text>
-        </View>
-        <View className='header-center'>
-          <Text className='title'>🏆 净分排行榜</Text>
-        </View>
-        <View className='header-right'/>
-      </View>
-
-      <ScrollView className='content' scrollY>
+    <PageLayout
+      className='leaderboard-page'
+      contentClassName='content'
+      header={<PageHeader title='🏆 净分排行榜' showBack />}
+    >
         {/* 领奖台区域 */}
         {topThree.length > 0 && (
           <View className='podium-section'>
@@ -256,8 +245,7 @@ const LeaderboardPage: React.FC = () => {
             <Text>暂无排行榜数据</Text>
           </View>
         )}
-      </ScrollView>
-    </View>
+    </PageLayout>
   );
 };
 

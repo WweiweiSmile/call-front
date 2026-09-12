@@ -5,9 +5,13 @@
 @import '../../styles/theme.less';
 
 .game-detail-page {
+  // 加载 / 错误分支不是 PageLayout 结构，仍需自己撑满一屏
   min-height: 100vh;
   background: @bg-primary;
-  padding-bottom: 20px;
+
+  .game-detail-content {
+    padding-bottom: 20px;
+  }
 
   // 分享按钮样式
   .share-icon {
