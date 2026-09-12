@@ -2,6 +2,7 @@ import React, {useEffect} from 'react';
 import {View} from '@tarojs/components';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAuthStore} from '../store/auth';
+import {DEFAULT_ROUTE} from '../utils/tabs';
 
 interface RequireAuthProps {
   children: React.ReactNode;
@@ -29,7 +30,7 @@ export function useRequireAuth() {
       try {
         if (typeof window !== 'undefined' && window.location) {
           // 使用完整的 hash 路由作为 redirectUri
-          redirectUri = encodeURIComponent(window.location.hash.slice(1) || '/pages/index/index');
+          redirectUri = encodeURIComponent(window.location.hash.slice(1) || DEFAULT_ROUTE);
         } else {
           // 降级方案：使用当前路径
           const params = new URLSearchParams(router.params as Record<string, string>).toString();
@@ -37,7 +38,7 @@ export function useRequireAuth() {
           redirectUri = encodeURIComponent(`${currentPath}${queryString}`);
         }
       } catch (e) {
-        redirectUri = encodeURIComponent('/pages/index/index');
+        redirectUri = encodeURIComponent(DEFAULT_ROUTE);
       }
 
       // 跳转到登录页面，带上 redirectUri
@@ -75,7 +76,7 @@ function RequireAuth({children}: RequireAuthProps) {
       try {
         if (typeof window !== 'undefined' && window.location) {
           // 使用完整的 hash 路由作为 redirectUri
-          redirectUri = encodeURIComponent(window.location.hash.slice(1) || '/pages/index/index');
+          redirectUri = encodeURIComponent(window.location.hash.slice(1) || DEFAULT_ROUTE);
         } else {
           // 降级方案：使用当前路径
           const params = new URLSearchParams(router.params as Record<string, string>).toString();
@@ -83,7 +84,7 @@ function RequireAuth({children}: RequireAuthProps) {
           redirectUri = encodeURIComponent(`${currentPath}${queryString}`);
         }
       } catch (e) {
-        redirectUri = encodeURIComponent('/pages/index/index');
+        redirectUri = encodeURIComponent(DEFAULT_ROUTE);
       }
 
       // 跳转到登录页面，带上 redirectUri

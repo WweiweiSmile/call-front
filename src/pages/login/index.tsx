@@ -3,6 +3,7 @@ import {Text, View} from '@tarojs/components';
 import Taro, {useRouter} from '@tarojs/taro';
 import {Button, Form, Input, Toast} from '@nutui/nutui-react-taro';
 import {useAuthStore} from '../../store/auth';
+import {DEFAULT_ROUTE} from '../../utils/tabs';
 import './index.less';
 
 type ModeType = 'login' | 'register';
@@ -43,7 +44,7 @@ function LoginPage() {
         Toast.show('login-toast', {content: '注册成功'});
       }
 
-      // 如果有 redirectUri，跳转到指定页面，否则跳转到首页
+      // 如果有 redirectUri，跳转到指定页面，否则跳转到默认 Tab 页
       if (redirectUri) {
         // 解码 redirectUri 并跳转
         const decodedRedirectUri = decodeURIComponent(redirectUri);
@@ -54,7 +55,7 @@ function LoginPage() {
         });
       } else {
         Taro.redirectTo({
-          url: '/pages/index/index',
+          url: DEFAULT_ROUTE,
         });
       }
     } catch (error: any) {

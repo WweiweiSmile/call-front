@@ -12,7 +12,6 @@ export interface AppState {
   transactions: Transaction[];
   gameParticipants: Record<string, User[]>;
   currentGameId: string | null;
-  currentTab: 'games' | 'my' | 'profile';
   isLoading: boolean;
   currentTime: Date;
 }
@@ -23,7 +22,6 @@ export const initialState: AppState = {
   transactions: [],
   gameParticipants: {},
   currentGameId: null,
-  currentTab: 'games',
   isLoading: false,
   currentTime: new Date(),
 };

@@ -7,6 +7,7 @@ import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import {useRequireAuth, Loading, PageHeader, PageLayout, ConfirmDialog} from '../../components';
 import type {Game, User as UserType} from '../../store/mockData';
+import {DEFAULT_ROUTE} from '../../utils/tabs';
 import './index.less';
 
 type ViewMode = 'self' | 'manage';
@@ -339,7 +340,7 @@ const GameDetailPage: React.FC = () => {
             showBack
             onBack={(e) => {
               e?.stopPropagation?.();
-              Taro.redirectTo({url: '/pages/index/index'});
+              Taro.redirectTo({url: DEFAULT_ROUTE});
             }}
             rightContent={
               isCreator ? (

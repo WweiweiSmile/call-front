@@ -12,11 +12,6 @@ export function useUIStore({state, setState}: UseUIStoreOptions) {
     setState((prev) => ({...prev, isLoading: loading}));
   }, [setState]);
 
-  // 设置当前 Tab
-  const setCurrentTab = useCallback((tab: 'games' | 'my' | 'profile') => {
-    setState((prev) => ({...prev, currentTab: tab}));
-  }, [setState]);
-
   // 设置当前游戏
   const setCurrentGameId = useCallback((gameId: string | null) => {
     setState((prev) => ({...prev, currentGameId: gameId}));
@@ -25,7 +20,6 @@ export function useUIStore({state, setState}: UseUIStoreOptions) {
   return {
     state,
     setLoading,
-    setCurrentTab,
     setCurrentGameId,
   };
 }

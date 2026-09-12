@@ -22,7 +22,7 @@ export function useAppStore() {
   }, []);
 
   // UI Store
-  const {setLoading, setCurrentTab, setCurrentGameId} = useUIStore({
+  const {setLoading, setCurrentGameId} = useUIStore({
     state,
     setState: safeSetState,
   });
@@ -89,7 +89,6 @@ export function useAppStore() {
     loadGameTransactions: transactionStore.loadGameTransactions,
 
     // UI 相关
-    setCurrentTab,
     setCurrentGameId,
   };
 }

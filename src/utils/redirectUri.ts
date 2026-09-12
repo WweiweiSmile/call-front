@@ -1,5 +1,6 @@
 import Taro, { useRouter } from '@tarojs/taro';
 import { throttle } from 'lodash';
+import { DEFAULT_ROUTE } from './tabs';
 
 /**
  * 获取当前页面的完整路径作为 redirectUri
@@ -33,14 +34,14 @@ export const getCurrentRedirectUri = (): string => {
   // 降级方案：使用 hash 路由
   try {
     if (typeof window !== 'undefined' && window.location) {
-      return encodeURIComponent(window.location.hash.slice(1) || '/pages/index/index');
+      return encodeURIComponent(window.location.hash.slice(1) || DEFAULT_ROUTE);
     }
   } catch (error) {
     console.error('获取 hash 路由失败:', error);
   }
 
   // 最终降级：返回首页
-  return encodeURIComponent('/pages/index/index');
+  return encodeURIComponent(DEFAULT_ROUTE);
 };
 
 // 实际的跳转逻辑
@@ -78,9 +79,10 @@ export const handleLoginRedirect = () => {
     }
   }
 
-  // 如果没有 redirectUri，跳转到首页
-  Taro.switchTab({
-    url: '/pages/index/index',
+  // 如果没有 redirectUri，跳转到默认 Tab 页
+  // Tab 页未注册为原生 tabBar，只能用 redirectTo
+  Taro.redirectTo({
+    url: DEFAULT_ROUTE,
   });
   return false;
 };

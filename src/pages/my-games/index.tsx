@@ -3,7 +3,7 @@ import { View, Text } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
-import { useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard, TabHeader, PageLayout } from '../../components';
+import { useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard, TabHeader, PageLayout, BottomTabBar } from '../../components';
 import { useLoadMore } from '../../hooks';
 import { gameApi } from '../../services/api';
 import type { GameResponse } from '../../models/service';
@@ -23,12 +23,7 @@ const FILTER_TABS = [
   { value: 'ended', label: '已结束' },
 ];
 
-interface MyGamesPageProps {
-  /** 底部导航栏，由 pages/index 渲染后传入（tab 状态与它同源） */
-  bottom?: React.ReactNode;
-}
-
-const MyGamesPage: React.FC<MyGamesPageProps> = ({bottom}) => {
+const MyGamesPage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
   const {
     getUserBalance,
@@ -132,7 +127,7 @@ const MyGamesPage: React.FC<MyGamesPageProps> = ({bottom}) => {
           />
         </>
       }
-      bottom={bottom}
+      bottom={<BottomTabBar currentTab='my'/>}
       refresherEnabled
       refresherTriggered={refreshing}
       onRefresherRefresh={handleRefresh}

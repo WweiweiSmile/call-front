@@ -7,15 +7,11 @@ import { useAuthStore } from '../../store/auth';
 import { useRequireAuth } from '../../components/RequireAuth';
 import TabHeader from '../../components/TabHeader';
 import PageLayout from '../../components/PageLayout';
+import BottomTabBar from '../../components/BottomTabBar';
 import type { Transaction, UserGameBalance } from '../../store/mockData';
 import './index.less';
 
-interface ProfilePageProps {
-  /** 底部导航栏，由 pages/index 渲染后传入（tab 状态与它同源） */
-  bottom?: React.ReactNode;
-}
-
-const ProfilePage: React.FC<ProfilePageProps> = ({bottom}) => {
+const ProfilePage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
   const {
     getUserGames,
@@ -99,7 +95,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({bottom}) => {
           />
         </>
       }
-      bottom={bottom}
+      bottom={<BottomTabBar currentTab='profile'/>}
     >
         <View className='user-info-card'>
           <View className='avatar'>{currentUser.avatar || '👤'}</View>

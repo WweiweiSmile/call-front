@@ -4,7 +4,7 @@ import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useDidShow} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth, LoadMore, EmptyState, GameCard, TabHeader, PageLayout} from '../../components';
+import {useRequireAuth, LoadMore, EmptyState, GameCard, TabHeader, PageLayout, BottomTabBar} from '../../components';
 import {useLoadMore} from '../../hooks';
 import {gameApi} from '../../services/api';
 import type {GameResponse} from '../../models/service';
@@ -12,12 +12,7 @@ import type {Game} from '../../store/mockData';
 import {transformGameListFromApi} from '../../models';
 import './index.less';
 
-interface GamesPageProps {
-  /** 底部导航栏，由 pages/index 渲染后传入（tab 状态与它同源） */
-  bottom?: React.ReactNode;
-}
-
-const GamesPage: React.FC<GamesPageProps> = ({bottom}) => {
+const GamesPage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
   const {
     joinGame,
@@ -153,7 +148,7 @@ const GamesPage: React.FC<GamesPageProps> = ({bottom}) => {
           </View>
         </>
       }
-      bottom={bottom}
+      bottom={<BottomTabBar currentTab='games'/>}
       refresherEnabled
       refresherTriggered={refreshing}
       onRefresherRefresh={handleRefresh}
