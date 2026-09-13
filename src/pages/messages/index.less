@@ -1,0 +1,59 @@
+// ============================================
+// 消息中心 - 样式
+// ============================================
+
+@import '../../styles/theme.less';
+
+.messages-page {
+  .messages-content {
+    padding: 16px;
+  }
+
+  .message-card {
+    background: @bg-secondary;
+    border: 1px solid @border-color;
+    border-radius: @radius-lg;
+    box-shadow: @shadow-sm;
+    padding: 14px;
+    margin-bottom: 12px;
+
+    &.read {
+      opacity: 0.7;
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+
+      .message-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: @text-primary;
+      }
+
+      .unread-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: @danger;
+        flex-shrink: 0;
+      }
+    }
+
+    .message-content {
+      display: block;
+      font-size: 14px;
+      color: @text-secondary;
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+
+    .message-time {
+      display: block;
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+  }
+}

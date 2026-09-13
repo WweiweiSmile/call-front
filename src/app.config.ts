@@ -12,6 +12,11 @@ export default defineAppConfig({
     'pages/leaderboard/index',
     'pages/history/index',
     'pages/transaction-records/index',
+    'pages/score-request-deposit/index',
+    'pages/score-request-withdraw/index',
+    'pages/score-request-review/index',
+    'pages/my-score-requests/index',
+    'pages/messages/index',
   ],
   entryPagePath: 'pages/login/index',
   window: {

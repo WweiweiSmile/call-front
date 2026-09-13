@@ -10,3 +10,5 @@ export * from './userBalance';
 
 // 前端状态管理类型
 export * from './frontend';
+export * from './scoreRequest';
+export * from './message';

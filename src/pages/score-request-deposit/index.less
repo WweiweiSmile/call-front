@@ -1,0 +1,91 @@
+// ============================================
+// 存分申请页 - 样式
+// 筹码网格见 components/ChipCounter
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/score-operation.less';
+
+.score-request-page {
+  .request-content {
+    padding: 16px;
+  }
+
+  .header-action {
+    font-size: 14px;
+    color: @primary;
+    font-weight: 600;
+  }
+
+  .intro-section {
+    background: @bg-secondary;
+    border-radius: @radius-lg;
+    border: 1px solid @border-color;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+
+    .intro-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: @text-primary;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .intro-desc {
+      font-size: 13px;
+      color: @text-secondary;
+      display: block;
+      line-height: 1.5;
+    }
+  }
+
+  .remark-section {
+    margin-top: 16px;
+
+    :global {
+      .nut-input {
+        background: @bg-tertiary;
+        border-radius: @radius-md;
+        border: 1px solid @border-color;
+
+        .nut-input__value {
+          color: @text-primary;
+        }
+
+        .nut-input__placeholder {
+          color: @text-tertiary;
+        }
+      }
+    }
+  }
+
+  // 底部提交条（由 PageLayout 的 bottom 区域承载）
+  .request-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: @bg-secondary;
+    border-top: 1px solid @border-color;
+
+    .request-total {
+      flex: 1;
+      min-width: 0;
+
+      .request-total-label {
+        font-size: 12px;
+        color: @text-tertiary;
+        display: block;
+        margin-bottom: 2px;
+      }
+
+      .request-total-value {
+        font-size: 20px;
+        font-weight: 700;
+        color: @success;
+        font-variant-numeric: tabular-nums;
+      }
+    }
+  }
+}

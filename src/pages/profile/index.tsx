@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
+import { useMessageStore } from '../../store/messageStore';
 import { Cell, Button, Dialog } from '@nutui/nutui-react-taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
@@ -22,6 +23,21 @@ const ProfilePage: React.FC = () => {
   const { user, logout } = useAuthStore();
 
   const [visible, setVisible] = useState(false);
+
+  // 未读消息数：挂在消息中心入口上
+  const unreadCount = useMessageStore((state) => state.unreadCount);
+  const refreshUnread = useMessageStore((state) => state.refreshUnread);
+  const clearMessages = useMessageStore((state) => state.clear);
+
+  // Tab 页用 redirectTo 切换会重新挂载，mount 一次足够；
+  // useDidShow 再兜一层（从消息中心返回时不重新挂载）
+  useEffect(() => {
+    refreshUnread();
+  }, [refreshUnread]);
+
+  useDidShow(() => {
+    refreshUnread();
+  });
 
   const currentUser = user;
   const userGames = currentUser ? getUserGames(currentUser.id) : [];
@@ -68,11 +84,12 @@ const ProfilePage: React.FC = () => {
 
   const handleConfirmLogout = useCallback(() => {
     setVisible(false);
+    clearMessages();
     logout();
     Taro.redirectTo({
       url: '/pages/login/index',
     });
-  }, [logout]);
+  }, [logout, clearMessages]);
 
   // 如果未认证，不渲染内容（会自动跳转）
   if (!isAuthenticated || !currentUser) {
@@ -132,6 +149,25 @@ const ProfilePage: React.FC = () => {
         </View>
 
         <View className='menu-section'>
+          <Cell
+            title={
+              <View className='cell-title-with-badge'>
+                <Text>📬 消息中心</Text>
+                {unreadCount > 0 && (
+                  <View className='menu-badge'>
+                    <Text className='menu-badge-text'>
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            }
+            isLink
+            onClick={() => {
+              Taro.navigateTo({ url: '/pages/messages/index' });
+            }}
+            data-testid="btn-messages"
+          />
           <Cell
             title='📜 历史战绩'
             isLink

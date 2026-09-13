@@ -99,6 +99,30 @@
     overflow: hidden;
     border: 1px solid @border-color;
     box-shadow: @shadow-sm;
+
+    // 带未读红点的菜单项标题
+    .cell-title-with-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .menu-badge {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 9px;
+        background: @danger;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .menu-badge-text {
+          font-size: 11px;
+          font-weight: 700;
+          color: #ffffff;
+        }
+      }
+    }
   }
 
   .content-wrapper {

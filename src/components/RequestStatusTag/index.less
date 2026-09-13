@@ -1,0 +1,35 @@
+// ============================================
+// RequestStatusTag 申请状态药丸 - 样式
+// ============================================
+
+@import '../../styles/theme.less';
+
+.request-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: @radius-sm;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &.pending {
+    background: fade(@warning, 12%);
+    color: @warning;
+  }
+
+  &.approved {
+    background: fade(@success, 12%);
+    color: @success;
+  }
+
+  &.rejected {
+    background: fade(@danger, 12%);
+    color: @danger;
+  }
+
+  &.cancelled,
+  &.expired {
+    background: fade(@text-tertiary, 18%);
+    color: @text-tertiary;
+  }
+}

@@ -396,6 +396,125 @@
     margin-bottom: 16px;
   }
 
+  // 存分/取分申请按钮（普通参与者）
+  .score-request-actions {
+    display: flex;
+    gap: 12px;
+    padding: 0 16px;
+    margin-bottom: 12px;
+
+    .request-btn {
+      flex: 1;
+    }
+  }
+
+  // 待审核申请入口（创建者，管理参与者模式）
+  .review-entry-section {
+    padding: 0 0 12px;
+
+    .review-entry {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 14px;
+      background: @bg-secondary;
+      border: 1px solid @primary;
+      border-radius: @radius-md;
+
+      &:active {
+        background: fade(@primary, 8%);
+      }
+
+      .review-entry-icon {
+        font-size: 18px;
+      }
+
+      .review-entry-label {
+        flex: 1;
+        font-size: 15px;
+        font-weight: 600;
+        color: @primary;
+      }
+
+      .review-badge {
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 10px;
+        background: @danger;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .review-badge-text {
+          font-size: 12px;
+          font-weight: 700;
+          color: #ffffff;
+        }
+      }
+    }
+  }
+
+  // 我的申请（本场次）
+  .my-requests-section {
+    margin: 0 16px 16px;
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+
+      .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: @text-primary;
+      }
+
+      .section-more {
+        font-size: 13px;
+        color: @primary;
+      }
+    }
+
+    .my-request-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: @bg-secondary;
+      border: 1px solid @border-color;
+      border-radius: @radius-md;
+      margin-bottom: 8px;
+
+      .my-request-main {
+        min-width: 0;
+
+        .my-request-amount {
+          display: block;
+          font-size: 15px;
+          font-weight: 700;
+          font-variant-numeric: tabular-nums;
+
+          &.deposit {
+            color: @success;
+          }
+
+          &.withdraw {
+            color: @danger;
+          }
+        }
+
+        .my-request-time {
+          display: block;
+          font-size: 12px;
+          color: @text-tertiary;
+          margin-top: 2px;
+        }
+      }
+    }
+  }
+
   // 归分按钮
   .chip-count-button-section {
     padding: 0 16px;

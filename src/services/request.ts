@@ -18,10 +18,15 @@ const getToken = (): string | null => {
   }
 };
 
+// 调用方传入的请求选项。
+// url 由 request 内部拼接，不接受外部覆盖，所以从 Option 里去掉——
+// Taro 的 Option 把 url 声明为必填，不去掉的话每个调用点都会报类型错误。
+export type RequestOptions = Omit<Taro.request.Option, 'url'>;
+
 // 通用请求方法
 export async function request<T>(
   url: string,
-  options: Taro.request.Option = {},
+  options: RequestOptions = {},
   requireAuth: boolean = true
 ): Promise<T> {
   const { method = 'GET', data, ...restOptions } = options;
@@ -41,11 +46,11 @@ export async function request<T>(
 
   try {
     const response = await Taro.request({
+      ...restOptions,
       url: `${BASE_URL}${url}`,
       method,
       data,
       header: headers,
-      ...restOptions,
     });
 
     const res = response.data as any;

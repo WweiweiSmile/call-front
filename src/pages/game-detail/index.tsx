@@ -5,8 +5,12 @@ import Taro, {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth, Loading, PageHeader, PageLayout, ConfirmDialog} from '../../components';
+import {useMessageStore} from '../../store/messageStore';
+import {scoreRequestApi} from '../../services/api';
+import {transformScoreRequestListFromApi} from '../../models';
+import {useRequireAuth, Loading, PageHeader, PageLayout, ConfirmDialog, RequestStatusTag} from '../../components';
 import type {Game, User as UserType} from '../../store/mockData';
+import type {FrontendScoreRequest} from '../../models/types';
 import {DEFAULT_ROUTE} from '../../utils/tabs';
 import './index.less';
 
@@ -151,6 +155,37 @@ const GameDetailPage: React.FC = () => {
     }
   }, [gameId, currentUser, loadData]);
 
+  // ===== 派生数据 =====
+  // 必须声明在下面的轮询 effect 之前：effect 的依赖数组在渲染期就会求值，
+  // 声明在后面会命中 const 的 TDZ，页面直接白屏。
+  const game = state.games.find((g) => g.id === gameId);
+  const isCreator = !!currentUser && game?.creatorId === currentUser.id;
+  const isGameEnded = game?.status === 'ended';
+
+  // 本场次我提交的申请（普通参与者展示）
+  const [myRequests, setMyRequests] = useState<FrontendScoreRequest[]>([]);
+
+  const pendingReviewCounts = useMessageStore((s) => s.pendingReviewCounts);
+  const refreshPending = useMessageStore((s) => s.refreshPending);
+  const pendingCount = pendingReviewCounts[gameId] || 0;
+
+  const loadMyRequests = useCallback(async () => {
+    if (!gameId) return;
+    try {
+      const response: any = await scoreRequestApi.getList({
+        gameId,
+        scope: 'mine',
+        page: 1,
+        page_size: 5,
+      });
+      setMyRequests(transformScoreRequestListFromApi(response.list || []));
+    } catch (error) {
+      console.error('加载我的申请失败:', error);
+    }
+  }, [gameId]);
+
+  const canPollRequests = !!game && !!gameId && !!currentUser && !isGameEnded;
+
   // 设置轮询：每隔5秒更新一次数据，只在游戏未结束时轮询
   useEffect(() => {
     if (!gameId || !currentUser || isLoading || isGameEnded) {
@@ -175,6 +210,34 @@ const GameDetailPage: React.FC = () => {
       }
     };
   }, [gameId, currentUser, isLoading, isGameEnded, loadData]);
+
+  // 申请相关的轮询：详情页原有的 5 秒轮询只刷余额/交易，这里单独拉申请数据。
+  // 不塞进 loadData 是因为它的依赖含 state.games，state 一变就重建并重启定时器，
+  // 往里加请求会放大那个抖动。
+  useEffect(() => {
+    if (!canPollRequests) return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const poll = async () => {
+      if (cancelled) return;
+      if (isCreator) {
+        await refreshPending(gameId);
+      } else {
+        await loadMyRequests();
+      }
+      if (cancelled) return;
+      timer = setTimeout(poll, 5000);
+    };
+
+    poll();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [canPollRequests, gameId, isCreator, refreshPending, loadMyRequests]);
 
   // 处理邀请链接自动加入游戏
   useEffect(() => {
@@ -267,6 +330,38 @@ const GameDetailPage: React.FC = () => {
     Taro.navigateTo({url: '/pages/chip-count/index'});
   }, []);
 
+  // 导航到存分申请页（普通参与者）
+  const navigateToDepositRequest = useCallback(() => {
+    const g = state.games.find((g) => g.id === gameId);
+    Taro.navigateTo({
+      url: `/pages/score-request-deposit/index?gameId=${gameId}&gameName=${encodeURIComponent(g?.name || '')}`,
+    });
+  }, [gameId, state.games]);
+
+  // 导航到取分申请页（普通参与者）
+  const navigateToWithdrawRequest = useCallback(() => {
+    const g = state.games.find((g) => g.id === gameId);
+    Taro.navigateTo({
+      url: `/pages/score-request-withdraw/index?gameId=${gameId}&gameName=${encodeURIComponent(g?.name || '')}`,
+    });
+  }, [gameId, state.games]);
+
+  // 导航到审核申请页（场次创建者）
+  const navigateToReview = useCallback(() => {
+    const g = state.games.find((g) => g.id === gameId);
+    Taro.navigateTo({
+      url: `/pages/score-request-review/index?gameId=${gameId}&gameName=${encodeURIComponent(g?.name || '')}`,
+    });
+  }, [gameId, state.games]);
+
+  // 导航到我的申请页
+  const navigateToMyRequests = useCallback(() => {
+    const g = state.games.find((g) => g.id === gameId);
+    Taro.navigateTo({
+      url: `/pages/my-score-requests/index?gameId=${gameId}&gameName=${encodeURIComponent(g?.name || '')}`,
+    });
+  }, [gameId, state.games]);
+
   // 导航到操作记录页面
   const navigateToTransactionRecords = useCallback(() => {
     let url = `/pages/transaction-records/index?gameId=${gameId}&viewMode=${viewMode}`;
@@ -300,10 +395,7 @@ const GameDetailPage: React.FC = () => {
     );
   }
 
-  const game = state.games.find((g) => g.id === gameId);
-  const isCreator = game?.creatorId === currentUser.id;
   const hasJoined = game?.isJoined || isCreator;
-  const isGameEnded = game?.status === 'ended';
 
   if (!game) {
     return (
@@ -432,6 +524,23 @@ const GameDetailPage: React.FC = () => {
       {/* 管理参与者列表 */}
       {isCreator && viewMode === 'manage' && (
         <View className='participants-section'>
+          {/* 待审核申请入口，红点以"待审队列"为准而非未读消息 */}
+          <View className='review-entry-section'>
+            <View
+              className='review-entry'
+              onClick={navigateToReview}
+              data-testid='btn-review-requests'
+            >
+              <Text className='review-entry-icon'>📋</Text>
+              <Text className='review-entry-label'>待审核申请</Text>
+              {pendingCount > 0 && (
+                <View className='review-badge'>
+                  <Text className='review-badge-text'>{pendingCount > 99 ? '99+' : pendingCount}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
           <Text className='section-title'>参与者列表</Text>
           {participants.map((participant) => {
             const pBalance = participant ? getUserBalance(gameId, participant.id) : null;
@@ -539,6 +648,30 @@ const GameDetailPage: React.FC = () => {
             </Button>
           </View>
 
+          {/* 存分/取分申请：创建者自己直接操作，不走申请，所以只对普通参与者展示 */}
+          {!isCreator && !isGameEnded && (
+            <View className='score-request-actions'>
+              <Button
+                type='success'
+                size='large'
+                className='request-btn'
+                onClick={navigateToDepositRequest}
+                data-testid="btn-deposit-request"
+              >
+                💰 存分申请
+              </Button>
+              <Button
+                type='warning'
+                size='large'
+                className='request-btn'
+                onClick={navigateToWithdrawRequest}
+                data-testid="btn-withdraw-request"
+              >
+                💵 取分申请
+              </Button>
+            </View>
+          )}
+
           {/* 去排行榜按钮 */}
           <View className='leaderboard-button-section'>
             <Button
@@ -558,6 +691,36 @@ const GameDetailPage: React.FC = () => {
         </>
       )}
 
+
+      {/* 我的申请（本场次），没有记录时整块不渲染，避免出现死块 */}
+      {viewMode === 'self' && myRequests.length > 0 && (
+        <View className='my-requests-section'>
+          <View className='section-header'>
+            <Text className='section-title'>我的申请</Text>
+            <Text
+              className='section-more'
+              onClick={navigateToMyRequests}
+              data-testid='btn-my-requests'
+            >
+              查看全部
+            </Text>
+          </View>
+          {myRequests.map((request) => (
+            <View key={request.id} className='my-request-item'>
+              <View className='my-request-main'>
+                <Text className={`my-request-amount ${request.type}`}>
+                  {request.type === 'deposit' ? '🟢 存分 +' : '🔴 取分 -'}
+                  {request.amount.toLocaleString()}
+                </Text>
+                <Text className='my-request-time'>
+                  ⏰ {request.createdAt ? dayjs(request.createdAt).format('MM-DD HH:mm') : ''}
+                </Text>
+              </View>
+              <RequestStatusTag status={request.status} />
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* 交易记录 */}
       <View className='transactions-section'>

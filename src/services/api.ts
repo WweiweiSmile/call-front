@@ -7,3 +7,5 @@ export * from './request';
 export * from './authApi';
 export * from './gameApi';
 export * from './transactionApi';
+export * from './scoreRequestApi';
+export * from './messageApi';

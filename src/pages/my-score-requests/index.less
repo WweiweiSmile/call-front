@@ -1,0 +1,80 @@
+// ============================================
+// 我的申请页 - 样式
+// ============================================
+
+@import '../../styles/theme.less';
+
+.my-score-requests-page {
+  .my-requests-content {
+    padding: 16px;
+  }
+
+  .my-request-card {
+    background: @bg-secondary;
+    border: 1px solid @border-color;
+    border-radius: @radius-lg;
+    box-shadow: @shadow-sm;
+    padding: 14px;
+    margin-bottom: 12px;
+
+    .my-request-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+
+      .my-request-game {
+        font-size: 14px;
+        font-weight: 600;
+        color: @text-primary;
+      }
+    }
+
+    .my-request-amount {
+      display: block;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-variant-numeric: tabular-nums;
+
+      &.deposit {
+        color: @success;
+      }
+
+      &.withdraw {
+        color: @danger;
+      }
+    }
+
+    .my-request-time {
+      display: block;
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+
+    .my-request-remark {
+      display: block;
+      font-size: 13px;
+      color: @text-secondary;
+      margin-top: 4px;
+    }
+
+    .my-request-review {
+      display: block;
+      font-size: 13px;
+      color: @text-secondary;
+      margin-top: 4px;
+    }
+
+    .my-request-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 12px;
+
+      .cancel-link {
+        font-size: 13px;
+        color: @danger;
+      }
+    }
+  }
+}

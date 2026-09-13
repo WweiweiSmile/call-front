@@ -4,7 +4,16 @@
 
 import type { GameResponse } from './service/game';
 import type { TransactionResponse, UserBalanceResponse } from './service/transaction';
-import type { FrontendGame, FrontendTransaction, FrontendUserGameBalance, FrontendUser } from './types';
+import type { ScoreRequestResponse } from './service/scoreRequest';
+import type { MessageResponse } from './service/message';
+import type {
+  FrontendGame,
+  FrontendTransaction,
+  FrontendUserGameBalance,
+  FrontendUser,
+  FrontendScoreRequest,
+  FrontendMessage,
+} from './types';
 
 /**
  * 将 API 返回的 GameResponse 转换为前端使用的 FrontendGame
@@ -93,4 +102,56 @@ export function transformParticipantsFromBalances(apiBalances: UserBalanceRespon
     name: p.userName || '未知用户',
     avatar: '👤',
   }));
+}
+
+/**
+ * 将 API 返回的 ScoreRequestResponse 转换为前端使用的 FrontendScoreRequest
+ */
+export function transformScoreRequestFromApi(apiRequest: ScoreRequestResponse): FrontendScoreRequest {
+  return {
+    id: String(apiRequest.id),
+    gameId: String(apiRequest.gameId),
+    gameName: apiRequest.gameName || '未知场次',
+    userId: String(apiRequest.userId),
+    userName: apiRequest.userName || '用户',
+    type: apiRequest.type,
+    amount: apiRequest.amount,
+    remark: apiRequest.remark,
+    status: apiRequest.status,
+    reviewerId: apiRequest.reviewerId != null ? String(apiRequest.reviewerId) : undefined,
+    reviewerName: apiRequest.reviewerName,
+    reviewRemark: apiRequest.reviewRemark,
+    reviewedAt: apiRequest.reviewedAt,
+    createdAt: apiRequest.createdAt,
+  };
+}
+
+/**
+ * 批量转换申请单列表
+ */
+export function transformScoreRequestListFromApi(apiRequests: ScoreRequestResponse[]): FrontendScoreRequest[] {
+  return apiRequests.map(transformScoreRequestFromApi);
+}
+
+/**
+ * 将 API 返回的 MessageResponse 转换为前端使用的 FrontendMessage
+ */
+export function transformMessageFromApi(apiMessage: MessageResponse): FrontendMessage {
+  return {
+    id: String(apiMessage.id),
+    type: apiMessage.type,
+    title: apiMessage.title,
+    content: apiMessage.content,
+    gameId: apiMessage.gameId != null ? String(apiMessage.gameId) : undefined,
+    requestId: apiMessage.requestId != null ? String(apiMessage.requestId) : undefined,
+    isRead: apiMessage.isRead,
+    createdAt: apiMessage.createdAt,
+  };
+}
+
+/**
+ * 批量转换消息列表
+ */
+export function transformMessageListFromApi(apiMessages: MessageResponse[]): FrontendMessage[] {
+  return apiMessages.map(transformMessageFromApi);
 }

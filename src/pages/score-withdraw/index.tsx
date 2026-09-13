@@ -1,10 +1,10 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
-import {Input, View, Text} from '@tarojs/components';
-import {Button, Input as NutInput, Toast} from '@nutui/nutui-react-taro';
+import {View} from '@tarojs/components';
+import {Button, Toast} from '@nutui/nutui-react-taro';
 import Taro, {useRouter} from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
-import {useRequireAuth, Loading, PageHeader, PageLayout} from '../../components';
+import {useRequireAuth, Loading, PageHeader, PageLayout, ScoreAmountForm, formatThousands} from '../../components';
 import type {UserGameBalance} from '../../store/mockData';
 import './index.less';
 
@@ -35,11 +35,8 @@ const ScoreWithdrawPage: React.FC = () => {
 
   const [amount, setAmount] = useState('0');
   const [remark, setRemark] = useState('');
-  const [amountFocused, setAmountFocused] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-
-  const quickAmounts = [500, 1000, 2000];
 
   // 加载游戏数据
   useEffect(() => {
@@ -63,13 +60,6 @@ const ScoreWithdrawPage: React.FC = () => {
     loadData();
   }, [gameId, loadUserBalance, loadGameParticipantBalances]);
 
-  // 格式化千分位显示
-  const formatThousands = (val: string) => {
-    const num = parseInt(val) || 0;
-    if (val === '' || val === '0') return '0';
-    return num.toLocaleString();
-  };
-
   // 获取操作用户信息
   const displayUser = useMemo((): DisplayUser | null => {
     if (viewMode === 'self' && currentUser) {
@@ -92,18 +82,6 @@ const ScoreWithdrawPage: React.FC = () => {
     if (!displayUser) return null;
     return getUserBalance(gameId, displayUser.id) ?? null;
   }, [displayUser, gameId, getUserBalance]);
-
-  // 计算取分后余额
-  const newBalance = useMemo(() => {
-    if (!balance) return 0;
-    const numAmount = parseInt(amount) || 0;
-    return balance.currentBalance - numAmount;
-  }, [balance, amount]);
-
-  // 快捷输入：在当前金额基础上累加
-  const handleQuickAmount = useCallback((num: number) => {
-    setAmount((prev) => ((parseInt(prev) || 0) + num).toString());
-  }, []);
 
   const buttonText = `确认取分 -${formatThousands(amount)}`;
 
@@ -148,7 +126,6 @@ const ScoreWithdrawPage: React.FC = () => {
   return (
     <PageLayout
       className='score-operation-page score-withdraw-page'
-      contentClassName='operation-content'
       header={
         <>
           <Toast id='score-withdraw-toast' />
@@ -171,86 +148,17 @@ const ScoreWithdrawPage: React.FC = () => {
         </View>
       }
     >
-        {/* 信息区 */}
-        <View className='info-section'>
-          <Text className='info-row'>游戏: {gameName || '未知'}</Text>
-          <Text className='info-row'>
-            操作: {viewMode === 'manage' ? '代理操作' : '自主操作'}
-          </Text>
-          {viewMode === 'manage' && displayUser && (
-            <Text className='info-row'>用户: {displayUser.name}</Text>
-          )}
-        </View>
-
-        {/* 金额输入 - 大尺寸千分位显示 */}
-        <View className={`amount-input-section ${amountFocused ? 'focused' : ''}`}>
-          <View
-            className='amount-display'
-            onClick={() => setAmountFocused(true)}
-          >
-            <Text className='amount-display-value'>
-              {amount && parseInt(amount) > 0 ? formatThousands(amount) : '0'}
-            </Text>
-            <Text className='amount-display-hint'>
-              点击输入取分数量
-            </Text>
-          </View>
-          <Input
-            className='amount-hidden-input'
-            type='number'
-            focus={amountFocused}
-            value={amount === '0' ? '' : amount}
-            onInput={(e) => setAmount(e.detail.value)}
-            onBlur={() => setAmountFocused(false)}
-            data-testid='input-withdraw-amount'
-          />
-        </View>
-
-        {/* 快捷金额 */}
-        <View className='quick-amounts'>
-          <Text className='quick-label'>快捷输入:</Text>
-          <View className='quick-buttons'>
-            {quickAmounts.map((num) => (
-              <Button
-                key={num}
-                type='default'
-                size='small'
-                className='quick-btn'
-                onClick={() => handleQuickAmount(num)}
-                data-testid={`btn-quick-withdraw-${num}`}
-              >
-                -{num}
-              </Button>
-            ))}
-          </View>
-        </View>
-
-        {/* 余额预览 */}
-        {balance && (
-          <View className='balance-preview'>
-            <View className='preview-row'>
-              <Text className='preview-label'>当前余额</Text>
-              <Text className='preview-value'>{balance.currentBalance.toLocaleString()}</Text>
-            </View>
-            <View className='preview-arrow'>
-              <Text className='preview-arrow-icon'>↓</Text>
-            </View>
-            <View className='preview-row preview-result'>
-              <Text className='preview-label'>取分后余额</Text>
-              <Text className='preview-value'>{newBalance.toLocaleString()}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* 备注 */}
-        <View className='remark-section'>
-          <NutInput
-            placeholder='备注 (选填)'
-            value={remark}
-            onChange={setRemark}
-            data-testid='input-withdraw-remark'
-          />
-        </View>
+      <ScoreAmountForm
+        mode='withdraw'
+        gameName={gameName}
+        isManageMode={viewMode === 'manage'}
+        displayUserName={displayUser?.name}
+        currentBalance={balance ? balance.currentBalance : null}
+        amount={amount}
+        onAmountChange={setAmount}
+        remark={remark}
+        onRemarkChange={setRemark}
+      />
     </PageLayout>
   );
 };
