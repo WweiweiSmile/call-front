@@ -10,16 +10,27 @@
 
   // 胶囊样式
   &.pill {
-    padding: 0 16px 12px;
+    // 不加 align-items 时子项默认 stretch 会被拉高，标签文本就贴顶了
+    align-items: center;
+    padding: 8px 16px;
     background: @bg-secondary;
     overflow-x: auto;
     flex-shrink: 0;
 
     .tab-item {
-      padding: 8px 16px;
+      // 自身也做 flex 容器，标签在任何高度下都居中
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      // H5 产物里全局 box-sizing 不生效，需显式声明，否则 border 会计入额外高度
+      box-sizing: border-box;
+      min-height: @control-height;
+      padding: 0 12px;
       background: @bg-tertiary;
-      border-radius: @radius-md;
-      font-size: 14px;
+      border-radius: @radius-sm;
+      font-size: 13px;
+      line-height: 18px;
       white-space: nowrap;
       border: 1px solid @border-color;
       transition: all @duration-fast ease;
