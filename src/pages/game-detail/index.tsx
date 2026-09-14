@@ -432,7 +432,25 @@ const GameDetailPage: React.FC = () => {
             showBack
             onBack={(e) => {
               e?.stopPropagation?.();
-              Taro.redirectTo({url: DEFAULT_ROUTE});
+              // 有上一页就正常返回，保留来源 Tab（从「已参与」进来就回「已参与」）。
+              // 直接打开分享链接时页面栈只有一层，navigateBack 无处可退，
+              // 这种情况下才回落到默认落地页。
+              let canGoBack = false;
+              try {
+                canGoBack = Taro.getCurrentPages().length > 1;
+              } catch {
+                canGoBack = false;
+              }
+
+              if (!canGoBack) {
+                Taro.redirectTo({url: DEFAULT_ROUTE});
+                return;
+              }
+
+              Taro.navigateBack().catch(() => {
+                // 页面栈被清空等异常情况下兜底
+                Taro.redirectTo({url: DEFAULT_ROUTE});
+              });
             }}
             rightContent={
               isCreator ? (
