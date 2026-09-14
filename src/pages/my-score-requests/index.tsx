@@ -16,6 +16,7 @@ import {
   RequestStatusTag,
 } from '../../components';
 import type {FrontendScoreRequest} from '../../models/types';
+import {decodeParam} from '../../utils/url';
 import './index.less';
 
 const STATUS_TABS = [
@@ -31,7 +32,7 @@ const MyScoreRequestsPage: React.FC = () => {
   const router = useRouter();
 
   const gameId = (router.params?.gameId as string) || '';
-  const gameName = (router.params?.gameName as string) || '';
+  const gameName = decodeParam(router.params?.gameName as string);
 
   const [status, setStatus] = useState('all');
   const [requests, setRequests] = useState<FrontendScoreRequest[]>([]);

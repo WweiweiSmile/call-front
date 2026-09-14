@@ -12,6 +12,7 @@ import {
   CHIP_DENOMINATIONS,
 } from '../../components';
 import type {CountMap} from '../../components';
+import {decodeParam} from '../../utils/url';
 import './index.less';
 
 /**
@@ -23,7 +24,7 @@ const ScoreRequestDepositPage: React.FC = () => {
   const router = useRouter();
 
   const gameId = (router.params?.gameId as string) || '';
-  const gameName = (router.params?.gameName as string) || '';
+  const gameName = decodeParam(router.params?.gameName as string);
 
   const [counts, setCounts] = useState<CountMap>({});
   const [remark, setRemark] = useState('');

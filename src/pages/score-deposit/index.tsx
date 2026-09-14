@@ -6,6 +6,7 @@ import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import {useRequireAuth, Loading, PageHeader, PageLayout, ScoreAmountForm, formatThousands} from '../../components';
 import type {UserGameBalance} from '../../store/mockData';
+import {decodeParam} from '../../utils/url';
 import './index.less';
 
 interface DisplayUser {
@@ -19,9 +20,9 @@ const ScoreDepositPage: React.FC = () => {
 
   // 从 URL 参数获取数据
   const gameId = (router.params?.gameId as string) || '';
-  const gameName = (router.params?.gameName as string) || '';
+  const gameName = decodeParam(router.params?.gameName as string);
   const targetUserId = (router.params?.targetUserId as string) || undefined;
-  const targetUserName = (router.params?.targetUserName as string) || undefined;
+  const targetUserName = decodeParam(router.params?.targetUserName as string) || undefined;
   const viewMode = (router.params?.viewMode as string) || 'self';
 
   const {user} = useAuthStore();

@@ -14,6 +14,7 @@ import {
   formatThousands,
 } from '../../components';
 import type {UserGameBalance} from '../../store/mockData';
+import {decodeParam} from '../../utils/url';
 import './index.less';
 
 /**
@@ -25,7 +26,7 @@ const ScoreRequestWithdrawPage: React.FC = () => {
   const router = useRouter();
 
   const gameId = (router.params?.gameId as string) || '';
-  const gameName = (router.params?.gameName as string) || '';
+  const gameName = decodeParam(router.params?.gameName as string);
 
   const {user} = useAuthStore();
   const currentUser = user;
