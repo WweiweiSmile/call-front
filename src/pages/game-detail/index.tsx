@@ -11,7 +11,7 @@ import {transformScoreRequestListFromApi} from '../../models';
 import {useRequireAuth, Loading, PageHeader, PageLayout, ConfirmDialog, RequestStatusTag} from '../../components';
 import type {User as UserType} from '../../store/mockData';
 import type {FrontendScoreRequest} from '../../models/types';
-import {DEFAULT_ROUTE} from '../../utils/tabs';
+import { markShareLink } from '../../utils/navigation';
 import './index.less';
 
 type ViewMode = 'self' | 'manage';
@@ -59,20 +59,22 @@ const GameDetailPage: React.FC = () => {
 
   // 分享功能
   const handleShare = useCallback(() => {
-    // 生成分享链接 - 使用 hash 路由格式
-    let shareUrl = '';
+    // 分享出去的链接统一带上来源标识（见 utils/navigation）：
+    // 从分享链接进来的人页面栈里没有上一页（经过登录跳转后甚至可能退到登录页），
+    // 「返回」要据此直接回主页面
+    const sharePath = markShareLink(
+      `#/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`
+    );
+
+    // 生成分享链接 - 使用 hash 路由格式。
+    // 只有 Web 环境能取到 origin，取不到就用 # 开头的相对形式
+    let shareUrl = sharePath;
     try {
-      // 尝试使用 window.location（Web 环境）
       if (typeof window !== 'undefined' && window.location) {
-        // 构建 hash 路由格式的链接
-        shareUrl = `${window.location.origin}${window.location.pathname}#/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`;
-      } else {
-        // 降级方案：构建一个 hash 路由格式的链接
-        shareUrl = `#/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`;
+        shareUrl = `${window.location.origin}${window.location.pathname}${sharePath}`;
       }
     } catch (e) {
-      // 如果获取失败，使用降级方案
-      shareUrl = `#/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`;
+      // 取不到 window.location 时保持上面的降级形式
     }
 
     // 复制到剪贴板
@@ -430,29 +432,6 @@ const GameDetailPage: React.FC = () => {
             title={game.name}
             subtitle={`👤 ${isCreator ? '我创建的游戏' : `创建者: ${game.creatorName}`}`}
             showBack
-            onBack={() => {
-              // PageHeader 调用 onBack() 时不传参，这里本来也没有事件对象可拿，
-              // 原先那句 e?.stopPropagation?.() 是永远不生效的死代码
-              // 有上一页就正常返回，保留来源 Tab（从「已参与」进来就回「已参与」）。
-              // 直接打开分享链接时页面栈只有一层，navigateBack 无处可退，
-              // 这种情况下才回落到默认落地页。
-              let canGoBack = false;
-              try {
-                canGoBack = Taro.getCurrentPages().length > 1;
-              } catch {
-                canGoBack = false;
-              }
-
-              if (!canGoBack) {
-                Taro.redirectTo({url: DEFAULT_ROUTE});
-                return;
-              }
-
-              Taro.navigateBack().catch(() => {
-                // 页面栈被清空等异常情况下兜底
-                Taro.redirectTo({url: DEFAULT_ROUTE});
-              });
-            }}
             rightContent={
               isCreator ? (
                 <Text className='share-icon' onClick={handleShare}>分享</Text>

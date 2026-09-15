@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, View } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import { goBackOrHome } from '../../utils/navigation';
 import './index.less';
 
 interface PageHeaderProps {
@@ -12,7 +12,10 @@ interface PageHeaderProps {
   showBack?: boolean;
   /** 右侧自定义内容 */
   rightContent?: React.ReactNode;
-  /** 返回按钮点击回调，默认返回上一页 */
+  /**
+   * 返回按钮点击回调。不传时走统一实现：
+   * 从分享链接进来的回主页面，否则返回上一页，没有上一页时兜底回主页面
+   */
   onBack?: () => void;
   /** 主题类型 */
   theme?: 'dark' | 'light';
@@ -29,9 +32,9 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else {
-      Taro.navigateBack();
+      return;
     }
+    goBackOrHome();
   };
 
   return (
