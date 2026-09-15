@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Taro from '@tarojs/taro';
+import { useRequest } from 'ahooks';
 import { gameApi, reviewApi } from '../../services/api';
 import {
   DEFAULT_TABLE_SIZE,
@@ -10,7 +11,6 @@ import {
   positionsForTableSize,
   validateCardString,
 } from '../../utils/poker';
-import type { GameResponse } from '../../models/service';
 import type {
   HandResult,
   Position,
@@ -76,28 +76,22 @@ const BOARD_CARDS_TO_STREET: Record<number, Street> = {
 export function useReviewForm(handId?: string) {
   const isEditMode = !!handId;
   const [form, setForm] = useState<ReviewFormState>(emptyFormState);
-  const [loading, setLoading] = useState(isEditMode);
-  const [submitting, setSubmitting] = useState(false);
   /** 展开的街道。默认只展开翻前，避免一屏塞四条街 */
   const [expandedStreets, setExpandedStreets] = useState<Street[]>(['preflop']);
-  const [myGames, setMyGames] = useState<GameResponse[]>([]);
   const [tagInput, setTagInput] = useState('');
   /** 草稿是否已读取完毕。没读完之前不允许自动保存，否则会覆盖存储里的草稿 */
   const [draftHydrated, setDraftHydrated] = useState(false);
 
   // ---------- 编辑模式：载入手牌 ----------
-  useEffect(() => {
-    if (!handId) return;
-
-    let cancelled = false;
-    setLoading(true);
-
-    // 用 async 函数包起来而不是在 Promise 上链 .finally()：
-    // 项目的 tsconfig lib 低于 es2018，Promise.prototype.finally 不在类型里
-    const load = async () => {
-      try {
-        const hand = await reviewApi.getHand(handId);
-        if (cancelled) return;
+  // ready 保证新建模式下不发请求，loading 也就天然是 false，
+  // 与原来 useState(isEditMode) 的语义一致
+  const { loading } = useRequest(
+    async () => (handId ? await reviewApi.getHand(handId) : null),
+    {
+      ready: !!handId,
+      refreshDeps: [handId],
+      onSuccess: (hand) => {
+        if (!hand) return;
         setForm({
           gameId: hand.gameId,
           title: hand.title,
@@ -130,17 +124,10 @@ export function useReviewForm(handId?: string) {
             (hand.streets || []).some((s) => s.street === street && s.actions.length > 0)
           )
         );
-      } catch {
-        if (!cancelled) Taro.showToast({ title: '手牌加载失败', icon: 'none' });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    };
-
-    load();
-
-    return () => { cancelled = true; };
-  }, [handId]);
+      },
+      onError: () => Taro.showToast({ title: '手牌加载失败', icon: 'none' }),
+    }
+  );
 
   // ---------- 新建模式：恢复草稿 ----------
   useEffect(() => {
@@ -180,13 +167,12 @@ export function useReviewForm(handId?: string) {
   }, [form, handId, loading, draftHydrated]);
 
   // ---------- 我的场次（用于可选关联） ----------
-  useEffect(() => {
-    gameApi.getMyGames({ page: 1, pageSize: 50 })
-      .then((res) => setMyGames(res.list || []))
-      .catch(() => {
-        // 场次列表拉不到不该挡住复盘录入，关联场次本来就是可选功能
-      });
-  }, []);
+  // 场次列表拉不到不该挡住复盘录入，关联场次本来就是可选功能，所以错误静默
+  const { data: myGamesResp } = useRequest(
+    () => gameApi.getMyGames({ page: 1, pageSize: 50 }),
+    { onError: () => {} }
+  );
+  const myGames = useMemo(() => myGamesResp?.list || [], [myGamesResp]);
 
   const setField = useCallback(<K extends keyof ReviewFormState>(
     key: K,
@@ -358,6 +344,32 @@ export function useReviewForm(handId?: string) {
     };
   }, [form, potType]);
 
+  // 提交。用 runAsync 是因为调用方要拿到成败来决定"是否返回上一页"
+  const { runAsync: submitRequest, loading: submitting } = useRequest(
+    async (): Promise<'updated' | 'created'> => {
+      const payload = buildPayload();
+      if (handId) {
+        await reviewApi.updateHand(handId, payload);
+        return 'updated';
+      }
+      await reviewApi.createHand(payload);
+      // 提交成功才清草稿，失败要留着让用户重试
+      try {
+        Taro.removeStorageSync(DRAFT_STORAGE_KEY);
+      } catch {
+        // 清不掉也不影响主流程
+      }
+      return 'created';
+    },
+    {
+      manual: true,
+      onSuccess: (kind) =>
+        Taro.showToast({ title: kind === 'updated' ? '已保存' : '已记录', icon: 'success' }),
+      onError: (e) =>
+        Taro.showToast({ title: e?.message || '保存失败', icon: 'none', duration: 2500 }),
+    }
+  );
+
   const submit = useCallback(async (): Promise<boolean> => {
     const error = validate();
     if (error) {
@@ -365,30 +377,14 @@ export function useReviewForm(handId?: string) {
       return false;
     }
 
-    setSubmitting(true);
     try {
-      const payload = buildPayload();
-      if (handId) {
-        await reviewApi.updateHand(handId, payload);
-        Taro.showToast({ title: '已保存', icon: 'success' });
-      } else {
-        await reviewApi.createHand(payload);
-        Taro.showToast({ title: '已记录', icon: 'success' });
-        // 提交成功才清草稿，失败要留着让用户重试
-        try {
-          Taro.removeStorageSync(DRAFT_STORAGE_KEY);
-        } catch {
-          // 清不掉也不影响主流程
-        }
-      }
+      await submitRequest();
       return true;
-    } catch (e: any) {
-      Taro.showToast({ title: e?.message || '保存失败', icon: 'none', duration: 2500 });
+    } catch {
+      // onError 已经提示过，返回 false 让调用方不要返回上一页
       return false;
-    } finally {
-      setSubmitting(false);
     }
-  }, [validate, buildPayload, handId]);
+  }, [validate, submitRequest]);
 
   const resetForm = useCallback(() => {
     setForm(emptyFormState);

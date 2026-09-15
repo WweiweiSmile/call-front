@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
+import { useRequest } from 'ahooks';
 import {
   BottomTabBar,
   EmptyState,
@@ -11,7 +12,6 @@ import {
   TabHeader,
   useRequireAuth,
 } from '../../components';
-import { useLoadMore } from '../../hooks';
 import { reviewApi } from '../../services/api';
 import { transformReviewHandListFromApi } from '../../models';
 import type { ReviewHandResponse } from '../../models/service';
@@ -20,9 +20,8 @@ import './index.less';
 
 type PositionFilter = 'all' | Position;
 
-interface ReviewFilterParams {
-  position?: string;
-}
+/** 每页条数 */
+const PAGE_SIZE = 10;
 
 /**
  * 位置筛选项。这里是展示顺序（后位在前，盲注垫底），不是翻前行动顺序，
@@ -47,47 +46,68 @@ const ReviewsPage: React.FC = () => {
   const { isAuthenticated } = useRequireAuth();
   const [positionFilter, setPositionFilter] = useState<PositionFilter>('all');
 
-  const {
-    data: rawHands,
-    loading,
-    refreshing,
-    hasMore,
-    refresh,
-    loadMore,
-    setParams,
-  } = useLoadMore<ReviewHandResponse, ReviewFilterParams>(
-    async (params) => {
-      const { page, pageSize, position } = params;
-      return await reviewApi.getHands({ page, page_size: pageSize, position });
-    },
+  const filterPosition = positionFilter === 'all' ? undefined : positionFilter;
+
+  const [rawHands, setRawHands] = useState<ReviewHandResponse[]>([]);
+  const [total, setTotal] = useState(0);
+  const [current, setCurrent] = useState(1);
+  const [refreshing, setRefreshing] = useState(false);
+
+  /**
+   * 手牌列表。
+   *
+   * 用 useRequest 手动管页码，而不是 ahooks 的 usePagination —— 后者是翻页式抽象
+   * （onChange 直接换页、不会追加），与本页的下拉无限滚动不是一回事。
+   * 好处是乱序响应由 ahooks 内部按请求序号丢弃，不用再自己记 counter。
+   */
+  const { loading, run } = useRequest(
+    (page: number, position?: string) =>
+      reviewApi.getHands({ page, page_size: PAGE_SIZE, position }),
     {
-      defaultCurrent: 1,
-      defaultPageSize: 10,
-      defaultParams: { position: undefined },
-      autoLoad: true,
+      manual: true,
+      onSuccess: (res, [page]) => {
+        setTotal(res.total);
+        setCurrent(page);
+        // 第一页是刷新（整体替换），后续页是追加
+        setRawHands((prev) => (page === 1 ? res.list : [...prev, ...res.list]));
+      },
     }
   );
 
   const hands = useMemo(() => transformReviewHandListFromApi(rawHands), [rawHands]);
+  const hasMore = rawHands.length < total;
 
+  // 首次进入与切换位置筛选都回到第一页重拉。
+  // run 是 ahooks 的 useMemoizedFn，引用稳定，所以这个 effect 不会反复触发
   useEffect(() => {
-    setParams({ position: positionFilter === 'all' ? undefined : positionFilter });
-  }, [positionFilter, setParams]);
+    run(1, filterPosition);
+  }, [filterPosition, run]);
 
-  // 从录入页/详情页返回时刷新，否则刚记录的手牌不会出现在列表里
+  // 从录入页/详情页返回时刷新，否则刚记录的手牌不会出现在列表里。
+  // 跳过首次：初次进入已经由上面的 effect 拉过了，不跳会白打一次接口
+  const isFirstShow = useRef(true);
   useDidShow(() => {
-    refresh();
+    if (isFirstShow.current) {
+      isFirstShow.current = false;
+      return;
+    }
+    run(1, filterPosition);
   });
 
   const handleRefresh = useCallback(async () => {
-    await refresh();
-  }, [refresh]);
+    setRefreshing(true);
+    try {
+      await run(1, filterPosition);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [run, filterPosition]);
 
   const handleScrollToLower = useCallback(() => {
     if (hasMore && !loading) {
-      loadMore();
+      run(current + 1, filterPosition);
     }
-  }, [hasMore, loading, loadMore]);
+  }, [hasMore, loading, current, filterPosition, run]);
 
   const handleCreate = useCallback(() => {
     Taro.navigateTo({ url: '/pages/review-create/index' });

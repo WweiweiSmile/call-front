@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow, useRouter } from '@tarojs/taro';
+import { useRequest } from 'ahooks';
 import dayjs from 'dayjs';
 import {
   AnalysisPanel,
@@ -36,29 +37,25 @@ const ReviewDetailPage: React.FC = () => {
   const router = useRouter();
   const handId = router.params?.id as string | undefined;
 
-  const [hand, setHand] = useState<FrontendReviewHand | null>(null);
-  const [loading, setLoading] = useState(true);
   const [deleteVisible, setDeleteVisible] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const { analysis, aiStatus, tagNameByCode, triggering, trigger, reload } = useAnalysis(handId);
 
-  const loadHand = useCallback(async () => {
-    if (!handId) return;
-    setLoading(true);
-    try {
-      const res = await reviewApi.getHand(handId);
-      setHand(transformReviewHandFromApi(res));
-    } catch (e: any) {
-      Taro.showToast({ title: e?.message || '加载失败', icon: 'none' });
-    } finally {
-      setLoading(false);
+  // 手牌详情。ready + refreshDeps 让它在 handId 就绪时自动加载，
+  // run() 保留给"从编辑页返回"时手动重拉
+  const {
+    data: hand,
+    loading,
+    run: loadHand,
+  } = useRequest(
+    async (): Promise<FrontendReviewHand> =>
+      transformReviewHandFromApi(await reviewApi.getHand(handId as string)),
+    {
+      ready: !!handId,
+      refreshDeps: [handId],
+      onError: (e) => Taro.showToast({ title: e?.message || '加载失败', icon: 'none' }),
     }
-  }, [handId]);
-
-  useEffect(() => {
-    loadHand();
-  }, [loadHand]);
+  );
 
   // 从编辑页返回时重新拉一次，否则页面还显示修改前的内容。
   // 用 ref 跳过首次触发：初次进入已经由上面的 effect 加载过了，
@@ -96,20 +93,25 @@ const ReviewDetailPage: React.FC = () => {
     Taro.navigateTo({ url: `/pages/review-create/index?id=${handId}` });
   }, [handId]);
 
+  const { runAsync: deleteHand, loading: deleting } = useRequest(
+    (id: string) => reviewApi.deleteHand(id),
+    {
+      manual: true,
+      onError: (e) => Taro.showToast({ title: e?.message || '删除失败', icon: 'none' }),
+    }
+  );
+
   const handleDelete = useCallback(async () => {
     if (!handId) return;
-    setDeleting(true);
     try {
-      await reviewApi.deleteHand(handId);
+      await deleteHand(handId);
       Taro.showToast({ title: '已删除', icon: 'success' });
       setDeleteVisible(false);
       setTimeout(() => Taro.navigateBack(), 500);
-    } catch (e: any) {
-      Taro.showToast({ title: e?.message || '删除失败', icon: 'none' });
-    } finally {
-      setDeleting(false);
+    } catch {
+      // onError 已经提示过
     }
-  }, [handId]);
+  }, [handId, deleteHand]);
 
   // 公共牌按 3/4/5 补齐空位，让"打到哪条街"一眼可见
   const boardPlaceholder = useMemo(() => {

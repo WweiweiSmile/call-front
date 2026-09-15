@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
+import { useRequest } from 'ahooks';
 import { Button } from '@nutui/nutui-react-taro';
 import {
   EmptyState,
@@ -12,7 +13,7 @@ import {
 import { reviewApi } from '../../services/api';
 import { transformReviewInsightListFromApi, transformReviewProfileFromApi } from '../../models';
 import { positionLabel } from '../../utils/poker';
-import type { FrontendReviewInsight, FrontendReviewProfile, ProfileLeakStat } from '../../models/types/review';
+import type { ProfileLeakStat } from '../../models/types/review';
 import './index.less';
 
 /** 严重度的展示文案与配色档位，与 AnalysisPanel 的口径保持一致 */
@@ -32,24 +33,17 @@ function severityLevel(avg: number): number {
 const ReviewProfilePage: React.FC = () => {
   const { isAuthenticated } = useRequireAuth();
 
-  const [profile, setProfile] = useState<FrontendReviewProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [refreshingSummary, setRefreshingSummary] = useState(false);
   /** 当前展开的漏洞标签，同时用于钻取 */
   const [expandedTag, setExpandedTag] = useState<string>('');
-  const [insights, setInsights] = useState<FrontendReviewInsight[]>([]);
-  const [insightsLoading, setInsightsLoading] = useState(false);
 
-  const loadProfile = useCallback(async () => {
-    try {
-      const res = await reviewApi.getProfile();
-      setProfile(transformReviewProfileFromApi(res));
-    } catch {
-      Taro.showToast({ title: '画像加载失败', icon: 'none' });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const {
+    data: profile,
+    loading,
+    refresh: loadProfile,
+    mutate: setProfile,
+  } = useRequest(async () => transformReviewProfileFromApi(await reviewApi.getProfile()), {
+    onError: () => Taro.showToast({ title: '画像加载失败', icon: 'none' }),
+  });
 
   // 用 useDidShow 而不是 useEffect：从小程序的手牌详情返回时组件不会重新挂载，
   // 只在 useEffect 里拉数据会一直显示旧画像（详情页编辑后同样踩过这个坑）
@@ -57,48 +51,67 @@ const ReviewProfilePage: React.FC = () => {
     loadProfile();
   });
 
+  // 钻取某个漏洞的历史证据
+  const {
+    data: insights = [],
+    loading: insightsLoading,
+    run: loadInsights,
+    mutate: setInsights,
+  } = useRequest(
+    (tagCode: string) =>
+      reviewApi
+        .getInsights({ tag_code: tagCode, limit: 50 })
+        .then((res) => transformReviewInsightListFromApi(res.list)),
+    {
+      manual: true,
+      onError: () => Taro.showToast({ title: '历史证据加载失败', icon: 'none' }),
+    }
+  );
+
   /** 展开某个漏洞并加载它的全部历史证据 */
   const handleToggleTag = useCallback(
-    async (leak: ProfileLeakStat) => {
+    (leak: ProfileLeakStat) => {
       if (expandedTag === leak.tagCode) {
         setExpandedTag('');
         return;
       }
-
       setExpandedTag(leak.tagCode);
-      setInsightsLoading(true);
+      // 先清空再拉：否则上一条漏洞的证据会短暂显示在新展开的标题下面
       setInsights([]);
-      try {
-        const res = await reviewApi.getInsights({ tag_code: leak.tagCode, limit: 50 });
-        setInsights(transformReviewInsightListFromApi(res.list));
-      } catch {
-        Taro.showToast({ title: '历史证据加载失败', icon: 'none' });
-      } finally {
-        setInsightsLoading(false);
-      }
+      loadInsights(leak.tagCode);
     },
-    [expandedTag]
+    [expandedTag, loadInsights, setInsights]
+  );
+
+  const { runAsync: refreshSummary, loading: refreshingSummary } = useRequest(
+    async () => transformReviewProfileFromApi(await reviewApi.refreshProfileSummary()),
+    {
+      manual: true,
+      onSuccess: (next) => {
+        setProfile(next);
+        Taro.showToast({ title: '总结已更新', icon: 'success' });
+      },
+      onError: (e) =>
+        Taro.showToast({ title: e?.message || '重写失败', icon: 'none', duration: 2500 }),
+    }
   );
 
   const handleRefreshSummary = useCallback(async () => {
-    setRefreshingSummary(true);
     try {
-      const res = await reviewApi.refreshProfileSummary();
-      setProfile(transformReviewProfileFromApi(res));
-      Taro.showToast({ title: '总结已更新', icon: 'success' });
-    } catch (e: any) {
-      Taro.showToast({ title: e?.message || '重写失败', icon: 'none', duration: 2500 });
-    } finally {
-      setRefreshingSummary(false);
+      await refreshSummary();
+    } catch {
+      // onError 已经提示过
     }
-  }, []);
+  }, [refreshSummary]);
 
   const handleEnterHand = useCallback((handId: string) => {
     Taro.navigateTo({ url: `/pages/review-detail/index?id=${handId}` });
   }, []);
 
   if (!isAuthenticated) return <View />;
-  if (loading) return <Loading fullPage text='加载画像' />;
+  // 只在"还没有任何数据"时占满整页。
+  // useDidShow 每次回到本页都会 refresh，若只看 loading 会每次闪一下全屏加载态
+  if (loading && !profile) return <Loading fullPage text='加载画像' />;
 
   const hasData =
     !!profile && (profile.handsReviewed > 0 || profile.leaks.length > 0 || !!profile.summary);
