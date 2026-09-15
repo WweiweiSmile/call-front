@@ -12,8 +12,22 @@ export type ActionType = 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allin';
 /** 行动者。other 表示不关注的其他玩家，聚合成一个角色即可 */
 export type ActorType = 'hero' | 'villain' | 'other';
 
-/** 位置 */
-export type Position = 'UTG' | 'MP' | 'CO' | 'BTN' | 'SB' | 'BB';
+/**
+ * 位置。取值随人数变化，合法组合见 utils/poker.ts 的 positionsForTableSize。
+ *
+ * 没有 MP：它既能读成 LJ 也能读成 HJ，交给 AI 分析是歧义，已由后端的
+ * MP→HJ 迁移统一取代（见 call-back/database/migrate_20260915_table_size.sql）。
+ */
+export type Position = 'SB' | 'BB' | 'UTG' | 'UTG+1' | 'UTG+2' | 'LJ' | 'HJ' | 'CO' | 'BTN';
+
+/** 几人桌。2 人桌时 SB 同时是 BTN */
+export type TableSize = 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+
+/** 可选人数，升序。与后端 models.MinTableSize / MaxTableSize 对应 */
+export const TABLE_SIZE_OPTIONS: TableSize[] = [2, 3, 4, 5, 6, 7, 8, 9];
+
+/** 默认人数：满员桌。与后端 models.DefaultTableSize 对应 */
+export const DEFAULT_TABLE_SIZE: TableSize = 9;
 
 /** 底池类型 */
 export type PotType = 'hu' | 'multi';
@@ -55,6 +69,8 @@ export interface ReviewHand {
   userId: number;
   gameId?: number;
   title: string;
+  /** 几人桌。位置的含义取决于它，两者要一起读 */
+  tableSize: TableSize;
   heroPosition: Position;
   /** 规范格式如 AsKh */
   heroCards: string;
@@ -97,6 +113,7 @@ export interface FrontendReviewHand {
   gameId?: string;
   gameName?: string;
   title: string;
+  tableSize: TableSize;
   heroPosition: Position;
   heroCards: string;
   heroStackBb: number;

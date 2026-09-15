@@ -2,6 +2,7 @@
 // API 响应数据 -> 前端类型转换器
 // ============================================
 
+import { DEFAULT_TABLE_SIZE } from './types/review';
 import type { GameResponse } from './service/game';
 import type { TransactionResponse, UserBalanceResponse } from './service/transaction';
 import type { ScoreRequestResponse } from './service/scoreRequest';
@@ -175,6 +176,8 @@ export function transformReviewHandFromApi(apiHand: ReviewHandResponse): Fronten
     gameId: apiHand.gameId != null ? String(apiHand.gameId) : undefined,
     gameName: apiHand.gameName,
     title: apiHand.title,
+    // 老数据可能没有人数（迁移前落库的行），兜底成满员桌，与后端归一化口径一致
+    tableSize: apiHand.tableSize || DEFAULT_TABLE_SIZE,
     heroPosition: apiHand.heroPosition,
     heroCards: apiHand.heroCards,
     heroStackBb: apiHand.heroStackBb,

@@ -24,6 +24,8 @@ import {
   STREET_LABEL,
   STREET_ORDER,
   formatBB,
+  positionLabel,
+  tableSizeLabel,
 } from '../../utils/poker';
 import type { FrontendReviewHand } from '../../models/types/review';
 import './index.less';
@@ -153,7 +155,7 @@ const ReviewDetailPage: React.FC = () => {
           <Text className='hand-title'>{hand.title}</Text>
           <View className='hero-cards'>
             <View className='position-tag'>
-              <Text className='position-text'>{hand.heroPosition}</Text>
+              <Text className='position-text'>{positionLabel(hand.heroPosition, hand.tableSize)}</Text>
             </View>
             <CardList cards={hand.heroCards} size='lg' />
             <View className='hero-meta'>
@@ -162,7 +164,7 @@ const ReviewDetailPage: React.FC = () => {
                 {hand.stakes ? ` · ${hand.stakes}` : ''}
               </Text>
               <Text className='meta-line'>
-                {POT_TYPE_LABEL[hand.potType]} · {hand.villainCount} 个对手
+                {tableSizeLabel(hand.tableSize)} · {POT_TYPE_LABEL[hand.potType]} · {hand.villainCount} 个对手
               </Text>
             </View>
           </View>

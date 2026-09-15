@@ -2,9 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { gameApi, reviewApi } from '../../services/api';
 import {
+  DEFAULT_TABLE_SIZE,
   STREET_ORDER,
   buildDefaultTitle,
   computePots,
+  isValidPositionForTableSize,
+  positionsForTableSize,
   validateCardString,
 } from '../../utils/poker';
 import type { GameResponse } from '../../models/service';
@@ -15,6 +18,7 @@ import type {
   Street,
   StreetAction,
   StreetRecord,
+  TableSize,
 } from '../../models/types/review';
 
 /** 草稿在本地存储里的 key。小程序切后台被杀进程是常事，表单必须能恢复 */
@@ -24,6 +28,8 @@ export const DRAFT_STORAGE_KEY = 'review_hand_draft';
 export interface ReviewFormState {
   gameId?: number;
   title: string;
+  /** 几人桌。它决定 heroPosition / villainPosition 的可选项，改动时要一起收拾 */
+  tableSize: TableSize;
   heroPosition: Position | '';
   heroCards: string;
   heroStackBb: string;
@@ -43,6 +49,7 @@ export interface ReviewFormState {
 export const emptyFormState: ReviewFormState = {
   gameId: undefined,
   title: '',
+  tableSize: DEFAULT_TABLE_SIZE,
   heroPosition: '',
   heroCards: '',
   heroStackBb: '100',
@@ -94,6 +101,8 @@ export function useReviewForm(handId?: string) {
         setForm({
           gameId: hand.gameId,
           title: hand.title,
+          // 迁移前落库的老手牌可能没有人数字段，兜底成满员桌，与后端口径一致
+          tableSize: hand.tableSize || DEFAULT_TABLE_SIZE,
           heroPosition: hand.heroPosition,
           heroCards: hand.heroCards,
           heroStackBb: String(hand.heroStackBb || ''),
@@ -186,6 +195,24 @@ export function useReviewForm(handId?: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }, []);
 
+  /**
+   * 切换人数。位置的可选范围随之变化，原来选的位置可能已经不存在了
+   * （比如 9 人桌选了 UTG+2，改成 6 人桌），这时必须清掉，
+   * 否则会提交出一份"6 人桌 + UTG+2"的自相矛盾数据，后端也会直接拒收。
+   */
+  const setTableSize = useCallback((size: TableSize) => {
+    setForm((prev) => {
+      const valid = positionsForTableSize(size);
+      return {
+        ...prev,
+        tableSize: size,
+        heroPosition: valid.indexOf(prev.heroPosition as Position) >= 0 ? prev.heroPosition : '',
+        villainPosition:
+          valid.indexOf(prev.villainPosition as Position) >= 0 ? prev.villainPosition : '',
+      };
+    });
+  }, []);
+
   const setStreetActions = useCallback((street: Street, actions: StreetAction[]) => {
     setForm((prev) => ({
       ...prev,
@@ -225,6 +252,12 @@ export function useReviewForm(handId?: string) {
   /** 提交前的完整校验，返回第一条错误信息 */
   const validate = useCallback((): string | null => {
     if (!form.heroPosition) return '请选择你的位置';
+
+    // 正常路径下 setTableSize 会顺手清掉失效的位置，这里再兜一层：
+    // 直接提交出去的话后端也会拒，但报错不如这里说得清楚
+    if (!isValidPositionForTableSize(form.heroPosition, form.tableSize)) {
+      return `${form.tableSize} 人桌没有「${form.heroPosition}」这个位置，请重新选择`;
+    }
 
     const cardError = validateCardString(form.heroCards);
     if (cardError) return `底牌：${cardError}`;
@@ -307,6 +340,7 @@ export function useReviewForm(handId?: string) {
     return {
       gameId: form.gameId,
       title: form.title.trim(),
+      tableSize: form.tableSize,
       heroPosition: form.heroPosition as Position,
       heroCards: form.heroCards,
       heroStackBb: form.heroStackBb ? Number(form.heroStackBb) : 0,
@@ -385,6 +419,7 @@ export function useReviewForm(handId?: string) {
 
     // 操作
     setField,
+    setTableSize,
     setStreetActions,
     toggleStreet,
     handleBoardChange,

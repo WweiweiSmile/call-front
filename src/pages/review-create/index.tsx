@@ -12,15 +12,17 @@ import {
   useRequireAuth,
 } from '../../components';
 import {
-  POSITION_ORDER,
   POT_TYPE_LABEL,
   RESULT_LABEL,
   STREET_ORDER,
   STREET_LABEL,
+  TABLE_SIZE_OPTIONS,
   formatBB,
+  positionLabel,
+  positionsForTableSize,
 } from '../../utils/poker';
 import { useReviewForm } from './useReviewForm';
-import type { HandResult, Position } from '../../models/types/review';
+import type { HandResult, TableSize } from '../../models/types/review';
 import './index.less';
 
 const RESULTS: HandResult[] = ['win', 'lose', 'fold', 'unknown'];
@@ -44,6 +46,7 @@ const ReviewCreatePage: React.FC = () => {
     heroUnavailableCards,
     boardUnavailableCards,
     setField,
+    setTableSize,
     setStreetActions,
     toggleStreet,
     handleBoardChange,
@@ -87,6 +90,8 @@ const ReviewCreatePage: React.FC = () => {
   if (loading) return <Loading fullPage text='加载手牌' />;
 
   const boardCount = form.board.length / 2;
+  // 位置的可选项由人数决定，改了人数这里的列表跟着变
+  const positionOptions = positionsForTableSize(form.tableSize);
 
   return (
     <>
@@ -143,18 +148,39 @@ const ReviewCreatePage: React.FC = () => {
           <Text className='section-title'>我的手牌</Text>
 
           <View className='field'>
-            <Text className='field-label'>位置</Text>
+            <Text className='field-label'>几人桌</Text>
             <View className='position-grid'>
-              {POSITION_ORDER.map((pos) => (
+              {TABLE_SIZE_OPTIONS.map((size) => (
                 <View
-                  key={pos}
-                  className={`position-btn ${form.heroPosition === pos ? 'active' : ''}`}
-                  onClick={() => setField('heroPosition', pos as Position)}
+                  key={size}
+                  className={`position-btn ${form.tableSize === size ? 'active' : ''}`}
+                  onClick={() => setTableSize(size as TableSize)}
                 >
-                  <Text className='pos-text'>{pos}</Text>
+                  <Text className='pos-text'>{size}</Text>
                 </View>
               ))}
             </View>
+            <Text className='field-note'>
+              位置的含义随人数变化，选完人数下面的位置会对上
+            </Text>
+          </View>
+
+          <View className='field'>
+            <Text className='field-label'>位置</Text>
+            <View className='position-grid'>
+              {positionOptions.map((pos) => (
+                <View
+                  key={pos}
+                  className={`position-btn ${form.heroPosition === pos ? 'active' : ''}`}
+                  onClick={() => setField('heroPosition', pos)}
+                >
+                  <Text className='pos-text'>{positionLabel(pos, form.tableSize)}</Text>
+                </View>
+              ))}
+            </View>
+            {form.tableSize === 2 && (
+              <Text className='field-note'>单挑时 SB 同时是 BTN，按 SB 记录即可</Text>
+            )}
           </View>
 
           <View className='field'>
@@ -222,15 +248,15 @@ const ReviewCreatePage: React.FC = () => {
           <View className='field'>
             <Text className='field-label'>关键对手位置</Text>
             <View className='position-grid'>
-              {POSITION_ORDER.map((pos) => (
+              {positionOptions.map((pos) => (
                 <View
                   key={pos}
                   className={`position-btn ${form.villainPosition === pos ? 'active' : ''}`}
                   onClick={() =>
-                    setField('villainPosition', form.villainPosition === pos ? '' : (pos as Position))
+                    setField('villainPosition', form.villainPosition === pos ? '' : pos)
                   }
                 >
-                  <Text className='pos-text'>{pos}</Text>
+                  <Text className='pos-text'>{positionLabel(pos, form.tableSize)}</Text>
                 </View>
               ))}
             </View>

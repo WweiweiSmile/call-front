@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View } from '@tarojs/components';
 import dayjs from 'dayjs';
 import { CardList } from '../CardPicker';
-import { RESULT_LABEL, formatBB } from '../../utils/poker';
+import { RESULT_LABEL, formatBB, positionLabel } from '../../utils/poker';
 import type { FrontendReviewHand } from '../../models/types/review';
 import './index.less';
 
@@ -41,7 +41,7 @@ const ReviewHandCard: React.FC<ReviewHandCardProps> = ({ hand, onClick, testId }
 
       <View className='card-cards'>
         <View className='position-tag'>
-          <Text className='position-text'>{hand.heroPosition}</Text>
+          <Text className='position-text'>{positionLabel(hand.heroPosition, hand.tableSize)}</Text>
         </View>
         <CardList cards={hand.heroCards} size='sm' />
         {boardCount > 0 && (

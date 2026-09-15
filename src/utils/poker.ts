@@ -5,6 +5,7 @@
 // ============================================
 
 import { parseCards, formatRank, SUIT_SYMBOL } from './cards';
+import { DEFAULT_TABLE_SIZE } from '../models/types/review';
 import type {
   ActionType,
   ActorType,
@@ -13,7 +14,12 @@ import type {
   PotType,
   Street,
   StreetRecord,
+  TableSize,
 } from '../models/types/review';
+
+// 人数相关的常量定义在 models/types/review.ts（类型与其默认值放在一起），
+// 这里再导一次，方便调用方只 import 一个模块
+export { TABLE_SIZE_OPTIONS, DEFAULT_TABLE_SIZE } from '../models/types/review';
 
 /** 街道顺序 */
 export const STREET_ORDER: Street[] = ['preflop', 'flop', 'turn', 'river'];
@@ -46,8 +52,50 @@ export const ACTOR_LABEL: Record<ActorType, string> = {
 /** 需要填写金额的行动 */
 export const ACTION_NEEDS_AMOUNT: ActionType[] = ['bet', 'raise', 'allin'];
 
-/** 位置列表，按行动顺序（翻前 UTG 先说话） */
-export const POSITION_ORDER: Position[] = ['UTG', 'MP', 'CO', 'BTN', 'SB', 'BB'];
+/**
+ * 各人数下的合法位置，按翻前行动顺序（SB 先说话，BTN 最后）。
+ *
+ * 与后端 call-back/utils/hand.go 的 positionsByTableSize 是同一份契约，改动要两边同步。
+ * 规律：9 人桌去掉 UTG+2 就是 8 人，再去掉 UTG+1 就是 7 人，以此类推；
+ * 3 人桌只剩 BTN，2 人桌的 SB 同时兼任 BTN（单挑时按钮位下小盲）。
+ */
+const POSITIONS_BY_TABLE_SIZE: Record<number, Position[]> = {
+  9: ['SB', 'BB', 'UTG', 'UTG+1', 'UTG+2', 'LJ', 'HJ', 'CO', 'BTN'],
+  8: ['SB', 'BB', 'UTG', 'UTG+1', 'LJ', 'HJ', 'CO', 'BTN'],
+  7: ['SB', 'BB', 'UTG', 'LJ', 'HJ', 'CO', 'BTN'],
+  6: ['SB', 'BB', 'UTG', 'HJ', 'CO', 'BTN'],
+  5: ['SB', 'BB', 'UTG', 'CO', 'BTN'],
+  4: ['SB', 'BB', 'UTG', 'BTN'],
+  3: ['SB', 'BB', 'BTN'],
+  2: ['SB', 'BB'],
+};
+
+/** 全部位置，按翻前行动顺序。列表页筛选用它；人数取值异常时也回退到它 */
+export const POSITION_ORDER: Position[] = POSITIONS_BY_TABLE_SIZE[9];
+
+/** 该人数下的合法位置；人数越界时回退到全部位置，避免界面空掉 */
+export function positionsForTableSize(tableSize: number): Position[] {
+  return POSITIONS_BY_TABLE_SIZE[tableSize] || POSITION_ORDER;
+}
+
+/** 位置是否属于该人数下的合法集合 */
+export function isValidPositionForTableSize(position: string, tableSize: number): boolean {
+  return positionsForTableSize(tableSize).indexOf(position as Position) >= 0;
+}
+
+/**
+ * 位置的展示名。2 人桌的 SB 同时是 BTN，标出来免得用户以为界面上漏了按钮位。
+ * 存库的值始终是 SB——加个后缀只是为了显示，不参与任何匹配。
+ */
+export function positionLabel(position: Position | '', tableSize: number): string {
+  if (tableSize === 2 && position === 'SB') return 'SB(BTN)';
+  return position;
+}
+
+/** 桌型展示名，如 "6人桌" */
+export function tableSizeLabel(tableSize: number): string {
+  return `${tableSize}人桌`;
+}
 
 /** 结果中文名 */
 export const RESULT_LABEL: Record<HandResult, string> = {
@@ -151,6 +199,7 @@ export function computePots(streets: StreetRecord[]): PotResult {
  * 这里是为"给人看"，那边是为"给模型看"，所以刻意没有强行复用。
  */
 export function buildHandText(hand: {
+  tableSize?: TableSize;
   heroPosition: Position;
   heroCards: string;
   heroStackBb: number;
@@ -164,8 +213,13 @@ export function buildHandText(hand: {
 }): string {
   const lines: string[] = [];
 
+  // 位置的含义取决于人数，先说桌型再看位置，免得读的人按满员桌去理解短桌的 UTG
+  if (hand.tableSize) {
+    lines.push(tableSizeLabel(hand.tableSize));
+  }
+
   const heroLine = [
-    `我 (${hand.heroPosition})`,
+    `我 (${positionLabel(hand.heroPosition, hand.tableSize || DEFAULT_TABLE_SIZE)})`,
     formatCardsForText(hand.heroCards) || '未记录底牌',
     hand.heroStackBb ? `${formatBB(hand.heroStackBb)}bb` : '',
   ].filter(Boolean).join(' ');
@@ -175,7 +229,10 @@ export function buildHandText(hand: {
   const keyVillains = (hand.villains || []).filter((v) => v.isKey);
   if (keyVillains.length > 0) {
     keyVillains.forEach((v) => {
-      lines.push(`对手 (${v.position})${v.stackBb ? ` ${formatBB(v.stackBb)}bb` : ''}`);
+      lines.push(
+        `对手 (${positionLabel(v.position, hand.tableSize || DEFAULT_TABLE_SIZE)})` +
+        `${v.stackBb ? ` ${formatBB(v.stackBb)}bb` : ''}`
+      );
     });
   } else if (hand.villainCount > 0) {
     lines.push(`对手 ${hand.villainCount} 人`);

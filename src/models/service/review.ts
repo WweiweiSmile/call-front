@@ -13,6 +13,7 @@ import type {
   PotType,
   Position,
   StreetRecord,
+  TableSize,
   VillainInfo,
 } from '../types/review';
 
@@ -20,6 +21,8 @@ import type {
 export interface ReviewHandRequest {
   gameId?: number;
   title?: string;
+  /** 留空按 9 人桌处理 */
+  tableSize?: TableSize;
   heroPosition: Position;
   heroCards: string;
   heroStackBb?: number;
@@ -41,6 +44,7 @@ export interface ReviewHandResponse {
   gameId?: number;
   gameName?: string;
   title: string;
+  tableSize: TableSize;
   heroPosition: Position;
   heroCards: string;
   heroStackBb: number;

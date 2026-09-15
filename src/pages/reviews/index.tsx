@@ -24,11 +24,20 @@ interface ReviewFilterParams {
   position?: string;
 }
 
+/**
+ * 位置筛选项。这里是展示顺序（后位在前，盲注垫底），不是翻前行动顺序，
+ * 与录入页位置网格的顺序刻意不同：筛选时最常按 BTN/CO 找，放最左边少滑几下。
+ *
+ * 没有 MP：它已被 LJ/HJ 取代（存量数据已迁移），见 types/review.ts 的 Position 注释。
+ */
 const POSITION_TABS: { value: PositionFilter; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'BTN', label: 'BTN' },
   { value: 'CO', label: 'CO' },
-  { value: 'MP', label: 'MP' },
+  { value: 'HJ', label: 'HJ' },
+  { value: 'LJ', label: 'LJ' },
+  { value: 'UTG+2', label: 'UTG+2' },
+  { value: 'UTG+1', label: 'UTG+1' },
   { value: 'UTG', label: 'UTG' },
   { value: 'SB', label: 'SB' },
   { value: 'BB', label: 'BB' },
