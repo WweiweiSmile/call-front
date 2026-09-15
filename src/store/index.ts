@@ -53,7 +53,8 @@ export function useAppStore() {
   // 包装 joinGame 以初始化余额
   const joinGameWithBalanceInit = useCallback(
     async (gameId: string, currentUserId: string) => {
-      await gameStore.joinGame(gameId, currentUserId);
+      // joinGame 只收 gameId：加入者是谁由后端的 JWT 决定，前端传了也不会被用
+      await gameStore.joinGame(gameId);
       balanceStore.initUserBalanceOnJoin(currentUserId, gameId);
     },
     [gameStore.joinGame, balanceStore.initUserBalanceOnJoin]

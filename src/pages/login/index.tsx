@@ -135,7 +135,7 @@ function LoginPage() {
               size="large"
               loading={isLoading}
               block
-              htmlType="submit"
+              nativeType="submit"
               data-testid="btn-submit"
             >
               {mode === 'login' ? '登录' : '注册'}

@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {Text, View} from '@tarojs/components';
-import Taro, {useRouter} from '@tarojs/taro';
+import {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {transactionApi} from '../../services/api';
 import {transformTransactionListFromApi} from '../../models';

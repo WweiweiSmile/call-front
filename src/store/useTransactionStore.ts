@@ -22,7 +22,10 @@ export function useTransactionStore({
   // 加载交易记录
   const loadGameTransactions = useCallback(async (gameId: string, userId?: string) => {
     try {
-      const response: any = await transactionApi.getGameTransactions(gameId, {userId});
+      // 参数名必须是 user_id（下划线）：后端读的是 ctx.Query("user_id")，
+      // 之前这里传 userId，接口层取不到值就把这个筛选整个丢掉了，
+      // 结果是「某个用户的流水」实际返回了整场的流水
+      const response: any = await transactionApi.getGameTransactions(gameId, {user_id: userId});
       const transactions: Transaction[] = transformTransactionListFromApi(response.list);
 
       setState((prev) => {

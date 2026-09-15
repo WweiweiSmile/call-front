@@ -9,7 +9,7 @@ import {useMessageStore} from '../../store/messageStore';
 import {scoreRequestApi} from '../../services/api';
 import {transformScoreRequestListFromApi} from '../../models';
 import {useRequireAuth, Loading, PageHeader, PageLayout, ConfirmDialog, RequestStatusTag} from '../../components';
-import type {Game, User as UserType} from '../../store/mockData';
+import type {User as UserType} from '../../store/mockData';
 import type {FrontendScoreRequest} from '../../models/types';
 import {DEFAULT_ROUTE} from '../../utils/tabs';
 import './index.less';
@@ -430,8 +430,9 @@ const GameDetailPage: React.FC = () => {
             title={game.name}
             subtitle={`👤 ${isCreator ? '我创建的游戏' : `创建者: ${game.creatorName}`}`}
             showBack
-            onBack={(e) => {
-              e?.stopPropagation?.();
+            onBack={() => {
+              // PageHeader 调用 onBack() 时不传参，这里本来也没有事件对象可拿，
+              // 原先那句 e?.stopPropagation?.() 是永远不生效的死代码
               // 有上一页就正常返回，保留来源 Tab（从「已参与」进来就回「已参与」）。
               // 直接打开分享链接时页面栈只有一层，navigateBack 无处可退，
               // 这种情况下才回落到默认落地页。

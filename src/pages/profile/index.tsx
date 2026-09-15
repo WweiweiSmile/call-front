@@ -162,7 +162,6 @@ const ProfilePage: React.FC = () => {
                 )}
               </View>
             }
-            isLink
             onClick={() => {
               Taro.navigateTo({ url: '/pages/messages/index' });
             }}
@@ -170,7 +169,6 @@ const ProfilePage: React.FC = () => {
           />
           <Cell
             title='📜 历史战绩'
-            isLink
             onClick={() => {
               Taro.navigateTo({ url: '/pages/history/index' });
             }}

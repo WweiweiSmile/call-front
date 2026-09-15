@@ -18,6 +18,12 @@
     "jsx": "react-jsx",
     "allowJs": true,
     "resolveJsonModule": true,
+    // 跳过 node_modules 里第三方 .d.ts 的类型检查。
+    // @tarojs/components 与 @tarojs/taro 的声明文件引用了未安装的 react-native 类型和
+    // CommonEventFunction，不跳过的话 tsc 会稳定报 73 个与业务代码无关的错，
+    // 导致 tsc 永远非零退出、也就没人拿它当门禁 —— 这批 src 报错正是这么攒下来的。
+    // 只影响 .d.ts 自身的检查，业务代码的调用点仍然照常校验。
+    "skipLibCheck": true,
     "typeRoots": [
       "node_modules/@types"
     ]

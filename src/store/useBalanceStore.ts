@@ -10,7 +10,9 @@ interface UseBalanceStoreOptions {
   setLoading: (loading: boolean) => void;
 }
 
-export function useBalanceStore({state, setState, setLoading}: UseBalanceStoreOptions) {
+// setLoading 保留在 options 里：几个 store 共用同一套参数形状，
+// 但余额这几个加载动作都是静默的，不用全局 loading
+export function useBalanceStore({state, setState}: UseBalanceStoreOptions) {
   // 加载用户余额
   const loadUserBalance = useCallback(async (gameId: string) => {
     try {

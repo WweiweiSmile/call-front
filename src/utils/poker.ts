@@ -1,11 +1,9 @@
 // ============================================
 // 德州扑克领域工具
-// 底池估算、街道文案、手牌序列化
+// 底池估算、街道文案、位置与桌型
 // 录入页、详情页、列表卡片共用，避免各写一份
 // ============================================
 
-import { parseCards, formatRank, SUIT_SYMBOL } from './cards';
-import { DEFAULT_TABLE_SIZE } from '../models/types/review';
 import type {
   ActionType,
   ActorType,
@@ -14,7 +12,6 @@ import type {
   PotType,
   Street,
   StreetRecord,
-  TableSize,
 } from '../models/types/review';
 
 // 人数相关的常量定义在 models/types/review.ts（类型与其默认值放在一起），
@@ -189,99 +186,6 @@ export function computePots(streets: StreetRecord[]): PotResult {
   }
 
   return { byStreet, finalPotBb: pot };
-}
-
-/**
- * 把一手牌序列化成紧凑文本，用于详情页回放。
- * 格式参考手牌历史惯例，牌手一眼能读懂。
- *
- * 后端在 M3 拼提示词时会自己生成一份等价文本，两边的用途不同：
- * 这里是为"给人看"，那边是为"给模型看"，所以刻意没有强行复用。
- */
-export function buildHandText(hand: {
-  tableSize?: TableSize;
-  heroPosition: Position;
-  heroCards: string;
-  heroStackBb: number;
-  villainCount: number;
-  villains?: { position: Position; stackBb?: number; isKey?: boolean }[];
-  board: string;
-  streets: StreetRecord[];
-  heroThought?: string;
-  result?: HandResult;
-  resultAmount?: number;
-}): string {
-  const lines: string[] = [];
-
-  // 位置的含义取决于人数，先说桌型再看位置，免得读的人按满员桌去理解短桌的 UTG
-  if (hand.tableSize) {
-    lines.push(tableSizeLabel(hand.tableSize));
-  }
-
-  const heroLine = [
-    `我 (${positionLabel(hand.heroPosition, hand.tableSize || DEFAULT_TABLE_SIZE)})`,
-    formatCardsForText(hand.heroCards) || '未记录底牌',
-    hand.heroStackBb ? `${formatBB(hand.heroStackBb)}bb` : '',
-  ].filter(Boolean).join(' ');
-  lines.push(heroLine);
-
-  // 只列关键对手，没标关键对手时退化成只报数量
-  const keyVillains = (hand.villains || []).filter((v) => v.isKey);
-  if (keyVillains.length > 0) {
-    keyVillains.forEach((v) => {
-      lines.push(
-        `对手 (${positionLabel(v.position, hand.tableSize || DEFAULT_TABLE_SIZE)})` +
-        `${v.stackBb ? ` ${formatBB(v.stackBb)}bb` : ''}`
-      );
-    });
-  } else if (hand.villainCount > 0) {
-    lines.push(`对手 ${hand.villainCount} 人`);
-  }
-
-  const boardCards = parseCards(hand.board);
-  for (const street of STREET_ORDER) {
-    const record = hand.streets.find((s) => s.street === street);
-    if (!record || record.actions.length === 0) continue;
-
-    // 翻牌及之后带上公共牌，方便逐街对照
-    let prefix = STREET_LABEL[street];
-    if (street === 'flop' && boardCards.length >= 3) {
-      prefix += ` ${formatCardsForText(boardCards.slice(0, 3).join(''))}`;
-    } else if (street === 'turn' && boardCards.length >= 4) {
-      prefix += ` ${formatCardsForText(boardCards[3])}`;
-    } else if (street === 'river' && boardCards.length >= 5) {
-      prefix += ` ${formatCardsForText(boardCards[4])}`;
-    }
-
-    const actions = record.actions.map((a) => {
-      const who = ACTOR_LABEL[a.actor];
-      const what = ACTION_LABEL[a.action];
-      if (ACTION_NEEDS_AMOUNT.indexOf(a.action) >= 0 && a.amountBb) {
-        return `${who} ${what} ${formatBB(a.amountBb)}bb`;
-      }
-      return `${who} ${what}`;
-    }).join('，');
-
-    lines.push(`${prefix}: ${actions}`);
-  }
-
-  if (hand.heroThought) {
-    lines.push(`我的想法: ${hand.heroThought}`);
-  }
-
-  if (hand.result && hand.result !== 'unknown') {
-    const amount = hand.resultAmount ? ` ${formatBB(Math.abs(hand.resultAmount))}bb` : '';
-    lines.push(`结果: ${RESULT_LABEL[hand.result]}${amount}`);
-  }
-
-  return lines.join('\n');
-}
-
-/** 把 "AsKh" 转成带花色的可读文本，如 "A♠ K♥" */
-export function formatCardsForText(cards: string): string {
-  return parseCards(cards)
-    .map((c) => `${formatRank(c[0])}${SUIT_SYMBOL[c[1]] || c[1]}`)
-    .join(' ');
 }
 
 /**
