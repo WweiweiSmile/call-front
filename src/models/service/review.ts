@@ -10,8 +10,12 @@ import type {
   AnalyzeStatus,
   HandResult,
   LeakTagCategory,
+  MessageRole,
   PotType,
   Position,
+  ProfileLeakStat,
+  ProfileStrengthItem,
+  ReviewInsight,
   StreetRecord,
   TableSize,
   VillainInfo,
@@ -133,4 +137,67 @@ export interface AIStatusResponse {
   dailyLimit: number;
   usedToday: number;
   remaining: number;
+}
+
+// ============================================
+// 长期记忆接口类型（M4）
+// 对应后端: dto/review_memory.go
+// ============================================
+
+/** 用户复盘画像响应 */
+export interface ReviewProfileResponse {
+  userId: number;
+  handsReviewed: number;
+  leaks: ProfileLeakStat[];
+  strengths: ProfileStrengthItem[];
+  summary: string;
+  summaryVersion: number;
+  lastSummaryAt?: string;
+}
+
+/** 某漏洞的历史证据响应 */
+export interface ReviewInsightListResponse {
+  list: ReviewInsight[];
+}
+
+/** 钻取查询参数 */
+export interface GetReviewInsightsParams {
+  /** 不传则返回全部漏洞的洞察 */
+  tag_code?: string;
+  limit?: number;
+}
+
+// ============================================
+// 追问对话接口类型（M5）
+// 对应后端: dto/review_chat.go
+// ============================================
+
+/** 追问请求 */
+export interface AskReviewMessageRequest {
+  content: string;
+}
+
+/** 一条对话消息 */
+export interface ReviewMessageResponse {
+  id: number;
+  role: MessageRole;
+  content: string;
+  /** 只有 assistant 消息有值 */
+  tokensIn?: number;
+  tokensOut?: number;
+  createdAt: string;
+}
+
+/**
+ * 追问结果。用户那条也由后端返回：
+ * 消息何时落库由后端决定（模型答成功才写），前端据权威 id 渲染
+ */
+export interface AskReviewMessageResponse {
+  question: ReviewMessageResponse;
+  answer: ReviewMessageResponse;
+}
+
+/** 对话历史 */
+export interface ReviewMessageListResponse {
+  list: ReviewMessageResponse[];
 }

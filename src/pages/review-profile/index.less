@@ -1,0 +1,268 @@
+// ============================================
+// 复盘画像页
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+.review-profile-page {
+  .section {
+    margin-bottom: @spacing-md;
+    padding: @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+    box-shadow: @shadow-sm;
+  }
+
+  .section-head {
+    .flex-between();
+    margin-bottom: @spacing-sm;
+  }
+
+  .section-title {
+    font-size: @font-size-md;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .section-meta {
+    font-size: @font-size-xs;
+    color: @text-tertiary;
+  }
+
+  .section-hint {
+    display: block;
+    margin-top: @spacing-xs;
+    margin-bottom: @spacing-sm;
+    font-size: @font-size-xs;
+    color: @text-tertiary;
+    line-height: 1.5;
+  }
+
+  // -------------------------------------------
+  // 概览
+  // -------------------------------------------
+
+  .overview {
+    display: flex;
+    flex-direction: row;
+  }
+
+  .overview-item {
+    .flex-column-center();
+    flex: 1;
+
+    .overview-value {
+      font-size: @font-size-2xl;
+      font-weight: 700;
+      color: @primary-dark;
+      line-height: 1.2;
+    }
+
+    .overview-label {
+      margin-top: @spacing-xs;
+      font-size: @font-size-xs;
+      color: @text-secondary;
+    }
+  }
+
+  // -------------------------------------------
+  // 阶段总结
+  // -------------------------------------------
+
+  .summary-text {
+    display: block;
+    margin-bottom: @spacing-md;
+    font-size: @font-size-sm;
+    line-height: 1.8;
+    color: @text-primary;
+  }
+
+  .summary-empty {
+    display: block;
+    margin-bottom: @spacing-md;
+    font-size: @font-size-sm;
+    line-height: 1.7;
+    color: @text-tertiary;
+  }
+
+  // -------------------------------------------
+  // 漏洞排行
+  // -------------------------------------------
+
+  .leak-block {
+    border-bottom: 1px solid @divider-color;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .leak-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: @spacing-sm 0;
+
+    &:active {
+      opacity: 0.7;
+    }
+
+    &.expanded {
+      .leak-name {
+        color: @primary-dark;
+      }
+    }
+
+    .leak-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .leak-name {
+      display: block;
+      font-size: @font-size-sm;
+      font-weight: 500;
+      color: @text-primary;
+    }
+
+    .leak-sub {
+      display: block;
+      margin-top: 2px;
+      font-size: @font-size-xs;
+      color: @text-tertiary;
+    }
+
+    .leak-right {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: @spacing-sm;
+      flex-shrink: 0;
+    }
+
+    // 次数按严重度档位配色：一眼看出哪几个是最该先改的
+    .leak-count {
+      .flex-center();
+      min-width: 28px;
+      height: 28px;
+      padding: 0 6px;
+      border-radius: @radius-sm;
+      font-size: @font-size-sm;
+      font-weight: 600;
+
+      &.s1 {
+        background: fade(@warning, 12%);
+        color: @warning;
+      }
+
+      &.s2 {
+        background: fade(@danger, 10%);
+        color: @danger;
+      }
+
+      &.s3 {
+        background: fade(@danger, 18%);
+        color: @danger;
+      }
+    }
+
+    .leak-arrow {
+      font-size: @font-size-xs;
+      color: @text-tertiary;
+    }
+  }
+
+  // -------------------------------------------
+  // 钻取出来的历史证据
+  // -------------------------------------------
+
+  .evidence-list {
+    padding: 0 0 @spacing-sm @spacing-sm;
+    border-left: 2px solid fade(@primary, 25%);
+    margin-left: 2px;
+    margin-bottom: @spacing-sm;
+  }
+
+  .evidence-loading {
+    display: block;
+    padding: @spacing-sm 0;
+    font-size: @font-size-xs;
+    color: @text-tertiary;
+  }
+
+  .evidence-item {
+    padding: @spacing-sm 0;
+
+    &:active {
+      opacity: 0.7;
+    }
+
+    .evidence-head {
+      .flex-between();
+    }
+
+    .evidence-hand {
+      flex: 1;
+      min-width: 0;
+      .text-ellipsis();
+      font-size: @font-size-xs;
+      font-weight: 500;
+      color: @primary-dark;
+    }
+
+    .evidence-date {
+      flex-shrink: 0;
+      margin-left: @spacing-sm;
+      font-size: @font-size-xs;
+      color: @text-tertiary;
+    }
+
+    .evidence-text {
+      display: block;
+      margin-top: 2px;
+      font-size: @font-size-xs;
+      line-height: 1.6;
+      color: @text-secondary;
+    }
+  }
+
+  // -------------------------------------------
+  // 做对的地方
+  // -------------------------------------------
+
+  .strength-item {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    padding: @spacing-sm 0;
+    border-bottom: 1px solid @divider-color;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      opacity: 0.7;
+    }
+
+    .strength-text {
+      flex: 1;
+      min-width: 0;
+      font-size: @font-size-sm;
+      line-height: 1.6;
+      color: @text-primary;
+    }
+
+    .strength-date {
+      flex-shrink: 0;
+      margin-left: @spacing-sm;
+      font-size: @font-size-xs;
+      color: @text-tertiary;
+    }
+  }
+
+  .bottom-space {
+    height: 24px;
+  }
+}

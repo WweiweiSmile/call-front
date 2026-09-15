@@ -1,0 +1,97 @@
+// ============================================
+// 追问对话面板
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+.review-chat-panel {
+  .chat-hint {
+    display: block;
+    margin: @spacing-sm 0;
+    font-size: @font-size-xs;
+    line-height: 1.6;
+    color: @text-tertiary;
+  }
+
+  .bubble-row {
+    display: flex;
+    flex-direction: row;
+    margin-bottom: @spacing-sm;
+
+    // 学员靠右、教练靠左，一眼分清谁说的
+    &.user {
+      justify-content: flex-end;
+    }
+
+    &.assistant {
+      justify-content: flex-start;
+    }
+  }
+
+  .bubble {
+    max-width: 82%;
+    padding: 8px 12px;
+    border-radius: @radius-md;
+
+    &.user {
+      background: @gradient-primary;
+      border-top-right-radius: 4px;
+
+      .bubble-text {
+        color: #fff;
+      }
+    }
+
+    &.assistant {
+      background: @bg-tertiary;
+      border-top-left-radius: 4px;
+
+      .bubble-text {
+        color: @text-primary;
+      }
+    }
+
+    &.typing .bubble-text {
+      color: @text-tertiary;
+    }
+
+    .bubble-text {
+      font-size: @font-size-sm;
+      line-height: 1.7;
+      // 用户输入可能是长串英文/数字，不换行会把气泡撑出屏幕
+      word-break: break-word;
+    }
+  }
+
+  .chat-input-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: @spacing-sm;
+    margin-top: @spacing-md;
+  }
+
+  .input-box {
+    flex: 1;
+    // 缺了它，Input 里的长内容会把右侧按钮挤出屏幕
+    min-width: 0;
+    padding: 8px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+    box-sizing: border-box;
+
+    .chat-input {
+      width: 100%;
+      font-size: @font-size-sm;
+      color: @text-primary;
+    }
+  }
+
+  .chat-note {
+    display: block;
+    margin-top: @spacing-xs;
+    font-size: @font-size-xs;
+    color: @text-tertiary;
+  }
+}

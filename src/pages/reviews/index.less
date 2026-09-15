@@ -19,6 +19,25 @@
     }
   }
 
+  // 画像入口用描边样式，视觉权重低于「记录」——它不该抢主操作的位置
+  .profile-btn {
+    .flex-center();
+    padding: 6px 12px;
+    border-radius: @radius-sm;
+    border: 1px solid fade(@primary, 35%);
+    background: fade(@primary, 8%);
+
+    &:active {
+      opacity: 0.7;
+    }
+
+    .profile-text {
+      font-size: 13px;
+      color: @primary-dark;
+      font-weight: 500;
+    }
+  }
+
   .create-btn {
     display: flex;
     flex-direction: row;

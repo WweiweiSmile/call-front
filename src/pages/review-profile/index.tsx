@@ -1,0 +1,256 @@
+import React, { useCallback, useState } from 'react';
+import { Text, View } from '@tarojs/components';
+import Taro, { useDidShow } from '@tarojs/taro';
+import { Button } from '@nutui/nutui-react-taro';
+import {
+  EmptyState,
+  Loading,
+  PageHeader,
+  PageLayout,
+  useRequireAuth,
+} from '../../components';
+import { reviewApi } from '../../services/api';
+import { transformReviewInsightListFromApi, transformReviewProfileFromApi } from '../../models';
+import { positionLabel } from '../../utils/poker';
+import type { FrontendReviewInsight, FrontendReviewProfile, ProfileLeakStat } from '../../models/types/review';
+import './index.less';
+
+/** 严重度的展示文案与配色档位，与 AnalysisPanel 的口径保持一致 */
+const SEVERITY_TEXT: Record<number, string> = {
+  1: '轻微',
+  2: '明显',
+  3: '严重',
+};
+
+/** 平均严重度取整到最近的档位，用于选配色 */
+function severityLevel(avg: number): number {
+  if (avg >= 2.5) return 3;
+  if (avg >= 1.5) return 2;
+  return 1;
+}
+
+const ReviewProfilePage: React.FC = () => {
+  const { isAuthenticated } = useRequireAuth();
+
+  const [profile, setProfile] = useState<FrontendReviewProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshingSummary, setRefreshingSummary] = useState(false);
+  /** 当前展开的漏洞标签，同时用于钻取 */
+  const [expandedTag, setExpandedTag] = useState<string>('');
+  const [insights, setInsights] = useState<FrontendReviewInsight[]>([]);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      const res = await reviewApi.getProfile();
+      setProfile(transformReviewProfileFromApi(res));
+    } catch {
+      Taro.showToast({ title: '画像加载失败', icon: 'none' });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // 用 useDidShow 而不是 useEffect：从小程序的手牌详情返回时组件不会重新挂载，
+  // 只在 useEffect 里拉数据会一直显示旧画像（详情页编辑后同样踩过这个坑）
+  useDidShow(() => {
+    loadProfile();
+  });
+
+  /** 展开某个漏洞并加载它的全部历史证据 */
+  const handleToggleTag = useCallback(
+    async (leak: ProfileLeakStat) => {
+      if (expandedTag === leak.tagCode) {
+        setExpandedTag('');
+        return;
+      }
+
+      setExpandedTag(leak.tagCode);
+      setInsightsLoading(true);
+      setInsights([]);
+      try {
+        const res = await reviewApi.getInsights({ tag_code: leak.tagCode, limit: 50 });
+        setInsights(transformReviewInsightListFromApi(res.list));
+      } catch {
+        Taro.showToast({ title: '历史证据加载失败', icon: 'none' });
+      } finally {
+        setInsightsLoading(false);
+      }
+    },
+    [expandedTag]
+  );
+
+  const handleRefreshSummary = useCallback(async () => {
+    setRefreshingSummary(true);
+    try {
+      const res = await reviewApi.refreshProfileSummary();
+      setProfile(transformReviewProfileFromApi(res));
+      Taro.showToast({ title: '总结已更新', icon: 'success' });
+    } catch (e: any) {
+      Taro.showToast({ title: e?.message || '重写失败', icon: 'none', duration: 2500 });
+    } finally {
+      setRefreshingSummary(false);
+    }
+  }, []);
+
+  const handleEnterHand = useCallback((handId: string) => {
+    Taro.navigateTo({ url: `/pages/review-detail/index?id=${handId}` });
+  }, []);
+
+  if (!isAuthenticated) return <View />;
+  if (loading) return <Loading fullPage text='加载画像' />;
+
+  const hasData =
+    !!profile && (profile.handsReviewed > 0 || profile.leaks.length > 0 || !!profile.summary);
+
+  return (
+    <PageLayout
+      className='review-profile-page'
+      contentClassName='content'
+      header={<PageHeader title='我的画像' showBack />}
+    >
+      {!hasData ? (
+        <EmptyState
+          icon='🧠'
+          text='还没有足够的复盘记录'
+          subtext='分析几手牌之后，这里会累积出你的高频漏洞和改进趋势'
+        />
+      ) : (
+        <>
+          {/* ---------- 概览 ---------- */}
+          <View className='section overview'>
+            <View className='overview-item'>
+              <Text className='overview-value'>{profile!.handsReviewed}</Text>
+              <Text className='overview-label'>已复盘手牌</Text>
+            </View>
+            <View className='overview-item'>
+              <Text className='overview-value'>{profile!.leaks.length}</Text>
+              <Text className='overview-label'>累计漏洞种类</Text>
+            </View>
+          </View>
+
+          {/* ---------- 阶段总结 ---------- */}
+          <View className='section'>
+            <View className='section-head'>
+              <Text className='section-title'>教练的阶段总结</Text>
+              {profile!.summaryVersion > 0 && (
+                <Text className='section-meta'>第 {profile!.summaryVersion} 版</Text>
+              )}
+            </View>
+
+            {profile!.summary ? (
+              <Text className='summary-text'>{profile!.summary}</Text>
+            ) : (
+              <Text className='summary-empty'>
+                还没有生成总结。总结会在攒够新的洞察后自动重写，也可以现在手动生成。
+              </Text>
+            )}
+
+            <Button
+              type='default'
+              size='small'
+              loading={refreshingSummary}
+              onClick={handleRefreshSummary}
+              data-testid='btn-refresh-summary'
+            >
+              {refreshingSummary ? '生成中…' : '重新生成总结'}
+            </Button>
+            <Text className='section-hint'>
+              重新生成会调用一次模型，但不会占用你每日的分析次数
+            </Text>
+          </View>
+
+          {/* ---------- 漏洞排行 ---------- */}
+          <View className='section'>
+            <Text className='section-title'>高频漏洞</Text>
+            <Text className='section-hint'>点任意一条，看历史上是哪几手牌犯的</Text>
+
+            {profile!.leaks.length === 0 ? (
+              <Text className='summary-empty'>还没有记录到漏洞，继续复盘吧</Text>
+            ) : (
+              profile!.leaks.map((leak) => {
+                const expanded = expandedTag === leak.tagCode;
+                return (
+                  <View key={leak.tagCode} className='leak-block'>
+                    <View
+                      className={`leak-row ${expanded ? 'expanded' : ''}`}
+                      onClick={() => handleToggleTag(leak)}
+                      data-testid={`leak-${leak.tagCode}`}
+                    >
+                      <View className='leak-main'>
+                        <Text className='leak-name'>{leak.name}</Text>
+                        <Text className='leak-sub'>
+                          最近 {leak.lastSeenAt} · 平均严重度{' '}
+                          {SEVERITY_TEXT[severityLevel(leak.avgSeverity)]}
+                        </Text>
+                      </View>
+                      <View className='leak-right'>
+                        <Text className={`leak-count s${severityLevel(leak.avgSeverity)}`}>
+                          {leak.count}
+                        </Text>
+                        <Text className='leak-arrow'>{expanded ? '▾' : '▸'}</Text>
+                      </View>
+                    </View>
+
+                    {expanded && (
+                      <View className='evidence-list'>
+                        {insightsLoading ? (
+                          <Text className='evidence-loading'>加载中…</Text>
+                        ) : insights.length === 0 ? (
+                          <Text className='evidence-loading'>没有可展示的历史证据</Text>
+                        ) : (
+                          insights.map((item) => (
+                            <View
+                              key={item.insightId}
+                              className='evidence-item'
+                              onClick={() => handleEnterHand(item.handId)}
+                            >
+                              <View className='evidence-head'>
+                                <Text className='evidence-hand'>
+                                  {item.position
+                                    ? `${positionLabel(item.position, item.tableSize)} · `
+                                    : ''}
+                                  {item.handTitle || `手牌 #${item.handId}`}
+                                </Text>
+                                <Text className='evidence-date'>
+                                  {item.createdAt ? item.createdAt.slice(0, 10) : ''}
+                                </Text>
+                              </View>
+                              <Text className='evidence-text'>{item.evidence}</Text>
+                            </View>
+                          ))
+                        )}
+                      </View>
+                    )}
+                  </View>
+                );
+              })
+            )}
+          </View>
+
+          {/* ---------- 做得好的地方 ---------- */}
+          {profile!.strengths.length > 0 && (
+            <View className='section'>
+              <Text className='section-title'>做对的地方</Text>
+              <Text className='section-hint'>这些是已经稳定的好习惯，别丢掉</Text>
+              {profile!.strengths.map((item, i) => (
+                <View
+                  key={`${item.handId}-${i}`}
+                  className='strength-item'
+                  onClick={() => handleEnterHand(item.handId)}
+                >
+                  <Text className='strength-text'>{item.text}</Text>
+                  <Text className='strength-date'>{item.date}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          <View className='bottom-space' />
+        </>
+      )}
+    </PageLayout>
+  );
+};
+
+export default ReviewProfilePage;

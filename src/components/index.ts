@@ -24,3 +24,4 @@ export { parseCards, joinCards, formatRank, SUIT_SYMBOL, RANKS, SUITS } from './
 export { default as StreetActionEditor } from './StreetActionEditor';
 export { default as ReviewHandCard } from './ReviewHandCard';
 export { default as AnalysisPanel } from './AnalysisPanel';
+export { default as ReviewChatPanel } from './ReviewChatPanel';

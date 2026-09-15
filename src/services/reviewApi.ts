@@ -1,14 +1,19 @@
 import { request } from './request';
 import type {
   AIStatusResponse,
+  AskReviewMessageResponse,
   GetReviewHandsParams,
+  GetReviewInsightsParams,
   RequestAnalysisResponse,
   ReviewAnalysisListResponse,
   ReviewAnalysisResponse,
   ReviewHandListResponse,
   ReviewHandRequest,
   ReviewHandResponse,
+  ReviewInsightListResponse,
   ReviewLeakTagListResponse,
+  ReviewMessageListResponse,
+  ReviewProfileResponse,
 } from '../models/service';
 
 // 复盘相关 API
@@ -80,5 +85,45 @@ export const reviewApi = {
   // AI 是否可用、今日剩余额度
   getAIStatus: () => {
     return request<AIStatusResponse>('/reviews/ai-status');
+  },
+
+  // ---------- 长期记忆（M4）----------
+
+  // 我的复盘画像。后端会顺手重算一次统计，所以拿到的计数总是最新的
+  getProfile: () => {
+    return request<ReviewProfileResponse>('/reviews/profile');
+  },
+
+  // 手动触发画像总结重写。同步接口，会真实调用模型，耗时约十几秒
+  refreshProfileSummary: () => {
+    return request<ReviewProfileResponse>('/reviews/profile/summary/refresh', {
+      method: 'POST',
+    });
+  },
+
+  // 某个漏洞的全部历史证据。不传 tag_code 则返回全部漏洞的洞察
+  getInsights: (params?: GetReviewInsightsParams) => {
+    const query = new URLSearchParams();
+    if (params?.tag_code) query.append('tag_code', params.tag_code);
+    if (params?.limit) query.append('limit', params.limit.toString());
+    const queryString = query.toString();
+    return request<ReviewInsightListResponse>(
+      `/reviews/insights${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  // ---------- 追问对话（M5）----------
+
+  // 追问。同步接口：后端会真实调用模型，耗时约十几秒
+  askQuestion: (handId: string, content: string) => {
+    return request<AskReviewMessageResponse>(`/reviews/hands/${handId}/messages`, {
+      method: 'POST',
+      data: { content },
+    });
+  },
+
+  // 某手牌的对话历史，按时间升序
+  getMessages: (handId: string) => {
+    return request<ReviewMessageListResponse>(`/reviews/hands/${handId}/messages`);
   },
 };

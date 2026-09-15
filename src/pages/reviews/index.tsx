@@ -97,6 +97,10 @@ const ReviewsPage: React.FC = () => {
     Taro.navigateTo({ url: `/pages/review-detail/index?id=${handId}` });
   }, []);
 
+  const handleEnterProfile = useCallback(() => {
+    Taro.navigateTo({ url: '/pages/review-profile/index' });
+  }, []);
+
   if (!isAuthenticated) {
     return <View />;
   }
@@ -110,14 +114,25 @@ const ReviewsPage: React.FC = () => {
           <TabHeader
             title='复盘'
             actions={
-              <View
-                className='create-btn'
-                onClick={handleCreate}
-                data-testid='btn-create-review'
-              >
-                <Text className='create-icon'>+</Text>
-                <Text className='create-text'>记录</Text>
-              </View>
+              <>
+                {/* 画像入口放在这里而不是底部 Tab：复盘是高频行为、画像不是，
+                    多占一个 Tab 会把底部导航挤到 5 个 */}
+                <View
+                  className='profile-btn'
+                  onClick={handleEnterProfile}
+                  data-testid='btn-review-profile'
+                >
+                  <Text className='profile-text'>画像</Text>
+                </View>
+                <View
+                  className='create-btn'
+                  onClick={handleCreate}
+                  data-testid='btn-create-review'
+                >
+                  <Text className='create-icon'>+</Text>
+                  <Text className='create-text'>记录</Text>
+                </View>
+              </>
             }
           />
           {/* 7 个位置胶囊在窄屏上放不下。小程序里 View 的 overflow-x:auto 不会真的滚动，

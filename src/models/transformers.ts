@@ -12,6 +12,8 @@ import type {
   ReviewAnalysisResponse,
   ReviewHandResponse,
   ReviewLeakTagResponse,
+  ReviewMessageResponse,
+  ReviewProfileResponse,
 } from './service/review';
 import type {
   FrontendAIStatus,
@@ -23,6 +25,10 @@ import type {
   FrontendScoreRequest,
   FrontendMessage,
   FrontendReviewHand,
+  FrontendReviewInsight,
+  FrontendReviewMessage,
+  FrontendReviewProfile,
+  ReviewInsight,
   ReviewLeakTag,
 } from './types';
 
@@ -265,4 +271,67 @@ export function transformAIStatusFromApi(api: AIStatusResponse): FrontendAIStatu
     usedToday: api.usedToday,
     remaining: api.remaining,
   };
+}
+
+/**
+ * 将用户画像响应转成前端形态。
+ * 只把 strengths 里的 handId 转成字符串（要用于路由跳转），其余字段一一对应
+ */
+export function transformReviewProfileFromApi(
+  api: ReviewProfileResponse
+): FrontendReviewProfile {
+  return {
+    handsReviewed: api.handsReviewed,
+    leaks: api.leaks || [],
+    strengths: (api.strengths || []).map((s) => ({
+      text: s.text,
+      handId: String(s.handId),
+      date: s.date,
+    })),
+    summary: api.summary,
+    summaryVersion: api.summaryVersion,
+    lastSummaryAt: api.lastSummaryAt,
+  };
+}
+
+/**
+ * 转换单条追问对话消息
+ */
+export function transformReviewMessageFromApi(
+  api: ReviewMessageResponse
+): FrontendReviewMessage {
+  return {
+    id: String(api.id),
+    role: api.role,
+    content: api.content,
+    createdAt: api.createdAt,
+  };
+}
+
+/**
+ * 批量转换对话历史，顺序保持后端给的（按时间升序）
+ */
+export function transformReviewMessageListFromApi(
+  apiList: ReviewMessageResponse[]
+): FrontendReviewMessage[] {
+  return (apiList || []).map(transformReviewMessageFromApi);
+}
+
+/**
+ * 批量转换历史洞察（画像页钻取到的证据）
+ */
+export function transformReviewInsightListFromApi(
+  apiList: ReviewInsight[]
+): FrontendReviewInsight[] {
+  return (apiList || []).map((item) => ({
+    insightId: String(item.insightId),
+    handId: String(item.handId),
+    handTitle: item.handTitle,
+    position: item.position,
+    tableSize: item.tableSize,
+    heroCards: item.heroCards,
+    severity: item.severity,
+    evidence: item.evidence,
+    createdAt: item.createdAt,
+  }));
 }

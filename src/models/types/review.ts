@@ -230,3 +230,99 @@ export interface FrontendAIStatus {
   usedToday: number;
   remaining: number;
 }
+
+// ============================================
+// 长期记忆（M4）
+// 对应后端: models/review_insight.go
+// ============================================
+
+/** 洞察类型：漏洞 / 优点 */
+export type InsightKind = 'leak' | 'strength';
+
+/** 画像里的一个漏洞条目 */
+export interface ProfileLeakStat {
+  tagCode: string;
+  name: string;
+  /** 出现次数 */
+  count: number;
+  /** 最近一次出现（YYYY-MM-DD） */
+  lastSeenAt: string;
+  /** 平均严重度，原始浮点数，展示时再格式化 */
+  avgSeverity: number;
+  /** 最近的几条证据，已按时间升序 */
+  topEvidence: string[];
+}
+
+/** 画像里的一条优点。刻意不做聚合计数，优点没有标签可聚合 */
+export interface ProfileStrengthItem {
+  text: string;
+  /** 对应的手牌，便于跳转查看 */
+  handId: number;
+  date: string;
+}
+
+/** 用户复盘画像（后端原始形态） */
+export interface ReviewProfile {
+  userId: number;
+  /** 已完成分析的手牌数 */
+  handsReviewed: number;
+  /** 已按出现次数从多到少排好 */
+  leaks: ProfileLeakStat[];
+  strengths: ProfileStrengthItem[];
+  summary: string;
+  summaryVersion: number;
+  /** 为空表示还没生成过总结 */
+  lastSummaryAt?: string;
+}
+
+/** 前端使用的画像。id 类字段转成字符串，便于直接用于路由跳转 */
+export interface FrontendReviewProfile {
+  handsReviewed: number;
+  leaks: ProfileLeakStat[];
+  strengths: { text: string; handId: string; date: string }[];
+  summary: string;
+  summaryVersion: number;
+  lastSummaryAt?: string;
+}
+
+/** 一条历史洞察（画像页点击漏洞后钻取到的证据） */
+export interface ReviewInsight {
+  insightId: number;
+  handId: number;
+  handTitle: string;
+  position: Position;
+  tableSize: TableSize;
+  heroCards: string;
+  severity: number;
+  evidence: string;
+  createdAt: string;
+}
+
+/** 前端使用的历史洞察 */
+export interface FrontendReviewInsight {
+  insightId: string;
+  handId: string;
+  handTitle: string;
+  position: Position;
+  tableSize: TableSize;
+  heroCards: string;
+  severity: number;
+  evidence: string;
+  createdAt: string;
+}
+
+// ============================================
+// 追问对话（M5）
+// 对应后端: models/review_message.go
+// ============================================
+
+/** 对话角色 */
+export type MessageRole = 'user' | 'assistant';
+
+/** 前端使用的一条对话消息 */
+export interface FrontendReviewMessage {
+  id: string;
+  role: MessageRole;
+  content: string;
+  createdAt: string;
+}

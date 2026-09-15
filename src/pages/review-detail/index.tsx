@@ -4,6 +4,7 @@ import Taro, { useDidShow, useRouter } from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {
   AnalysisPanel,
+  ReviewChatPanel,
   CardList,
   ConfirmDialog,
   EmptyState,
@@ -272,6 +273,15 @@ const ReviewDetailPage: React.FC = () => {
             tagNameByCode={tagNameByCode}
             onAnalyze={handleAnalyze}
             triggering={triggering}
+          />
+        </View>
+
+        {/* ---------- 追问对话 ---------- */}
+        <View className='section'>
+          <ReviewChatPanel
+            handId={handId || ''}
+            enabled={!!analysis && analysis.status === 'done'}
+            testId='review-chat-panel'
           />
         </View>
 
