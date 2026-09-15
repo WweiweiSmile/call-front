@@ -12,12 +12,13 @@ interface BottomTabBarProps {
 
 const TABS: { key: TabType; label: string; icon: string }[] = [
   { key: 'games', label: '游戏', icon: '🎮' },
+  { key: 'reviews', label: '复盘', icon: '🃏' },
   { key: 'my', label: '已参与', icon: '🎯' },
   { key: 'profile', label: '我', icon: '👤' },
 ];
 
 const BottomTabBar: React.FC<BottomTabBarProps> = ({ currentTab }) => {
-  // 三个 Tab 是独立页面，用 redirectTo 替换当前页，页面栈始终只有一层
+  // 各 Tab 是独立页面，用 redirectTo 替换当前页，页面栈始终只有一层
   const handleTabChange = (tab: TabType) => {
     if (tab === currentTab) return;
     Taro.redirectTo({ url: TAB_ROUTES[tab] });

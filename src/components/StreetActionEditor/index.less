@@ -1,0 +1,197 @@
+// ============================================
+// StreetActionEditor - 单条街的行动序列编辑器
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+.street-editor {
+  border: 1px solid @border-color;
+  border-radius: @radius-md;
+  background: @bg-secondary;
+  margin-bottom: @spacing-sm;
+  overflow: hidden;
+
+  &.expanded {
+    border-color: fade(@primary, 35%);
+  }
+
+  .street-header {
+    .flex-between();
+    padding: 12px @spacing-md;
+
+    .header-left {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: @spacing-sm;
+
+      .street-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: @text-primary;
+      }
+
+      .action-count {
+        font-size: 12px;
+        color: @text-tertiary;
+      }
+    }
+
+    .header-right {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: @spacing-sm;
+
+      .pot-hint {
+        font-size: 12px;
+        color: @primary;
+      }
+
+      .toggle-icon {
+        font-size: 12px;
+        color: @text-tertiary;
+      }
+    }
+
+    &:active {
+      background: @bg-tertiary;
+    }
+  }
+
+  .street-body {
+    padding: 0 @spacing-md @spacing-md;
+    border-top: 1px solid @divider-color;
+  }
+
+  .empty-hint {
+    display: block;
+    padding: @spacing-md 0 0;
+    font-size: 13px;
+    color: @text-tertiary;
+  }
+
+  .action-row {
+    padding-top: @spacing-sm;
+
+    & + .action-row {
+      border-top: 1px dashed @divider-color;
+      margin-top: @spacing-sm;
+    }
+  }
+
+  // 行动者与行动类型都用小胶囊，比下拉选择器少一次点击
+  .actor-group,
+  .action-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .action-group {
+    margin-top: 6px;
+  }
+
+  .chip {
+    padding: 4px 10px;
+    border-radius: @radius-sm;
+    background: @bg-tertiary;
+    transition: all @duration-fast ease;
+
+    .chip-text {
+      font-size: 12px;
+      color: @text-secondary;
+    }
+
+    &:active {
+      transform: scale(0.94);
+    }
+
+    &.active {
+      background: fade(@primary, 15%);
+
+      .chip-text {
+        color: @primary-dark;
+        font-weight: 600;
+      }
+    }
+
+    // 行动者选中用不同色，避免和行动类型混淆
+    &.actor.active {
+      background: fade(@success, 15%);
+
+      .chip-text {
+        color: @success;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .amount-line {
+    .flex-between();
+    margin-top: @spacing-sm;
+    gap: @spacing-sm;
+  }
+
+  .amount-input {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    padding: 4px 10px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+
+    .input {
+      flex: 1;
+      font-size: 14px;
+      color: @text-primary;
+    }
+
+    .unit {
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+  }
+
+  .amount-placeholder {
+    flex: 1;
+  }
+
+  .remove-btn {
+    .flex-center();
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: fade(@danger, 10%);
+
+    .remove-icon {
+      font-size: 14px;
+      color: @danger;
+    }
+
+    &:active {
+      background: fade(@danger, 25%);
+    }
+  }
+
+  .add-action-btn {
+    .flex-center();
+    margin-top: @spacing-md;
+    padding: 8px;
+    border: 1px dashed @border-color;
+    border-radius: @radius-sm;
+
+    .add-text {
+      font-size: 13px;
+      color: @primary;
+    }
+
+    &:active {
+      background: fade(@primary, 6%);
+    }
+  }
+}

@@ -1,0 +1,327 @@
+// ============================================
+// AnalysisPanel - AI 分析结果展示
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+.analysis-panel {
+  .panel-head {
+    .flex-between();
+  }
+
+  .panel-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .quota-hint {
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  .state-text {
+    display: block;
+    margin-top: @spacing-sm;
+    font-size: 13px;
+    line-height: 1.6;
+    color: @text-secondary;
+  }
+
+  .cost-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  // ---------- 空态 ----------
+  .empty-state {
+    margin-top: @spacing-sm;
+
+    .cost-hint {
+      margin-bottom: @spacing-md;
+    }
+  }
+
+  // ---------- 进行中 ----------
+  .running-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: @spacing-lg 0;
+
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: @primary;
+      margin-bottom: @spacing-sm;
+      animation: analysis-pulse 1.2s ease-in-out infinite;
+    }
+  }
+
+  @keyframes analysis-pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+
+  // ---------- 失败 ----------
+  .failed-state {
+    margin-top: @spacing-sm;
+
+    .error-text {
+      display: block;
+      margin-bottom: @spacing-md;
+      padding: 10px 12px;
+      background: fade(@danger, 8%);
+      border-radius: @radius-sm;
+      font-size: 13px;
+      line-height: 1.5;
+      color: @danger;
+    }
+  }
+
+  // ---------- 结果 ----------
+  .summary-block {
+    margin-top: @spacing-md;
+    padding: 12px;
+    background: fade(@primary, 8%);
+    border-radius: @radius-sm;
+    border-left: 3px solid @primary;
+
+    .summary-text {
+      font-size: 14px;
+      line-height: 1.7;
+      color: @text-primary;
+    }
+  }
+
+  .section-block {
+    margin-top: @spacing-md;
+    padding-top: @spacing-md;
+    border-top: 1px solid @divider-color;
+  }
+
+  .block-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  // 逐街评价
+  .street-item {
+    margin-top: @spacing-sm;
+  }
+
+  .street-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: @spacing-sm;
+  }
+
+  .street-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: @text-secondary;
+  }
+
+  .verdict {
+    padding: 1px 8px;
+    border-radius: @radius-sm;
+    font-size: 11px;
+
+    &.ok {
+      background: fade(@success, 12%);
+      color: @success;
+    }
+
+    &.marginal {
+      background: fade(@warning, 14%);
+      color: @warning;
+    }
+
+    &.mistake {
+      background: fade(@danger, 12%);
+      color: @danger;
+    }
+  }
+
+  .street-comment {
+    display: block;
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: @text-primary;
+  }
+
+  // 关键错误
+  .key-mistake {
+    .block-title {
+      margin-right: 4px;
+    }
+
+    .mistake-row {
+      margin-top: @spacing-sm;
+      padding-left: 10px;
+      border-left: 2px solid @border-color;
+
+      &.better {
+        border-left-color: @success;
+      }
+    }
+
+    .row-label {
+      display: block;
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+
+    .row-text {
+      display: block;
+      margin-top: 2px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: @text-primary;
+    }
+  }
+
+  // 替代线路
+  .alt-item {
+    margin-top: @spacing-sm;
+    padding: 10px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+
+    .alt-line {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: @text-primary;
+    }
+
+    .alt-note {
+      display: block;
+      margin-top: 2px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: @text-secondary;
+    }
+  }
+
+  // 漏洞 / 优点
+  .tag-block {
+    margin-top: @spacing-sm;
+  }
+
+  .leak-item {
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: @radius-sm;
+    background: fade(@danger, 6%);
+
+    .leak-head {
+      .flex-between();
+    }
+
+    .leak-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: @text-primary;
+    }
+
+    .severity {
+      font-size: 11px;
+
+      &.s1 {
+        color: @text-tertiary;
+      }
+
+      &.s2 {
+        color: @warning;
+      }
+
+      &.s3 {
+        color: @danger;
+      }
+    }
+
+    .leak-evidence {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: @text-secondary;
+    }
+  }
+
+  // 优点没有标签，整块就是一段文字，所以字号用正文级、颜色用主文字色
+  .strength-item {
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border-radius: @radius-sm;
+    background: fade(@success, 6%);
+
+    .strength-text {
+      font-size: 13px;
+      line-height: 1.7;
+      color: @text-primary;
+    }
+  }
+
+  // 练习建议
+  .drill-item {
+    display: flex;
+    flex-direction: row;
+    gap: @spacing-sm;
+    margin-top: @spacing-sm;
+
+    .drill-index {
+      .flex-center();
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: fade(@primary, 12%);
+      color: @primary-dark;
+      font-size: 11px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .drill-text {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.7;
+      color: @text-primary;
+    }
+  }
+
+  .suggest-hint {
+    display: block;
+    margin-top: @spacing-md;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  .disclaimer {
+    display: block;
+    margin-top: @spacing-md;
+    padding-top: @spacing-sm;
+    border-top: 1px dashed @border-color;
+    font-size: 12px;
+    line-height: 1.6;
+    color: @text-tertiary;
+  }
+
+  .panel-footer {
+    .flex-between();
+    margin-top: @spacing-md;
+
+    .meta-text {
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+  }
+}

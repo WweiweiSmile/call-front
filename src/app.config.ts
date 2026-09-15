@@ -17,6 +17,9 @@ export default defineAppConfig({
     'pages/score-request-review/index',
     'pages/my-score-requests/index',
     'pages/messages/index',
+    'pages/reviews/index',
+    'pages/review-create/index',
+    'pages/review-detail/index',
   ],
   entryPagePath: 'pages/login/index',
   window: {

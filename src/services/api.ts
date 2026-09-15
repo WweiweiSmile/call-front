@@ -9,3 +9,4 @@ export * from './gameApi';
 export * from './transactionApi';
 export * from './scoreRequestApi';
 export * from './messageApi';
+export * from './reviewApi';

@@ -12,3 +12,4 @@ export * from './userBalance';
 export * from './frontend';
 export * from './scoreRequest';
 export * from './message';
+export * from './review';

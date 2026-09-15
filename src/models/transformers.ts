@@ -7,12 +7,22 @@ import type { TransactionResponse, UserBalanceResponse } from './service/transac
 import type { ScoreRequestResponse } from './service/scoreRequest';
 import type { MessageResponse } from './service/message';
 import type {
+  AIStatusResponse,
+  ReviewAnalysisResponse,
+  ReviewHandResponse,
+  ReviewLeakTagResponse,
+} from './service/review';
+import type {
+  FrontendAIStatus,
+  FrontendAnalysis,
   FrontendGame,
   FrontendTransaction,
   FrontendUserGameBalance,
   FrontendUser,
   FrontendScoreRequest,
   FrontendMessage,
+  FrontendReviewHand,
+  ReviewLeakTag,
 } from './types';
 
 /**
@@ -154,4 +164,102 @@ export function transformMessageFromApi(apiMessage: MessageResponse): FrontendMe
  */
 export function transformMessageListFromApi(apiMessages: MessageResponse[]): FrontendMessage[] {
   return apiMessages.map(transformMessageFromApi);
+}
+
+/**
+ * 将 API 返回的 ReviewHandResponse 转换为前端使用的 FrontendReviewHand
+ */
+export function transformReviewHandFromApi(apiHand: ReviewHandResponse): FrontendReviewHand {
+  return {
+    id: String(apiHand.id),
+    gameId: apiHand.gameId != null ? String(apiHand.gameId) : undefined,
+    gameName: apiHand.gameName,
+    title: apiHand.title,
+    heroPosition: apiHand.heroPosition,
+    heroCards: apiHand.heroCards,
+    heroStackBb: apiHand.heroStackBb,
+    stakes: apiHand.stakes,
+    board: apiHand.board,
+    villainCount: apiHand.villainCount,
+    // 后端保证返回数组，这里再兜一层：老数据可能是 null
+    villains: apiHand.villains || [],
+    potType: apiHand.potType,
+    streets: apiHand.streets || [],
+    heroThought: apiHand.heroThought,
+    result: apiHand.result,
+    resultAmount: apiHand.resultAmount,
+    heroTags: apiHand.heroTags || [],
+    analyzeStatus: apiHand.analyzeStatus,
+    createdAt: apiHand.createdAt,
+    updatedAt: apiHand.updatedAt,
+  };
+}
+
+/**
+ * 批量转换复盘手牌列表
+ */
+export function transformReviewHandListFromApi(apiHands: ReviewHandResponse[]): FrontendReviewHand[] {
+  return apiHands.map(transformReviewHandFromApi);
+}
+
+/**
+ * 将 API 返回的标签字典转换为前端类型。
+ * 字段结构一致，这里主要做一层显式声明，后端加字段时不至于静默漏掉。
+ */
+export function transformLeakTagFromApi(apiTag: ReviewLeakTagResponse): ReviewLeakTag {
+  return {
+    code: apiTag.code,
+    name: apiTag.name,
+    category: apiTag.category,
+    description: apiTag.description,
+    sortOrder: apiTag.sortOrder,
+  };
+}
+
+/**
+ * 批量转换标签字典
+ */
+export function transformLeakTagListFromApi(apiTags: ReviewLeakTagResponse[]): ReviewLeakTag[] {
+  return apiTags.map(transformLeakTagFromApi);
+}
+
+/**
+ * 将 API 返回的分析记录转换为前端使用的 FrontendAnalysis
+ */
+export function transformAnalysisFromApi(api: ReviewAnalysisResponse): FrontendAnalysis {
+  return {
+    id: String(api.id),
+    handId: String(api.handId),
+    status: api.status,
+    model: api.model,
+    promptVersion: api.promptVersion,
+    // 失败的记录没有 result，这里保持 undefined，由 UI 决定展示错误还是空态
+    result: api.result,
+    tokensIn: api.tokensIn,
+    tokensOut: api.tokensOut,
+    durationMs: api.durationMs,
+    errorMsg: api.errorMsg,
+    stale: api.stale,
+    createdAt: api.createdAt,
+    updatedAt: api.updatedAt,
+  };
+}
+
+/**
+ * 批量转换分析列表
+ */
+export function transformAnalysisListFromApi(apiList: ReviewAnalysisResponse[]): FrontendAnalysis[] {
+  return (apiList || []).map(transformAnalysisFromApi);
+}
+
+/**
+ * 转换 AI 可用状态。字段一一对应，这里主要做一层显式声明
+ */
+export function transformAIStatusFromApi(api: AIStatusResponse): FrontendAIStatus {
+  return {
+    enabled: api.enabled,
+    dailyLimit: api.dailyLimit,
+    usedToday: api.usedToday,
+    remaining: api.remaining,
+  };
 }

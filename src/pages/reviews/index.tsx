@@ -1,0 +1,163 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ScrollView, Text, View } from '@tarojs/components';
+import Taro, { useDidShow } from '@tarojs/taro';
+import {
+  BottomTabBar,
+  EmptyState,
+  FilterTabs,
+  LoadMore,
+  PageLayout,
+  ReviewHandCard,
+  TabHeader,
+  useRequireAuth,
+} from '../../components';
+import { useLoadMore } from '../../hooks';
+import { reviewApi } from '../../services/api';
+import { transformReviewHandListFromApi } from '../../models';
+import type { ReviewHandResponse } from '../../models/service';
+import type { Position } from '../../models/types/review';
+import './index.less';
+
+type PositionFilter = 'all' | Position;
+
+interface ReviewFilterParams {
+  position?: string;
+}
+
+const POSITION_TABS: { value: PositionFilter; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'BTN', label: 'BTN' },
+  { value: 'CO', label: 'CO' },
+  { value: 'MP', label: 'MP' },
+  { value: 'UTG', label: 'UTG' },
+  { value: 'SB', label: 'SB' },
+  { value: 'BB', label: 'BB' },
+];
+
+const ReviewsPage: React.FC = () => {
+  const { isAuthenticated } = useRequireAuth();
+  const [positionFilter, setPositionFilter] = useState<PositionFilter>('all');
+
+  const {
+    data: rawHands,
+    loading,
+    refreshing,
+    hasMore,
+    refresh,
+    loadMore,
+    setParams,
+  } = useLoadMore<ReviewHandResponse, ReviewFilterParams>(
+    async (params) => {
+      const { page, pageSize, position } = params;
+      return await reviewApi.getHands({ page, page_size: pageSize, position });
+    },
+    {
+      defaultCurrent: 1,
+      defaultPageSize: 10,
+      defaultParams: { position: undefined },
+      autoLoad: true,
+    }
+  );
+
+  const hands = useMemo(() => transformReviewHandListFromApi(rawHands), [rawHands]);
+
+  useEffect(() => {
+    setParams({ position: positionFilter === 'all' ? undefined : positionFilter });
+  }, [positionFilter, setParams]);
+
+  // 从录入页/详情页返回时刷新，否则刚记录的手牌不会出现在列表里
+  useDidShow(() => {
+    refresh();
+  });
+
+  const handleRefresh = useCallback(async () => {
+    await refresh();
+  }, [refresh]);
+
+  const handleScrollToLower = useCallback(() => {
+    if (hasMore && !loading) {
+      loadMore();
+    }
+  }, [hasMore, loading, loadMore]);
+
+  const handleCreate = useCallback(() => {
+    Taro.navigateTo({ url: '/pages/review-create/index' });
+  }, []);
+
+  const handleEnterHand = useCallback((handId: string) => {
+    Taro.navigateTo({ url: `/pages/review-detail/index?id=${handId}` });
+  }, []);
+
+  if (!isAuthenticated) {
+    return <View />;
+  }
+
+  return (
+    <PageLayout
+      className='reviews-page'
+      contentClassName='content'
+      header={
+        <>
+          <TabHeader
+            title='复盘'
+            actions={
+              <View
+                className='create-btn'
+                onClick={handleCreate}
+                data-testid='btn-create-review'
+              >
+                <Text className='create-icon'>+</Text>
+                <Text className='create-text'>记录</Text>
+              </View>
+            }
+          />
+          {/* 7 个位置胶囊在窄屏上放不下。小程序里 View 的 overflow-x:auto 不会真的滚动，
+              必须用 ScrollView，否则最右边的 BB 点不到 */}
+          <ScrollView className='filter-scroll' scrollX enableFlex>
+            <FilterTabs
+              tabs={POSITION_TABS}
+              activeValue={positionFilter}
+              onChange={(v) => setPositionFilter(v as PositionFilter)}
+            />
+          </ScrollView>
+        </>
+      }
+      bottom={<BottomTabBar currentTab='reviews' />}
+      refresherEnabled
+      refresherTriggered={refreshing}
+      onRefresherRefresh={handleRefresh}
+      onScrollToLower={handleScrollToLower}
+      lowerThreshold={100}
+    >
+      {hands.length > 0 ? (
+        <>
+          {hands.map((hand) => (
+            <ReviewHandCard
+              key={hand.id}
+              hand={hand}
+              onClick={() => handleEnterHand(hand.id)}
+              testId={`review-card-${hand.id}`}
+            />
+          ))}
+          <LoadMore hasMore={hasMore} loading={loading} />
+        </>
+      ) : (
+        !loading && (
+          <EmptyState
+            icon='🃏'
+            text='还没有复盘记录'
+            subtext='记下一手让你纠结的牌，AI 会帮你找出思维漏洞'
+          />
+        )
+      )}
+
+      {loading && hands.length === 0 && (
+        <View className='loading-hint'>
+          <Text className='hint-text'>加载中…</Text>
+        </View>
+      )}
+    </PageLayout>
+  );
+};
+
+export default ReviewsPage;

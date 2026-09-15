@@ -1,0 +1,294 @@
+// ============================================
+// CardPicker / CardFace / CardList - 牌面组件
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+// -------------------------------------------
+// 单张牌
+// -------------------------------------------
+
+.card-face {
+  .flex-column-center();
+  position: relative;
+  background: @bg-secondary;
+  border: 1px solid @border-color;
+  border-radius: 4px;
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+  // 显式宽高 + 边框，必须 border-box 才能得到标称尺寸（全局 * 规则在 H5 不生效）
+  box-sizing: border-box;
+
+  &.black {
+    color: @text-primary;
+  }
+
+  &.red {
+    color: @danger;
+  }
+
+  // 尺码
+  &.sm {
+    width: 24px;
+    height: 32px;
+
+    .card-rank {
+      font-size: 12px;
+    }
+
+    .card-suit {
+      font-size: 10px;
+    }
+  }
+
+  &.md {
+    width: 32px;
+    height: 44px;
+
+    .card-rank {
+      font-size: 15px;
+    }
+
+    .card-suit {
+      font-size: 12px;
+    }
+  }
+
+  &.lg {
+    width: 38px;
+    height: 52px;
+
+    .card-rank {
+      font-size: 18px;
+    }
+
+    .card-suit {
+      font-size: 14px;
+    }
+  }
+
+  &.selected {
+    border-color: @primary;
+    box-shadow: 0 0 0 2px fade(@primary, 25%);
+  }
+
+  &.disabled {
+    opacity: 0.3;
+  }
+
+  &.clickable:active {
+    transform: scale(0.92);
+  }
+
+  // 空牌位
+  &.empty {
+    background: transparent;
+    border-style: dashed;
+    border-color: @border-color;
+  }
+
+  .card-rank,
+  .card-suit {
+    display: block;
+    text-align: center;
+  }
+
+  .card-suit {
+    margin-top: 1px;
+  }
+}
+
+// -------------------------------------------
+// 只读牌面列表
+// -------------------------------------------
+
+.card-list {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+// -------------------------------------------
+// 选牌器
+// -------------------------------------------
+
+.card-picker {
+  .picker-selected {
+    .flex-between();
+    gap: @spacing-sm;
+    min-height: 52px;
+  }
+
+  .selected-list {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: @spacing-sm;
+    flex: 1;
+    // flex item 默认 min-width: auto 会被内容撑开，把右侧的"选牌"按钮挤出屏幕
+    min-width: 0;
+  }
+
+  .selected-item {
+    position: relative;
+
+    .remove-hint {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: @danger;
+      color: #fff;
+      font-size: 12px;
+      line-height: 16px;
+      text-align: center;
+    }
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+
+  // 未选满时的占位方框
+  .selected-placeholder {
+    .flex-center();
+    width: 38px;
+    height: 52px;
+    border: 1px dashed @border-color;
+    border-radius: 4px;
+    flex-shrink: 0;
+
+    .placeholder-text {
+      color: @text-tertiary;
+      font-size: 18px;
+    }
+  }
+
+  .picker-placeholder {
+    flex: 1;
+    color: @text-tertiary;
+    font-size: 14px;
+  }
+
+  .picker-toggle {
+    padding: 6px 14px;
+    border-radius: @radius-sm;
+    background: fade(@primary, 10%);
+    flex-shrink: 0;
+
+    .toggle-text {
+      color: @primary;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    &:active {
+      background: fade(@primary, 20%);
+    }
+
+    &.active {
+      background: fade(@primary, 18%);
+    }
+  }
+
+  // -------------------------------------------
+  // 选牌面板
+  // -------------------------------------------
+
+  .picker-panel {
+    margin-top: @spacing-md;
+    padding: @spacing-sm;
+    background: @bg-tertiary;
+    border-radius: @radius-md;
+  }
+
+  .suit-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 4px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .suit-label {
+    width: 16px;
+    flex-shrink: 0;
+    text-align: center;
+
+    &.red .suit-symbol {
+      color: @danger;
+    }
+
+    &.black .suit-symbol {
+      color: @text-primary;
+    }
+
+    .suit-symbol {
+      font-size: 13px;
+    }
+  }
+
+  // 13 列等宽，A 在左 2 在右。
+  // 必须用 minmax(0, 1fr)：1fr 的最小值是 min-content，13 列的 min-content
+  // 之和一旦超过容器宽度，整个网格会横向溢出把页面撑宽
+  .rank-grid {
+    display: grid;
+    grid-template-columns: repeat(13, minmax(0, 1fr));
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .rank-cell {
+    .flex-center();
+    height: 30px;
+    // 全局 * { box-sizing } 在 H5 产物里不生效，网格项带边框时必须显式声明，
+    // 否则每格比列宽多出 2px 边框，13 列累计溢出 26px
+    box-sizing: border-box;
+    background: @bg-secondary;
+    border: 1px solid @border-color;
+    border-radius: 3px;
+    transition: all @duration-fast ease;
+    min-width: 0;
+
+    .rank-text {
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    &.red .rank-text {
+      color: @danger;
+    }
+
+    &.black .rank-text {
+      color: @text-primary;
+    }
+
+    &:active {
+      transform: scale(0.9);
+    }
+
+    &.selected {
+      background: @primary;
+      border-color: @primary;
+
+      .rank-text {
+        color: #fff;
+      }
+    }
+
+    &.disabled {
+      opacity: 0.25;
+    }
+  }
+}

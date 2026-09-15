@@ -8,3 +8,4 @@ export * from './game';
 export * from './transaction';
 export * from './scoreRequest';
 export * from './message';
+export * from './review';

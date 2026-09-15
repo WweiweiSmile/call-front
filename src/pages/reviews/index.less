@@ -1,0 +1,61 @@
+// ============================================
+// 复盘列表页
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+.reviews-page {
+  // 位置筛选横向滚动。FilterTabs 自己也带了 overflow-x:auto，
+  // 嵌在 ScrollView 里要关掉，否则两层滚动会互相抢手势
+  .filter-scroll {
+    width: 100%;
+    white-space: nowrap;
+
+    .filter-tabs {
+      display: inline-flex;
+      overflow-x: visible;
+      width: max-content;
+    }
+  }
+
+  .create-btn {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 12px;
+    border-radius: @radius-sm;
+    background: @gradient-primary;
+
+    .create-icon {
+      font-size: 15px;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .create-text {
+      font-size: 13px;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    &:active {
+      opacity: 0.85;
+    }
+  }
+
+  .content {
+    padding: @spacing-md;
+  }
+
+  .loading-hint {
+    .flex-center();
+    padding: @spacing-xl 0;
+
+    .hint-text {
+      font-size: 13px;
+      color: @text-tertiary;
+    }
+  }
+}

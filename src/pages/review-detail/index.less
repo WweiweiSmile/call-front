@@ -1,0 +1,339 @@
+// ============================================
+// 手牌详情页
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+// 骨架交给 PageLayout（见 review-create 里的同款说明），这里只写业务样式
+.review-detail-page {
+  .detail-content {
+    padding: @spacing-md;
+  }
+
+  // PageHeader 的左右两侧各固定 60px（为单个图标按钮设计），标题靠这个对称来居中。
+  // 本页右侧要放两个文字按钮，放宽后就不再对称了，所以改用另一种居中方式：
+  // 把标题绝对定位横跨整个表头，无论两侧多宽都真正居中。
+  // 全部只在本页生效，不动公共组件
+  .page-header {
+    position: relative;
+  }
+
+  .header-right {
+    width: auto;
+    flex-shrink: 0;
+    // 抬到绝对定位的标题之上，否则点击被标题挡住
+    z-index: 1;
+  }
+
+  .header-center {
+    position: absolute;
+    left: 0;
+    right: 0;
+    // 标题只是文字，不该拦截点击（否则会挡住返回和右侧按钮）
+    pointer-events: none;
+  }
+
+  .header-actions {
+    display: flex;
+    flex-direction: row;
+    gap: @spacing-sm;
+
+    .action-btn {
+      padding: 5px 12px;
+      border-radius: @radius-sm;
+      background: fade(@primary, 10%);
+      flex-shrink: 0;
+
+      .action-text {
+        font-size: 13px;
+        color: @primary-dark;
+        white-space: nowrap;
+      }
+
+      &:active {
+        background: fade(@primary, 20%);
+      }
+
+      &.danger {
+        background: fade(@danger, 10%);
+
+        .action-text {
+          color: @danger;
+        }
+
+        &:active {
+          background: fade(@danger, 20%);
+        }
+      }
+    }
+  }
+
+  // -------------------------------------------
+  // 分区
+  // -------------------------------------------
+
+  .section {
+    padding: @spacing-md;
+    margin-bottom: @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+    box-shadow: @shadow-sm;
+
+    &.highlight {
+      border: 1px solid fade(@primary, 30%);
+      background: linear-gradient(180deg, fade(@primary, 5%) 0%, @bg-secondary 100%);
+    }
+  }
+
+  .section-title {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  // -------------------------------------------
+  // 概览
+  // -------------------------------------------
+
+  .hero-section {
+    .hand-title {
+      display: block;
+      font-size: 18px;
+      font-weight: 700;
+      color: @text-primary;
+    }
+  }
+
+  .hero-cards {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: @spacing-sm;
+    margin-top: @spacing-md;
+  }
+
+  .position-tag {
+    .flex-center();
+    min-width: 40px;
+    padding: 4px 8px;
+    background: fade(@primary, 12%);
+    border-radius: @radius-sm;
+    flex-shrink: 0;
+
+    .position-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: @primary-dark;
+    }
+  }
+
+  .hero-meta {
+    .flex-column();
+    gap: 2px;
+    margin-left: 4px;
+
+    .meta-line {
+      font-size: 12px;
+      color: @text-secondary;
+    }
+  }
+
+  .board-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: @spacing-sm;
+    margin-top: @spacing-md;
+    padding-top: @spacing-md;
+    border-top: 1px solid @divider-color;
+
+    .board-label {
+      font-size: 13px;
+      color: @text-secondary;
+      flex-shrink: 0;
+    }
+
+    .board-empty {
+      font-size: 13px;
+      color: @text-tertiary;
+    }
+  }
+
+  .result-line {
+    .flex-between();
+    margin-top: @spacing-md;
+
+    .result-text {
+      font-size: 15px;
+      font-weight: 600;
+
+      &.win {
+        color: @success;
+      }
+
+      &.lose {
+        color: @danger;
+      }
+
+      &.fold,
+      &.unknown {
+        color: @text-tertiary;
+      }
+    }
+
+    .time-text {
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+  }
+
+  .game-name {
+    display: block;
+    margin-top: @spacing-sm;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  // -------------------------------------------
+  // 行动回放
+  // -------------------------------------------
+
+  .street-block {
+    margin-top: @spacing-md;
+    padding-top: @spacing-sm;
+    border-top: 1px dashed @divider-color;
+
+    &:first-of-type {
+      border-top: none;
+    }
+  }
+
+  .street-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: @spacing-sm;
+
+    .street-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: @text-secondary;
+      flex-shrink: 0;
+    }
+  }
+
+  .action-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: @spacing-sm;
+    padding: 5px 0 0 8px;
+
+    .actor-tag {
+      .flex-center();
+      min-width: 40px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      flex-shrink: 0;
+
+      &.hero {
+        background: fade(@success, 15%);
+        color: @success;
+      }
+
+      &.villain {
+        background: fade(@danger, 12%);
+        color: @danger;
+      }
+
+      &.other {
+        background: @bg-tertiary;
+        color: @text-tertiary;
+      }
+    }
+
+    .action-text {
+      font-size: 13px;
+      color: @text-primary;
+    }
+
+    .amount-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: @primary;
+    }
+  }
+
+  .empty-text {
+    display: block;
+    margin-top: @spacing-sm;
+    font-size: 13px;
+    color: @text-tertiary;
+  }
+
+  // -------------------------------------------
+  // 想法 / 标签 / 占位
+  // -------------------------------------------
+
+  .thought-text {
+    display: block;
+    margin-top: @spacing-sm;
+    font-size: 14px;
+    line-height: 1.7;
+    color: @text-primary;
+    white-space: pre-wrap;
+  }
+
+  .tag-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: @spacing-sm;
+    margin-top: @spacing-sm;
+  }
+
+  .tag-chip {
+    padding: 4px 10px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+
+    .tag-text {
+      font-size: 12px;
+      color: @text-secondary;
+    }
+  }
+
+  .bottom-space {
+    height: 24px;
+  }
+}
+
+// -------------------------------------------
+// 分析结论过期的提示
+// -------------------------------------------
+
+.review-detail-page {
+  .stale-notice {
+    margin-bottom: @spacing-md;
+    padding: 10px 12px;
+    background: fade(@warning, 10%);
+    border-radius: @radius-sm;
+    border-left: 3px solid @warning;
+
+    .stale-text {
+      font-size: 12px;
+      line-height: 1.6;
+      color: @warning;
+    }
+  }
+
+  // 分析面板自己在 section 里，去掉重复的标题间距
+  .analysis-panel {
+    .panel-head {
+      margin-top: 0;
+    }
+  }
+}
