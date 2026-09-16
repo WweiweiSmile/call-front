@@ -5,14 +5,18 @@
 
 @import './theme.less';
 
-.score-operation-page {
-  // 操作按钮（由 PageLayout 的 bottom 区域承载）
-  .operation-actions {
-    display: flex;
-    gap: 12px;
+// 底部操作按钮条（由 PageLayout 的 bottom 区域承载）
+// 不嵌套页面根类名：引用方里 score-withdraw 用的是 .score-operation-page，
+// 而 score-request-withdraw 用的是 .score-request-page，嵌套会导致后者匹配不上、flex 失效
+.operation-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  // 与 score-request-deposit 的 .request-actions 对齐，四个存取分页面底栏高度一致
+  padding: 12px 16px;
+  border-top: 1px solid @border-color;
 
-    .nut-button {
-      flex: 1;
-    }
+  .nut-button {
+    flex: 1;
   }
 }
