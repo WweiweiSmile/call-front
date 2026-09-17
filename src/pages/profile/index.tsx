@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro from '@tarojs/taro';
 import { useMessageStore } from '../../store/messageStore';
+import { useRefreshOnShow } from '../../hooks';
 import { Cell, Button, Dialog } from '@nutui/nutui-react-taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
@@ -29,15 +30,14 @@ const ProfilePage: React.FC = () => {
   const refreshUnread = useMessageStore((state) => state.refreshUnread);
   const clearMessages = useMessageStore((state) => state.clear);
 
-  // Tab 页用 redirectTo 切换会重新挂载，mount 一次足够；
-  // useDidShow 再兜一层（从消息中心返回时不重新挂载）
+  // Tab 页用 redirectTo 切换会重新挂载，mount 时拉一次；
+  // 从消息中心返回时不会重新挂载，靠 useRefreshOnShow 再兜一层
+  // （它会跳过首次 onShow，所以不会和上面这句重复请求）
   useEffect(() => {
     refreshUnread();
   }, [refreshUnread]);
 
-  useDidShow(() => {
-    refreshUnread();
-  });
+  useRefreshOnShow(refreshUnread);
 
   const currentUser = user;
   const userGames = currentUser ? getUserGames(currentUser.id) : [];

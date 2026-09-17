@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro from '@tarojs/taro';
 import { useRequest } from 'ahooks';
 import {
   BottomTabBar,
@@ -13,6 +13,7 @@ import {
   useRequireAuth,
 } from '../../components';
 import { reviewApi } from '../../services/api';
+import { useRefreshOnShow } from '../../hooks';
 import { transformReviewHandListFromApi } from '../../models';
 import type { ReviewHandResponse } from '../../models/service';
 import type { Position } from '../../models/types/review';
@@ -84,15 +85,8 @@ const ReviewsPage: React.FC = () => {
   }, [filterPosition, run]);
 
   // 从录入页/详情页返回时刷新，否则刚记录的手牌不会出现在列表里。
-  // 跳过首次：初次进入已经由上面的 effect 拉过了，不跳会白打一次接口
-  const isFirstShow = useRef(true);
-  useDidShow(() => {
-    if (isFirstShow.current) {
-      isFirstShow.current = false;
-      return;
-    }
-    run(1, filterPosition);
-  });
+  // useRefreshOnShow 会跳过首次 onShow —— 初次进入已经由上面的 effect 拉过了
+  useRefreshOnShow(() => run(1, filterPosition));
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

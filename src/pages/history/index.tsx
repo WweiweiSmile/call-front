@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
 import { Text, View } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro from '@tarojs/taro';
 import dayjs from 'dayjs';
 import { useAuthStore } from '../../store/auth';
 import { useRequireAuth, Loading, PageHeader, PageLayout, EmptyState, LoadMore, HistoryGameCard } from '../../components';
@@ -90,11 +90,6 @@ const HistoryPage: React.FC = () => {
 
   const currentUser = user;
 
-  // 页面显示时刷新数据
-  useDidShow(() => {
-    refresh();
-  });
-
   // 点击游戏卡片跳转到详情
   const handleGameClick = useCallback((gameId: string) => {
     Taro.navigateTo({ url: `/pages/game-detail/index?gameId=${gameId}` });
@@ -117,7 +112,9 @@ const HistoryPage: React.FC = () => {
     return <View />;
   }
 
-  if (loading) {
+  // 只有首次加载才铺满屏。回到本页会静默刷新，那时把内容换成 Loading
+  // 会把整页卸载重建，滚动位置直接归零
+  if (loading && historyGames.length === 0) {
     return (
       <View className='history-page'>
         <Loading

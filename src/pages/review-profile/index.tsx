@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Text, View } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro from '@tarojs/taro';
 import { useRequest } from 'ahooks';
 import { Button } from '@nutui/nutui-react-taro';
 import {
@@ -12,6 +12,7 @@ import {
 } from '../../components';
 import { reviewApi } from '../../services/api';
 import { transformReviewInsightListFromApi, transformReviewProfileFromApi } from '../../models';
+import { usePageData } from '../../hooks';
 import { positionLabel } from '../../utils/poker';
 import type { ProfileLeakStat } from '../../models/types/review';
 import './index.less';
@@ -42,20 +43,18 @@ const ReviewProfilePage: React.FC = () => {
   /** 当前展开的漏洞标签，同时用于钻取 */
   const [expandedTag, setExpandedTag] = useState<string>('');
 
+  // usePageData 内置了"回到本页时重拉"：从小程序的手牌详情返回时组件不会重新挂载，
+  // 只在 useEffect 里拉数据会一直显示旧画像（详情页编辑后同样踩过这个坑）
   const {
     data: profile,
-    loading,
-    refresh: loadProfile,
+    isFirstLoading,
     mutate: setProfile,
-  } = useRequest(async () => transformReviewProfileFromApi(await reviewApi.getProfile()), {
-    onError: () => Taro.showToast({ title: '画像加载失败', icon: 'none' }),
-  });
-
-  // 用 useDidShow 而不是 useEffect：从小程序的手牌详情返回时组件不会重新挂载，
-  // 只在 useEffect 里拉数据会一直显示旧画像（详情页编辑后同样踩过这个坑）
-  useDidShow(() => {
-    loadProfile();
-  });
+  } = usePageData(
+    async () => transformReviewProfileFromApi(await reviewApi.getProfile()),
+    {
+      onError: () => Taro.showToast({ title: '画像加载失败', icon: 'none' }),
+    }
+  );
 
   // 钻取某个漏洞的历史证据
   const {
@@ -115,9 +114,9 @@ const ReviewProfilePage: React.FC = () => {
   }, []);
 
   if (!isAuthenticated) return <View />;
-  // 只在"还没有任何数据"时占满整页。
-  // useDidShow 每次回到本页都会 refresh，若只看 loading 会每次闪一下全屏加载态
-  if (loading && !profile) return <Loading fullPage text='加载画像' />;
+  // 只在"还没有任何数据"时占满整页。回到本页会静默重拉，
+  // 那时若也走这个分支，页面会整个卸载重建、滚动位置归零
+  if (isFirstLoading) return <Loading fullPage text='加载画像' />;
 
   const hasData =
     !!profile && (profile.handsReviewed > 0 || profile.leaks.length > 0 || !!profile.summary);

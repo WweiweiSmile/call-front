@@ -1,11 +1,18 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { ListResponse } from '../models/service';
+import { useRefreshOnShow } from './useRefreshOnShow';
 
 export interface UseLoadMoreOptions<TParams = any> {
   defaultCurrent?: number;
   defaultPageSize?: number;
   defaultParams?: TParams;
   autoLoad?: boolean;
+  /**
+   * 页面重新可见时自动回到第一页刷新，默认 true。
+   * 交给本 hook 统一处理，省得每个分页页面各写一遍 useDidShow(refresh) ——
+   * 那样首屏会白拉两次（onShow 首次也触发，autoLoad 已经拉过了）
+   */
+  refreshOnShow?: boolean;
 }
 
 export interface UseLoadMoreResult<TData, TParams = any> {
@@ -34,6 +41,7 @@ export function useLoadMore<TData, TParams = any>(
     defaultPageSize = 10,
     defaultParams,
     autoLoad = true,
+    refreshOnShow = true,
   } = options;
 
   const [data, setData] = useState<TData[]>([]);
@@ -159,6 +167,10 @@ export function useLoadMore<TData, TParams = any>(
       refresh();
     }
   }, [autoLoad, refresh]);
+
+  // 回到本页时刷新。放在 hook 内部而不是让页面自己写，是因为
+  // "首屏别拉两次"这个细节每个页面都会写错一次
+  useRefreshOnShow(refresh, refreshOnShow);
 
   // 监听 params 变化
   useEffect(() => {

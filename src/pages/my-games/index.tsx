@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback, useState, useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro from '@tarojs/taro';
 import { useAppStore } from '../../store';
 import { useAuthStore } from '../../store/auth';
 import { useRequireAuth, FilterTabs, LoadMore, EmptyState, GameCard, TabHeader, PageLayout, BottomTabBar } from '../../components';
@@ -65,11 +65,6 @@ const MyGamesPage: React.FC = () => {
     const statusParam = filterType === 'all' ? undefined : filterType;
     setParams({ status: statusParam });
   }, [filterType, setParams]);
-
-  // 页面显示时刷新数据
-  useDidShow(() => {
-    refresh();
-  });
 
   const currentUser = user;
 

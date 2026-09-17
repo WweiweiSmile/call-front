@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { useRequest } from 'ahooks';
+import { usePageData } from '../../hooks';
 import { gameApi, reviewApi } from '../../services/api';
 import {
   DEFAULT_TABLE_SIZE,
@@ -83,13 +84,17 @@ export function useReviewForm(handId?: string) {
   const [draftHydrated, setDraftHydrated] = useState(false);
 
   // ---------- 编辑模式：载入手牌 ----------
-  // ready 保证新建模式下不发请求，loading 也就天然是 false，
-  // 与原来 useState(isEditMode) 的语义一致
-  const { loading } = useRequest(
+  // ready 保证新建模式下不发请求，isFirstLoading 也就天然是 false，
+  // 与原来 useState(isEditMode) 的语义一致。
+  //
+  // refreshOnShow 必须关掉：这是个表单页，回到本页时重拉会走 onSuccess 里的
+  // setForm，把用户填了一半的内容直接冲掉
+  const { isFirstLoading: loading } = usePageData(
     async () => (handId ? await reviewApi.getHand(handId) : null),
     {
       ready: !!handId,
       refreshDeps: [handId],
+      refreshOnShow: false,
       onSuccess: (hand) => {
         if (!hand) return;
         setForm({

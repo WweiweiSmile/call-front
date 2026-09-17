@@ -1,10 +1,11 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {Text, View} from '@tarojs/components';
 import {Toast} from '@nutui/nutui-react-taro';
-import {useRouter, useDidShow} from '@tarojs/taro';
+import {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {scoreRequestApi} from '../../services/api';
 import {transformScoreRequestListFromApi} from '../../models';
+import {usePageData} from '../../hooks';
 import {
   useRequireAuth,
   Loading,
@@ -26,6 +27,9 @@ const STATUS_TABS = [
   {value: 'rejected', label: '已驳回'},
 ];
 
+/** 列表没数据时的稳定空引用，避免 usePageData 的 data 每轮都换新数组 */
+const EMPTY_REQUESTS: FrontendScoreRequest[] = [];
+
 /** 我提交的存取分申请 */
 const MyScoreRequestsPage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
@@ -35,14 +39,11 @@ const MyScoreRequestsPage: React.FC = () => {
   const gameName = decodeParam(router.params?.gameName as string);
 
   const [status, setStatus] = useState('all');
-  const [requests, setRequests] = useState<FrontendScoreRequest[]>([]);
-  const [pageLoading, setPageLoading] = useState(true);
   const [cancelTarget, setCancelTarget] = useState<FrontendScoreRequest | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
-  const loadRequests = useCallback(async () => {
-    try {
-      setPageLoading(true);
+  const {data: requests = EMPTY_REQUESTS, isFirstLoading, refresh: loadRequests} = usePageData(
+    async () => {
       const response: any = await scoreRequestApi.getList({
         gameId: gameId || undefined,
         scope: 'mine',
@@ -50,22 +51,17 @@ const MyScoreRequestsPage: React.FC = () => {
         page: 1,
         page_size: 50,
       });
-      setRequests(transformScoreRequestListFromApi(response.list || []));
-    } catch (error: any) {
-      console.error('加载申请列表失败:', error);
-      Toast.show('my-score-requests-toast', {content: error.message || '加载失败'});
-    } finally {
-      setPageLoading(false);
+      return transformScoreRequestListFromApi(response.list || []);
+    },
+    {
+      // 切筛选标签、换场次都要重拉
+      refreshDeps: [gameId, status],
+      onError: (error) => {
+        console.error('加载申请列表失败:', error);
+        Toast.show('my-score-requests-toast', {content: error.message || '加载失败'});
+      },
     }
-  }, [gameId, status]);
-
-  useEffect(() => {
-    loadRequests();
-  }, [loadRequests]);
-
-  useDidShow(() => {
-    loadRequests();
-  });
+  );
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancelTarget) return;
@@ -107,7 +103,7 @@ const MyScoreRequestsPage: React.FC = () => {
         </>
       }
     >
-      {pageLoading ? (
+      {isFirstLoading ? (
         <Loading text='加载中' subtitle='正在获取申请记录...' fullPage />
       ) : requests.length === 0 ? (
         <EmptyState text='暂无申请记录' />

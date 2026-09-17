@@ -1,11 +1,12 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {Input, Text, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
-import {useRouter, useDidShow} from '@tarojs/taro';
+import {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {scoreRequestApi} from '../../services/api';
 import {transformScoreRequestListFromApi} from '../../models';
 import {useMessageStore} from '../../store/messageStore';
+import {usePageData} from '../../hooks';
 import {
   useRequireAuth,
   Loading,
@@ -19,6 +20,9 @@ import {
 import type {FrontendScoreRequest, FrontendScoreRequestStatus} from '../../models/types';
 import {decodeParam} from '../../utils/url';
 import './index.less';
+
+/** 列表没数据时的稳定空引用，避免 usePageData 的 data 每轮都换新数组 */
+const EMPTY_REQUESTS: FrontendScoreRequest[] = [];
 
 const STATUS_TABS = [
   {value: 'pending', label: '待审核'},
@@ -35,21 +39,15 @@ const ScoreRequestReviewPage: React.FC = () => {
   const gameName = decodeParam(router.params?.gameName as string);
 
   const [status, setStatus] = useState<FrontendScoreRequestStatus>('pending');
-  const [requests, setRequests] = useState<FrontendScoreRequest[]>([]);
-  const [pageLoading, setPageLoading] = useState(true);
   const [processingId, setProcessingId] = useState('');
   const [rejectTarget, setRejectTarget] = useState<FrontendScoreRequest | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
   const refreshPending = useMessageStore((state) => state.refreshPending);
 
-  const loadRequests = useCallback(async () => {
-    if (!gameId) {
-      setPageLoading(false);
-      return;
-    }
-    try {
-      setPageLoading(true);
+  const {data: requests = EMPTY_REQUESTS, isFirstLoading, refresh: loadRequests} = usePageData(
+    async () => {
+      if (!gameId) return EMPTY_REQUESTS;
       const response: any = await scoreRequestApi.getList({
         gameId,
         scope: 'review',
@@ -57,26 +55,20 @@ const ScoreRequestReviewPage: React.FC = () => {
         page: 1,
         page_size: 50,
       });
-      setRequests(transformScoreRequestListFromApi(response.list || []));
-    } catch (error: any) {
-      console.error('加载申请列表失败:', error);
-      Toast.show('score-request-review-toast', {content: error.message || '加载失败'});
-    } finally {
-      setPageLoading(false);
+      return transformScoreRequestListFromApi(response.list || []);
+    },
+    {
+      refreshDeps: [gameId, status],
+      // 每次拉到列表顺手更新场次详情的待审角标
+      onSuccess: () => {
+        if (gameId) refreshPending(gameId);
+      },
+      onError: (error) => {
+        console.error('加载申请列表失败:', error);
+        Toast.show('score-request-review-toast', {content: error.message || '加载失败'});
+      },
     }
-  }, [gameId, status]);
-
-  useEffect(() => {
-    loadRequests();
-  }, [loadRequests]);
-
-  // 退回本页时刷新（可能刚审完一条）
-  useDidShow(() => {
-    loadRequests();
-    if (gameId) {
-      refreshPending(gameId);
-    }
-  });
+  );
 
   const handleApprove = useCallback(async (request: FrontendScoreRequest) => {
     try {
@@ -143,7 +135,7 @@ const ScoreRequestReviewPage: React.FC = () => {
         </>
       }
     >
-      {pageLoading ? (
+      {isFirstLoading ? (
         <Loading text='加载中' subtitle='正在获取申请列表...' fullPage />
       ) : requests.length === 0 ? (
         <EmptyState text='暂无相关申请' />

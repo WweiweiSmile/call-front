@@ -1,6 +1,6 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Text, View } from '@tarojs/components';
-import Taro, { useDidShow, useRouter } from '@tarojs/taro';
+import Taro, { useRouter } from '@tarojs/taro';
 import { useRequest } from 'ahooks';
 import dayjs from 'dayjs';
 import {
@@ -15,6 +15,7 @@ import {
   useRequireAuth,
 } from '../../components';
 import { useAnalysis } from './useAnalysis';
+import { usePageData, useRefreshOnShow } from '../../hooks';
 import { reviewApi } from '../../services/api';
 import { transformReviewHandFromApi } from '../../models';
 import {
@@ -42,12 +43,8 @@ const ReviewDetailPage: React.FC = () => {
   const { analysis, aiStatus, tagNameByCode, triggering, trigger, reload } = useAnalysis(handId);
 
   // 手牌详情。ready + refreshDeps 让它在 handId 就绪时自动加载，
-  // run() 保留给"从编辑页返回"时手动重拉
-  const {
-    data: hand,
-    loading,
-    run: loadHand,
-  } = useRequest(
+  // 回到本页时（从编辑页返回、或切回标签页）由 usePageData 内部重拉
+  const { data: hand, isFirstLoading } = usePageData(
     async (): Promise<FrontendReviewHand> =>
       transformReviewHandFromApi(await reviewApi.getHand(handId as string)),
     {
@@ -57,19 +54,9 @@ const ReviewDetailPage: React.FC = () => {
     }
   );
 
-  // 从编辑页返回时重新拉一次，否则页面还显示修改前的内容。
-  // 用 ref 跳过首次触发：初次进入已经由上面的 effect 加载过了，
-  // 不跳过会白拉一次接口
-  const isFirstShow = useRef(true);
-  useDidShow(() => {
-    if (isFirstShow.current) {
-      isFirstShow.current = false;
-      return;
-    }
-    loadHand();
-    // 手牌可能被改过，分析结论也要重新取，否则会继续展示已过期的内容
-    reload();
-  });
+  // 分析结论要跟着手牌一起刷：手牌被改过之后，旧结论就不再对应当前内容了。
+  // 单独注册一次，因为 usePageData 只管它自己那份数据
+  useRefreshOnShow(reload);
 
   // 触发分析前先确认：这会消耗一次额度，用户应当知情
   const handleAnalyze = useCallback(async () => {
@@ -120,7 +107,9 @@ const ReviewDetailPage: React.FC = () => {
   }, [hand]);
 
   if (!isAuthenticated) return <View />;
-  if (loading) return <Loading fullPage text='加载手牌' />;
+  // 只有首次加载才铺满屏。回到本页会静默重拉，那时把内容换成 Loading
+  // 会把整页卸载重建，滚动位置直接归零
+  if (isFirstLoading) return <Loading fullPage text='加载手牌' />;
 
   if (!hand) {
     return (

@@ -1,14 +1,19 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React from 'react';
 import {Text, View} from '@tarojs/components';
 import {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {transactionApi} from '../../services/api';
 import {transformTransactionListFromApi} from '../../models';
+import {usePageData} from '../../hooks';
 import {useRequireAuth, Loading, PageHeader, PageLayout} from '../../components';
 import type {FrontendTransaction} from '../../models/types';
 import './index.less';
 
 const ALL_PAGE_SIZE = 1000;
+
+/** 没有数据时的稳定空值，避免渲染层每轮都拿到新对象 */
+const EMPTY_TRANSACTIONS: FrontendTransaction[] = [];
+const EMPTY_RESULT = {list: EMPTY_TRANSACTIONS, total: 0};
 
 const TransactionRecordsPage: React.FC = () => {
   const {isAuthenticated} = useRequireAuth();
@@ -18,39 +23,29 @@ const TransactionRecordsPage: React.FC = () => {
   const userId = (router.params?.userId as string) || undefined;
   const viewMode = (router.params?.viewMode as string) || 'self';
 
-  const [transactions, setTransactions] = useState<FrontendTransaction[]>([]);
-  const [total, setTotal] = useState(0);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
 
-  // 加载所有交易记录
-  const loadAllTransactions = useCallback(async () => {
-    if (!gameId) {
-      setPageLoading(false);
-      return;
-    }
-    try {
-      setPageLoading(true);
-      setLoadError('');
+  const {data, isFirstLoading, error} = usePageData(
+    async () => {
+      if (!gameId) return EMPTY_RESULT;
       const params: any = {page: 1, page_size: ALL_PAGE_SIZE};
       if (userId) {
         params.user_id = userId;
       }
       const response: any = await transactionApi.getGameTransactions(gameId, params);
-      const list = transformTransactionListFromApi(response.list || []);
-      setTransactions(list);
-      setTotal(response.total || 0);
-    } catch (error: any) {
-      console.error('加载交易记录失败:', error);
-      setLoadError(error.message || '加载失败');
-    } finally {
-      setPageLoading(false);
+      return {
+        list: transformTransactionListFromApi(response.list || []),
+        total: response.total || 0,
+      };
+    },
+    {
+      refreshDeps: [gameId, userId],
+      onError: (e) => console.error('加载交易记录失败:', e),
     }
-  }, [gameId, userId]);
+  );
 
-  useEffect(() => {
-    loadAllTransactions();
-  }, [loadAllTransactions]);
+  const transactions = data?.list ?? EMPTY_TRANSACTIONS;
+  const total = data?.total ?? 0;
+  const loadError = error?.message || '';
 
   // 如果未认证，不渲染内容
   if (!isAuthenticated || !gameId) {
@@ -65,7 +60,7 @@ const TransactionRecordsPage: React.FC = () => {
         <>
           <PageHeader title='操作记录' showBack />
           {/* 条数信息固定在顶部，不随列表滚动 */}
-          {!pageLoading && !loadError && transactions.length > 0 && (
+          {!isFirstLoading && !loadError && transactions.length > 0 && (
             <View className='total-info'>
               <Text className='total-text'>共 {total} 条操作记录</Text>
             </View>
@@ -73,7 +68,7 @@ const TransactionRecordsPage: React.FC = () => {
         </>
       }
     >
-      {pageLoading ? (
+      {isFirstLoading ? (
         <Loading text='加载中' subtitle='正在获取操作记录...' fullPage />
       ) : loadError ? (
         <View className='error-state'>

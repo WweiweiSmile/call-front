@@ -1,7 +1,7 @@
 import React, {useCallback, useMemo, useState} from 'react';
 import {Input, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
-import Taro, {useDidShow} from '@tarojs/taro';
+import Taro from '@tarojs/taro';
 import {useAppStore} from '../../store';
 import {useAuthStore} from '../../store/auth';
 import {useRequireAuth, LoadMore, EmptyState, GameCard, TabHeader, PageLayout, BottomTabBar} from '../../components';
@@ -43,11 +43,6 @@ const GamesPage: React.FC = () => {
   const allGames = useMemo((): Game[] => {
     return transformGameListFromApi(rawGames);
   }, [rawGames]);
-
-  // 页面显示时刷新数据
-  useDidShow(() => {
-    refresh();
-  });
 
   const handleEnterGame = useCallback((gameId: string) => {
     setCurrentGameId(gameId);

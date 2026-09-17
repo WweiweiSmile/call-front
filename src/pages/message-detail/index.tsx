@@ -1,9 +1,10 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {Input, Text, Textarea, View} from '@tarojs/components';
 import {Button, Toast} from '@nutui/nutui-react-taro';
-import {useRouter, useDidShow} from '@tarojs/taro';
+import {useRouter} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {messageApi, scoreRequestApi, tagSuggestionApi} from '../../services/api';
+import {usePageData} from '../../hooks';
 import {transformMessageDetailFromApi} from '../../models';
 import {useMessageStore} from '../../store/messageStore';
 import {
@@ -14,7 +15,7 @@ import {
   PageLayout,
   ConfirmDialog,
 } from '../../components';
-import type {FrontendMessageDetail, LeakTagCategory} from '../../models/types';
+import type {LeakTagCategory} from '../../models/types';
 import './index.less';
 
 /** 标签分类的中文名，与标签字典的分类一一对应 */
@@ -54,8 +55,6 @@ const MessageDetailPage: React.FC = () => {
   const router = useRouter();
   const messageId = (router.params?.id as string) || '';
 
-  const [detail, setDetail] = useState<FrontendMessageDetail | null>(null);
-  const [pageLoading, setPageLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [rejectVisible, setRejectVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -64,31 +63,20 @@ const MessageDetailPage: React.FC = () => {
   const refreshUnread = useMessageStore((state) => state.refreshUnread);
   const refreshPending = useMessageStore((state) => state.refreshPending);
 
-  const loadDetail = useCallback(async () => {
-    if (!messageId) {
-      setPageLoading(false);
-      return;
+  // 回到本页时重拉是有意义的：另一个管理员可能已经处理了这条待审。
+  // 刷新期间不铺全屏 loading（见 isFirstLoading），所以不会有"页面被刷掉"的观感
+  const {
+    data: detail,
+    isFirstLoading,
+    refresh: loadDetail,
+  } = usePageData(
+    async () => transformMessageDetailFromApi(await messageApi.getDetail(messageId)),
+    {
+      ready: !!messageId,
+      refreshDeps: [messageId],
+      onError: (error) => console.error('加载消息详情失败:', error),
     }
-    try {
-      setPageLoading(true);
-      const response: any = await messageApi.getDetail(messageId);
-      setDetail(transformMessageDetailFromApi(response));
-    } catch (error: any) {
-      console.error('加载消息详情失败:', error);
-      setDetail(null);
-    } finally {
-      setPageLoading(false);
-    }
-  }, [messageId]);
-
-  useEffect(() => {
-    loadDetail();
-  }, [loadDetail]);
-
-  // 退回本页时重拉：单据可能在别处已被处理
-  useDidShow(() => {
-    loadDetail();
-  });
+  );
 
   /** 审批动作成功后：刷新红点与角标，并重拉详情让它切到"已处理"态 */
   const afterHandled = useCallback(async () => {
@@ -308,7 +296,7 @@ const MessageDetailPage: React.FC = () => {
         </>
       }
     >
-      {pageLoading ? (
+      {isFirstLoading ? (
         <Loading text='加载中' subtitle='正在获取消息...' fullPage />
       ) : !detail ? (
         <EmptyState text='消息不存在' subtext='它可能已被删除' />
