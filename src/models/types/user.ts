@@ -9,6 +9,7 @@ export interface User {
   nickname: string;
   avatar: string;
   status: 'active' | 'inactive';
+  role: 'user' | 'admin';
   created_at: string;
   updated_at: string;
 }

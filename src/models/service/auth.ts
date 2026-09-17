@@ -16,12 +16,17 @@ export interface RegisterRequest {
   password: string;
 }
 
+// 用户角色
+export type UserRole = 'user' | 'admin';
+
 // 用户信息
 export interface UserInfo {
   id: number;
   username: string;
   nickname: string;
   avatar: string;
+  /** 前端据此显示管理员入口；权限判定在后端，这个值只用于渲染 */
+  role: UserRole;
 }
 
 // 登录响应

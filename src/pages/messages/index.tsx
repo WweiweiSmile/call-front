@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {Text, View} from '@tarojs/components';
 import {Toast} from '@nutui/nutui-react-taro';
-import {useDidShow} from '@tarojs/taro';
+import Taro, {useDidShow} from '@tarojs/taro';
 import dayjs from 'dayjs';
 import {messageApi} from '../../services/api';
 import {transformMessageListFromApi} from '../../models';
@@ -80,11 +80,18 @@ const MessagesPage: React.FC = () => {
           <View
             key={message.id}
             className={`message-card ${message.isRead ? 'read' : 'unread'}`}
+            onClick={() =>
+              Taro.navigateTo({url: `/pages/message-detail/index?id=${message.id}`})
+            }
             data-testid={`message-${message.id}`}
           >
             <View className='message-header'>
               <Text className='message-title'>{message.title}</Text>
-              {!message.isRead && <View className='unread-dot' />}
+              <View className='message-header-right'>
+                {/* 待处理是"还有事没做"的标记。它不会被自动已读清掉，所以要显式标出来 */}
+                {message.actionable && <Text className='pending-badge'>待处理</Text>}
+                {!message.isRead && <View className='unread-dot' />}
+              </View>
             </View>
             <Text className='message-content'>{message.content}</Text>
             <Text className='message-time'>

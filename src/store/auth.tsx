@@ -8,6 +8,8 @@ export interface User {
   username: string;
   nickname: string;
   avatar?: string;
+  /** 前端据此显示管理员入口；权限判定在后端 */
+  role: 'user' | 'admin';
 }
 
 // 认证状态
@@ -84,6 +86,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         username: response.user.username,
         nickname: response.user.nickname,
         avatar: response.user.avatar,
+        // 老后端不带 role 时退化成普通用户，不会误开管理员入口
+        role: response.user.role === 'admin' ? 'admin' : 'user',
       };
 
       saveToStorage(response.token, user);
@@ -111,6 +115,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         username: response.user.username,
         nickname: response.user.nickname,
         avatar: response.user.avatar,
+        // 老后端不带 role 时退化成普通用户，不会误开管理员入口
+        role: response.user.role === 'admin' ? 'admin' : 'user',
       };
 
       saveToStorage(response.token, user);

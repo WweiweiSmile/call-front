@@ -326,3 +326,26 @@ export interface FrontendReviewMessage {
   content: string;
   createdAt: string;
 }
+
+// ============================================
+// AI 新标签待审队列（M2）
+// 对应后端: models/review_tag_suggestion.go
+// ============================================
+
+/** 标签建议状态 */
+export type TagSuggestionStatus = 'pending' | 'approved' | 'rejected';
+
+/** 前端使用的标签建议 */
+export interface FrontendTagSuggestion {
+  id: string;
+  name: string;
+  /** 模型给出的理由，审批时预填进判定说明 */
+  reason: string;
+  status: TagSuggestionStatus;
+  /** 被提议的次数。越多越说明这个漏洞反复出现 */
+  hitCount: number;
+  reviewRemark: string;
+  reviewedAt?: string;
+  tagId?: string;
+  createdAt: string;
+}

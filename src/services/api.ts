@@ -10,3 +10,4 @@ export * from './transactionApi';
 export * from './scoreRequestApi';
 export * from './messageApi';
 export * from './reviewApi';
+export * from './tagSuggestionApi';

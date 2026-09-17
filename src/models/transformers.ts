@@ -6,7 +6,8 @@ import { DEFAULT_TABLE_SIZE } from './types/review';
 import type { GameResponse } from './service/game';
 import type { TransactionResponse, UserBalanceResponse } from './service/transaction';
 import type { ScoreRequestResponse } from './service/scoreRequest';
-import type { MessageResponse } from './service/message';
+import type { MessageDetailResponse, MessageResponse } from './service/message';
+import type { TagSuggestionResponse } from './service/tagSuggestion';
 import type {
   AIStatusResponse,
   ReviewAnalysisResponse,
@@ -24,12 +25,14 @@ import type {
   FrontendUser,
   FrontendScoreRequest,
   FrontendMessage,
+  FrontendMessageDetail,
   FrontendReviewHand,
   FrontendReviewInsight,
   FrontendReviewMessage,
   FrontendReviewProfile,
   ReviewInsight,
   ReviewLeakTag,
+  FrontendTagSuggestion,
 } from './types';
 
 /**
@@ -157,11 +160,16 @@ export function transformMessageFromApi(apiMessage: MessageResponse): FrontendMe
   return {
     id: String(apiMessage.id),
     type: apiMessage.type,
+    // 后端未重启（旧版本不带这两个字段）时退化成只读通知，不白屏
+    category: apiMessage.category === 'approval' ? 'approval' : 'notice',
     title: apiMessage.title,
     content: apiMessage.content,
     gameId: apiMessage.gameId != null ? String(apiMessage.gameId) : undefined,
     requestId: apiMessage.requestId != null ? String(apiMessage.requestId) : undefined,
+    suggestionId:
+      apiMessage.suggestionId != null ? String(apiMessage.suggestionId) : undefined,
     isRead: apiMessage.isRead,
+    actionable: !!apiMessage.actionable,
     createdAt: apiMessage.createdAt,
   };
 }
@@ -171,6 +179,40 @@ export function transformMessageFromApi(apiMessage: MessageResponse): FrontendMe
  */
 export function transformMessageListFromApi(apiMessages: MessageResponse[]): FrontendMessage[] {
   return apiMessages.map(transformMessageFromApi);
+}
+
+/**
+ * 将 API 返回的消息详情转换为前端类型
+ */
+export function transformMessageDetailFromApi(apiDetail: MessageDetailResponse): FrontendMessageDetail {
+  return {
+    ...transformMessageFromApi(apiDetail),
+    scoreRequest: apiDetail.scoreRequest
+      ? transformScoreRequestFromApi(apiDetail.scoreRequest)
+      : undefined,
+    tagSuggestion: apiDetail.tagSuggestion
+      ? transformTagSuggestionFromApi(apiDetail.tagSuggestion)
+      : undefined,
+  };
+}
+
+/**
+ * 将 API 返回的标签建议转换为前端类型
+ */
+export function transformTagSuggestionFromApi(
+  apiSuggestion: TagSuggestionResponse
+): FrontendTagSuggestion {
+  return {
+    id: String(apiSuggestion.id),
+    name: apiSuggestion.name,
+    reason: apiSuggestion.reason,
+    status: apiSuggestion.status,
+    hitCount: apiSuggestion.hitCount,
+    reviewRemark: apiSuggestion.reviewRemark,
+    reviewedAt: apiSuggestion.reviewedAt,
+    tagId: apiSuggestion.tagId != null ? String(apiSuggestion.tagId) : undefined,
+    createdAt: apiSuggestion.createdAt,
+  };
 }
 
 /**

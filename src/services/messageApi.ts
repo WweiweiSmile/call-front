@@ -1,5 +1,6 @@
 import { request } from './request';
 import type {
+  MessageDetailResponse,
   MessageListResponse,
   UnreadCountResponse,
   GetMessagesParams,
@@ -15,6 +16,11 @@ export const messageApi = {
     if (params?.page_size) query.append('page_size', params.page_size.toString());
     const queryString = query.toString();
     return request<MessageListResponse>(`/messages${queryString ? `?${queryString}` : ''}`);
+  },
+
+  // 单条消息详情。审批类消息会带关联申请单，供详情页核对后再通过/驳回
+  getDetail: (messageId: string) => {
+    return request<MessageDetailResponse>(`/messages/${messageId}`);
   },
 
   // 未读消息数（轮询用）
