@@ -114,6 +114,13 @@
       }
     }
 
+    // 最近 30 手没再出现过。压成弱化的绿色，跟"还在犯"的红色计数区分开
+    &.improved {
+      .leak-name {
+        color: @text-secondary;
+      }
+    }
+
     .leak-main {
       flex: 1;
       min-width: 0;
@@ -165,6 +172,16 @@
         background: fade(@danger, 18%);
         color: @danger;
       }
+    }
+
+    .leak-improved-tag {
+      .flex-center();
+      padding: 3px 8px;
+      border-radius: @radius-sm;
+      font-size: @font-size-xs;
+      font-weight: 600;
+      background: fade(@success, 12%);
+      color: @success;
     }
 
     .leak-arrow {

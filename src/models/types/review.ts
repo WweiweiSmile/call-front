@@ -243,9 +243,14 @@ export type InsightKind = 'leak' | 'strength';
 export interface ProfileLeakStat {
   tagCode: string;
   name: string;
-  /** 出现次数 */
+  /** 统计窗口（最近 30 手 / 90 天内）的出现次数 */
   count: number;
-  /** 最近一次出现（YYYY-MM-DD） */
+  /**
+   * 统计窗口之外的累计次数。
+   * count 为 0 而这个数很大，说明以前常犯、最近没再出现 —— 是进步，不是数据缺失
+   */
+  historicCount: number;
+  /** 最近一次出现（YYYY-MM-DD），含窗口之外的历史 */
   lastSeenAt: string;
   /** 平均严重度，原始浮点数，展示时再格式化 */
   avgSeverity: number;

@@ -16,6 +16,12 @@ import { positionLabel } from '../../utils/poker';
 import type { ProfileLeakStat } from '../../models/types/review';
 import './index.less';
 
+/**
+ * 画像的统计窗口手数。与后端 ProfileWindowHands 对齐 ——
+ * 后端只统计最近这么多手，前端拿它解释"为什么这条显示已改善"
+ */
+const PROFILE_WINDOW_HANDS = 30;
+
 /** 严重度的展示文案与配色档位，与 AnalysisPanel 的口径保持一致 */
 const SEVERITY_TEXT: Record<number, string> = {
   1: '轻微',
@@ -176,31 +182,44 @@ const ReviewProfilePage: React.FC = () => {
           {/* ---------- 漏洞排行 ---------- */}
           <View className='section'>
             <Text className='section-title'>高频漏洞</Text>
-            <Text className='section-hint'>点任意一条，看历史上是哪几手牌犯的</Text>
+            <Text className='section-hint'>
+              按最近 {PROFILE_WINDOW_HANDS} 手统计 · 点任意一条看是哪几手牌犯的
+            </Text>
 
             {profile!.leaks.length === 0 ? (
               <Text className='summary-empty'>还没有记录到漏洞，继续复盘吧</Text>
             ) : (
               profile!.leaks.map((leak) => {
                 const expanded = expandedTag === leak.tagCode;
+                // 最近 30 手没再出现、但更早常犯 —— 这是进步，不能显示成"出现 0 次"
+                const improved = leak.count === 0 && leak.historicCount > 0;
                 return (
                   <View key={leak.tagCode} className='leak-block'>
                     <View
-                      className={`leak-row ${expanded ? 'expanded' : ''}`}
+                      className={`leak-row ${expanded ? 'expanded' : ''} ${
+                        improved ? 'improved' : ''
+                      }`}
                       onClick={() => handleToggleTag(leak)}
                       data-testid={`leak-${leak.tagCode}`}
                     >
                       <View className='leak-main'>
                         <Text className='leak-name'>{leak.name}</Text>
                         <Text className='leak-sub'>
-                          最近 {leak.lastSeenAt} · 平均严重度{' '}
-                          {SEVERITY_TEXT[severityLevel(leak.avgSeverity)]}
+                          {improved
+                            ? `最近 ${PROFILE_WINDOW_HANDS} 手未再出现 · 更早累计 ${leak.historicCount} 次`
+                            : `最近 ${leak.lastSeenAt} · 平均严重度 ${
+                                SEVERITY_TEXT[severityLevel(leak.avgSeverity)]
+                              }`}
                         </Text>
                       </View>
                       <View className='leak-right'>
-                        <Text className={`leak-count s${severityLevel(leak.avgSeverity)}`}>
-                          {leak.count}
-                        </Text>
+                        {improved ? (
+                          <Text className='leak-improved-tag'>已改善</Text>
+                        ) : (
+                          <Text className={`leak-count s${severityLevel(leak.avgSeverity)}`}>
+                            {leak.count}
+                          </Text>
+                        )}
                         <Text className='leak-arrow'>{expanded ? '▾' : '▸'}</Text>
                       </View>
                     </View>
