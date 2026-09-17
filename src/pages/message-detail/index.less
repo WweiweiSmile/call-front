@@ -1,0 +1,195 @@
+// ============================================
+// 消息详情 - 样式
+// ============================================
+
+@import '../../styles/theme.less';
+
+.message-detail-page {
+  .message-detail-content {
+    padding: 16px;
+  }
+
+  .detail-card {
+    background: @bg-secondary;
+    border: 1px solid @border-color;
+    border-radius: @radius-lg;
+    box-shadow: @shadow-sm;
+    padding: 16px;
+  }
+
+  .detail-title {
+    display: block;
+    font-size: 17px;
+    font-weight: 600;
+    color: @text-primary;
+    line-height: 1.4;
+  }
+
+  .detail-time {
+    display: block;
+    font-size: 12px;
+    color: @text-tertiary;
+    margin-top: 6px;
+  }
+
+  .detail-content {
+    display: block;
+    font-size: 15px;
+    color: @text-secondary;
+    line-height: 1.6;
+    margin-top: @spacing-md;
+    // 正文是自由文本，可能带换行
+    white-space: pre-wrap;
+  }
+
+  // 审批类消息附带的申请单信息
+  .request-block {
+    margin-top: @spacing-md;
+    padding-top: @spacing-md;
+    border-top: 1px solid @border-color;
+  }
+
+  .request-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: @spacing-md;
+    padding: 6px 0;
+
+    .request-label {
+      font-size: 13px;
+      color: @text-tertiary;
+      flex-shrink: 0;
+    }
+
+    .request-value {
+      font-size: 13px;
+      color: @text-primary;
+      text-align: right;
+      word-break: break-all;
+
+      &.deposit {
+        color: @success;
+      }
+
+      &.withdraw {
+        color: @danger;
+      }
+    }
+  }
+
+  // 底部审批按钮区
+  .approval-actions {
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+
+    .action-btn {
+      flex: 1;
+    }
+  }
+
+  .approval-handled {
+    padding: 12px 16px;
+    text-align: center;
+
+    .handled-label {
+      display: block;
+      font-size: 15px;
+      color: @text-secondary;
+    }
+
+    .handled-remark {
+      display: block;
+      font-size: 12px;
+      color: @text-tertiary;
+      margin-top: 6px;
+    }
+  }
+
+  // 标签建议的理由是长文本，要能换行、不截断
+  .suggestion-reason {
+    padding: 6px 0;
+
+    .reason-text {
+      display: block;
+      font-size: 13px;
+      color: @text-secondary;
+      line-height: 1.6;
+      margin-top: 4px;
+      word-break: break-all;
+    }
+  }
+
+  // 标签入库表单
+  .tag-form {
+    .tag-form-hint {
+      display: block;
+      font-size: 12px;
+      color: @text-tertiary;
+      margin-bottom: @spacing-sm;
+    }
+
+    .tag-form-label {
+      display: block;
+      font-size: 13px;
+      color: @text-secondary;
+      margin: @spacing-sm 0 4px;
+    }
+
+    .tag-form-input,
+    .tag-form-textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px 12px;
+      border: 1px solid @border-color;
+      border-radius: @radius-sm;
+      background: @bg-tertiary;
+      font-size: 14px;
+    }
+
+    .tag-form-textarea {
+      height: 64px;
+    }
+
+    .category-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .category-chip {
+        font-size: 13px;
+        padding: 6px 12px;
+        border: 1px solid @border-color;
+        border-radius: @radius-sm;
+        color: @text-secondary;
+        background: @bg-tertiary;
+
+        &.active {
+          color: #fff;
+          background: @primary;
+          border-color: @primary;
+        }
+      }
+    }
+  }
+
+  // 驳回理由弹窗（与审核页同款）
+  .reject-reason-box {
+    .reject-reason-hint {
+      display: block;
+      font-size: 13px;
+      color: @text-secondary;
+      margin-bottom: @spacing-sm;
+    }
+
+    .reject-reason-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid @border-color;
+      border-radius: @radius-sm;
+      background: @bg-tertiary;
+      font-size: 14px;
+    }
+  }
+}
