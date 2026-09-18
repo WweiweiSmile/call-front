@@ -1,17 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Taro from '@tarojs/taro';
 import { useRequest } from 'ahooks';
 import { usePageData } from '../../hooks';
-import { gameApi, reviewApi } from '../../services/api';
+import { gameApi, preferenceApi, reviewApi } from '../../services/api';
 import {
   DEFAULT_TABLE_SIZE,
   STREET_ORDER,
+  bbToInput,
   buildDefaultTitle,
   computePots,
+  inputToBb,
   isValidPositionForTableSize,
   positionsForTableSize,
   validateCardString,
 } from '../../utils/poker';
+import type { BlindConfig } from '../../utils/poker';
 import type {
   HandResult,
   Position,
@@ -35,6 +38,10 @@ export interface ReviewFormState {
   heroCards: string;
   heroStackBb: string;
   stakes: string;
+  /** 盲注与前注（BB）。空字符串表示没记录，底池退回不含盲注的口径 */
+  smallBlindBb: string;
+  bigBlindBb: string;
+  anteBb: string;
   board: string;
   villainCount: number;
   /** v1 只记录一个关键对手，其余归入"其他人" */
@@ -55,6 +62,11 @@ export const emptyFormState: ReviewFormState = {
   heroCards: '',
   heroStackBb: '100',
   stakes: '',
+  // 留空而不是写死 0.5/1：设置里的默认值要等偏好接口回来才填，
+  // 写死会让"接口还没回来"和"用户就是要这个值"分不清
+  smallBlindBb: '',
+  bigBlindBb: '',
+  anteBb: '',
   board: '',
   villainCount: 1,
   villainPosition: '',
@@ -106,6 +118,9 @@ export function useReviewForm(handId?: string) {
           heroCards: hand.heroCards,
           heroStackBb: String(hand.heroStackBb || ''),
           stakes: hand.stakes || '',
+          smallBlindBb: bbToInput(hand.smallBlindBb),
+          bigBlindBb: bbToInput(hand.bigBlindBb),
+          anteBb: bbToInput(hand.anteBb),
           board: hand.board || '',
           villainCount: hand.villainCount || 1,
           villainPosition: (hand.villains || []).find((v) => v.isKey)?.position || '',
@@ -135,12 +150,19 @@ export function useReviewForm(handId?: string) {
   );
 
   // ---------- 新建模式：恢复草稿 ----------
+  //
+  // draftHasBlinds 记下草稿里到底有没有盲注字段：老草稿（加这个功能之前存的）没有，
+  // 这时才该拿设置里的默认值填进去；草稿里已经有（哪怕是用户手动清空的空串）就一律听草稿的，
+  // 否则用户特意清空盲注、退出再进来又会被默认值填回来
+  const draftHasBlindsRef = useRef(false);
+
   useEffect(() => {
     if (handId) return;
     try {
       const raw = Taro.getStorageSync(DRAFT_STORAGE_KEY);
       if (raw) {
         const draft = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        draftHasBlindsRef.current = draft.smallBlindBb !== undefined;
         setForm({ ...emptyFormState, ...draft });
         setExpandedStreets(
           STREET_ORDER.filter((street) =>
@@ -170,6 +192,30 @@ export function useReviewForm(handId?: string) {
       // 存储失败不影响填写
     }
   }, [form, handId, loading, draftHydrated]);
+
+  // ---------- 新建模式：用设置里的默认盲注预填 ----------
+  // 「自动添加盲注和前注」就落在这里：打开录入页时盲注与前注已经按设置页里配好的
+  // 默认值填上，不用每次重新敲一遍，仍然可以就地改。
+  //
+  // 只在新建模式拉：编辑已有手牌要用这手牌自己存的值，拿默认值覆盖等于改历史数据
+  const { data: blindPreference } = useRequest(
+    () => preferenceApi.getPreferences(),
+    {
+      ready: !handId,
+      // 设置拉不到就留空（等于没记盲注），不该挡住录入主流程
+      onError: () => {},
+    }
+  );
+
+  useEffect(() => {
+    if (handId || !blindPreference || draftHasBlindsRef.current) return;
+    setForm((prev) => ({
+      ...prev,
+      smallBlindBb: bbToInput(blindPreference.smallBlindBb),
+      bigBlindBb: bbToInput(blindPreference.bigBlindBb),
+      anteBb: bbToInput(blindPreference.anteBb),
+    }));
+  }, [handId, blindPreference]);
 
   // ---------- 我的场次（用于可选关联） ----------
   // 场次列表拉不到不该挡住复盘录入，关联场次本来就是可选功能，所以错误静默
@@ -217,8 +263,26 @@ export function useReviewForm(handId?: string) {
     );
   }, []);
 
+  // ---------- 盲注 ----------
+  // 位置要一起带上：底池推算靠它把大小盲认到具体行动者头上，否则大盲跟注会被多算
+  const blinds: BlindConfig = useMemo(() => ({
+    smallBlindBb: inputToBb(form.smallBlindBb),
+    bigBlindBb: inputToBb(form.bigBlindBb),
+    anteBb: inputToBb(form.anteBb),
+    tableSize: form.tableSize,
+    heroPosition: form.heroPosition,
+    villainPosition: form.villainPosition,
+  }), [
+    form.smallBlindBb,
+    form.bigBlindBb,
+    form.anteBb,
+    form.tableSize,
+    form.heroPosition,
+    form.villainPosition,
+  ]);
+
   // ---------- 底池估算 ----------
-  const pots = useMemo(() => computePots(form.streets), [form.streets]);
+  const pots = useMemo(() => computePots(form.streets, blinds), [form.streets, blinds]);
 
   // ---------- 公共牌与街道的一致性 ----------
   // 用户选到转牌公共牌时，顺手把转牌这条街展开，省一次点击
@@ -248,6 +312,15 @@ export function useReviewForm(handId?: string) {
     // 直接提交出去的话后端也会拒，但报错不如这里说得清楚
     if (!isValidPositionForTableSize(form.heroPosition, form.tableSize)) {
       return `${form.tableSize} 人桌没有「${form.heroPosition}」这个位置，请重新选择`;
+    }
+
+    // 盲注要么都不填（不记盲注），要么至少有大盲 —— 大盲是折算基准，
+    // 只填小盲或前注没有意义。与后端 utils.ValidateBlinds 是同一份口径，两边不能有分歧
+    if (blinds.bigBlindBb === 0 && (blinds.smallBlindBb > 0 || blinds.anteBb > 0)) {
+      return '填了小盲或前注，就必须填大盲';
+    }
+    if (blinds.bigBlindBb > 0 && blinds.smallBlindBb > blinds.bigBlindBb) {
+      return '小盲不能大于大盲';
     }
 
     const cardError = validateCardString(form.heroCards);
@@ -336,6 +409,9 @@ export function useReviewForm(handId?: string) {
       heroCards: form.heroCards,
       heroStackBb: form.heroStackBb ? Number(form.heroStackBb) : 0,
       stakes: form.stakes.trim(),
+      smallBlindBb: blinds.smallBlindBb,
+      bigBlindBb: blinds.bigBlindBb,
+      anteBb: blinds.anteBb,
       board: form.board,
       villainCount: form.villainCount,
       villains,
@@ -347,7 +423,7 @@ export function useReviewForm(handId?: string) {
       resultAmount: form.resultAmount ? Number(form.resultAmount) : undefined,
       heroTags: form.heroTags,
     };
-  }, [form, potType]);
+  }, [form, potType, blinds]);
 
   // 提交。用 runAsync 是因为调用方要拿到成败来决定"是否返回上一页"
   const { runAsync: submitRequest, loading: submitting } = useRequest(
@@ -408,6 +484,7 @@ export function useReviewForm(handId?: string) {
     loading,
     submitting,
     pots,
+    blinds,
     potType,
     defaultTitle,
     myGames,

@@ -20,6 +20,7 @@ import {
   formatBB,
   positionLabel,
   positionsForTableSize,
+  preflopPotBb,
 } from '../../utils/poker';
 import { useReviewForm } from './useReviewForm';
 import type { HandResult, TableSize } from '../../models/types/review';
@@ -38,6 +39,7 @@ const ReviewCreatePage: React.FC = () => {
     loading,
     submitting,
     pots,
+    blinds,
     potType,
     defaultTitle,
     myGames,
@@ -220,6 +222,67 @@ const ReviewCreatePage: React.FC = () => {
               </View>
             </View>
           </View>
+        </View>
+
+        {/* ---------- 盲注与前注 ---------- */}
+        <View className='section'>
+          <Text className='section-title'>盲注与前注</Text>
+          <Text className='section-hint'>
+            默认值来自设置页，这里可以针对这手牌改。翻前底池会自动带上它们，
+            行动记录里不用再记一遍盲注
+          </Text>
+
+          <View className='field-row'>
+            <View className='field half'>
+              <Text className='field-label'>小盲</Text>
+              <View className='input-box'>
+                <Input
+                  className='input'
+                  type='digit'
+                  value={form.smallBlindBb}
+                  placeholder='0.5'
+                  onInput={(e) => setField('smallBlindBb', e.detail.value)}
+                />
+                <Text className='unit'>bb</Text>
+              </View>
+            </View>
+            <View className='field half'>
+              <Text className='field-label'>大盲</Text>
+              <View className='input-box'>
+                <Input
+                  className='input'
+                  type='digit'
+                  value={form.bigBlindBb}
+                  placeholder='1'
+                  onInput={(e) => setField('bigBlindBb', e.detail.value)}
+                />
+                <Text className='unit'>bb</Text>
+              </View>
+            </View>
+          </View>
+
+          <View className='field'>
+            <Text className='field-label'>前注</Text>
+            <View className='input-box'>
+              <Input
+                className='input'
+                type='digit'
+                value={form.anteBb}
+                placeholder='不打前注就留空'
+                onInput={(e) => setField('anteBb', e.detail.value)}
+              />
+              <Text className='unit'>bb</Text>
+            </View>
+            {blinds.anteBb > 0 && (
+              <Text className='field-note'>
+                前注每人一份，{form.tableSize} 人桌共 {formatBB(blinds.anteBb * form.tableSize)} bb
+              </Text>
+            )}
+          </View>
+
+          <Text className='pot-summary'>
+            翻前起始底池：{formatBB(preflopPotBb(blinds))} bb
+          </Text>
         </View>
 
         {/* ---------- 对手 ---------- */}

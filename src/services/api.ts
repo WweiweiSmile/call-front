@@ -11,3 +11,4 @@ export * from './scoreRequestApi';
 export * from './messageApi';
 export * from './reviewApi';
 export * from './tagSuggestionApi';
+export * from './preferenceApi';

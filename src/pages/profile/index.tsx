@@ -176,7 +176,10 @@ const ProfilePage: React.FC = () => {
           />
           <Cell
             title='⚙️ 设置'
-            onClick={() => {}}
+            onClick={() => {
+              Taro.navigateTo({ url: '/pages/settings/index' });
+            }}
+            data-testid="btn-settings"
           />
           <Cell
             title='📖 帮助中心'

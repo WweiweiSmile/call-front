@@ -31,6 +31,10 @@ export interface ReviewHandRequest {
   heroCards: string;
   heroStackBb?: number;
   stakes?: string;
+  /** 盲注与前注（BB）。三项都是 0 表示没记录，底池按不含盲注的老口径估算 */
+  smallBlindBb?: number;
+  bigBlindBb?: number;
+  anteBb?: number;
   board?: string;
   villainCount?: number;
   villains?: VillainInfo[];
@@ -53,6 +57,9 @@ export interface ReviewHandResponse {
   heroCards: string;
   heroStackBb: number;
   stakes: string;
+  smallBlindBb: number;
+  bigBlindBb: number;
+  anteBb: number;
   board: string;
   villainCount: number;
   villains: VillainInfo[];

@@ -22,6 +22,7 @@ export default defineAppConfig({
     'pages/review-create/index',
     'pages/review-detail/index',
     'pages/review-profile/index',
+    'pages/settings/index',
   ],
   entryPagePath: 'pages/login/index',
   window: {

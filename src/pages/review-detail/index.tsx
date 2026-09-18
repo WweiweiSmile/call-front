@@ -26,6 +26,7 @@ import {
   RESULT_LABEL,
   STREET_LABEL,
   STREET_ORDER,
+  blindsLabel,
   formatBB,
   positionLabel,
   tableSizeLabel,
@@ -106,6 +107,19 @@ const ReviewDetailPage: React.FC = () => {
     return count === 0 ? 0 : 5;
   }, [hand]);
 
+  // 盲注文案。没记盲注（含加这个功能之前的老手牌）时是空串，整行不渲染
+  const blindText = useMemo(() => {
+    if (!hand) return '';
+    return blindsLabel({
+      smallBlindBb: hand.smallBlindBb,
+      bigBlindBb: hand.bigBlindBb,
+      anteBb: hand.anteBb,
+      tableSize: hand.tableSize,
+      heroPosition: hand.heroPosition,
+      villainPosition: (hand.villains || []).find((v) => v.isKey)?.position || '',
+    });
+  }, [hand]);
+
   if (!isAuthenticated) return <View />;
   // 只有首次加载才铺满屏。回到本页会静默重拉，那时把内容换成 Loading
   // 会把整页卸载重建，滚动位置直接归零
@@ -158,6 +172,7 @@ const ReviewDetailPage: React.FC = () => {
               <Text className='meta-line'>
                 {tableSizeLabel(hand.tableSize)} · {POT_TYPE_LABEL[hand.potType]} · {hand.villainCount} 个对手
               </Text>
+              {blindText && <Text className='meta-line'>{blindText}</Text>}
             </View>
           </View>
 

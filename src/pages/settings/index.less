@@ -1,0 +1,131 @@
+// ============================================
+// 设置 - 默认盲注
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+// 页面骨架（100vh flex 列布局、内容区滚动、box-sizing、底部安全区）全部交给 PageLayout。
+// 不要在这里自己写：手写很容易漏掉 min-height: 0 与 box-sizing: border-box，
+// 症状分别是"内容区滚不动"和"整块内容右移、右侧被裁掉"
+.settings-page {
+  .settings-content {
+    padding: @spacing-md;
+  }
+
+  .section {
+    padding: @spacing-md;
+    margin-bottom: @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+    box-shadow: @shadow-sm;
+  }
+
+  .section-title {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .section-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: @text-tertiary;
+    line-height: 1.5;
+  }
+
+  // -------------------------------------------
+  // 字段
+  // -------------------------------------------
+
+  .field {
+    margin-top: @spacing-md;
+  }
+
+  .field-row {
+    display: flex;
+    flex-direction: row;
+    gap: @spacing-md;
+  }
+
+  .field.half {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: @text-secondary;
+  }
+
+  .field-note {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  .input-box {
+    .flex-between();
+    padding: 8px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+    gap: 6px;
+
+    .input {
+      flex: 1;
+      font-size: 15px;
+      color: @text-primary;
+    }
+
+    .unit {
+      font-size: 13px;
+      color: @text-tertiary;
+      flex-shrink: 0;
+    }
+  }
+
+  // -------------------------------------------
+  // 预览与重试
+  // -------------------------------------------
+
+  .pot-preview {
+    display: block;
+    margin-top: @spacing-md;
+    font-size: 13px;
+    color: @primary;
+    font-weight: 500;
+  }
+
+  .retry-btn {
+    .flex-center();
+    margin-top: @spacing-md;
+    padding: 8px 16px;
+    background: fade(@primary, 12%);
+    border-radius: @radius-sm;
+
+    .retry-text {
+      font-size: 13px;
+      color: @primary-dark;
+    }
+
+    &:active {
+      background: fade(@primary, 22%);
+    }
+  }
+
+  .bottom-space {
+    height: 24px;
+  }
+
+  // 底部安全区由 PageLayout 的 bottom 容器统一加，这里不重复处理
+  .page-footer {
+    padding: @spacing-md;
+    background: @bg-secondary;
+    border-top: 1px solid @divider-color;
+  }
+}

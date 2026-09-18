@@ -230,6 +230,11 @@ export function transformReviewHandFromApi(apiHand: ReviewHandResponse): Fronten
     heroCards: apiHand.heroCards,
     heroStackBb: apiHand.heroStackBb,
     stakes: apiHand.stakes,
+    // 后端未重启（旧版本不带这三个字段）时兜底成 0，也就是"没记录盲注"，
+    // 底池退回不含盲注的老口径，不会白屏也不会算错
+    smallBlindBb: apiHand.smallBlindBb || 0,
+    bigBlindBb: apiHand.bigBlindBb || 0,
+    anteBb: apiHand.anteBb || 0,
     board: apiHand.board,
     villainCount: apiHand.villainCount,
     // 后端保证返回数组，这里再兜一层：老数据可能是 null

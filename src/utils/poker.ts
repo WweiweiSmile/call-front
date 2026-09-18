@@ -114,6 +114,83 @@ export function formatBB(value: number | undefined | null): string {
   return Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
 }
 
+/**
+ * 底池数字转成输入框里的字符串。
+ * 0 落成空串而不是 "0" —— 空串统一表示"没记录盲注"，比让用户看到一排 0 更清楚
+ */
+export function bbToInput(value: number | undefined): string {
+  return value && value > 0 ? formatBB(value) : '';
+}
+
+/** 输入框里的字符串转回数字。空串或解析不出数字都按 0（没记录）处理 */
+export function inputToBb(value: string): number {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * 盲注与前注的额度（BB）。
+ *
+ * 三项全为 0 表示"这手牌没记录盲注"，此时底池估算与加这个功能之前完全一致。
+ *
+ * 与后端 models.BlindConfig 是同一份契约，改动要两边同步。
+ */
+export interface BlindConfig {
+  smallBlindBb: number;
+  bigBlindBb: number;
+  anteBb: number;
+  /** 前注按人数折算 */
+  tableSize: number;
+  /** 位置用来把大小盲认到具体行动者头上，见 postedBlinds */
+  heroPosition: Position | '';
+  villainPosition: Position | '';
+}
+
+/** 没记录任何盲注 */
+export function blindsAreZero(blinds: BlindConfig): boolean {
+  return blinds.smallBlindBb === 0 && blinds.bigBlindBb === 0 && blinds.anteBb === 0;
+}
+
+/** 翻前第一条行动之前的底池：小盲 + 大盲 + 前注 × 人数 */
+export function preflopPotBb(blinds: BlindConfig): number {
+  let total = blinds.smallBlindBb + blinds.bigBlindBb;
+  if (blinds.anteBb > 0 && blinds.tableSize > 0) {
+    total += blinds.anteBb * blinds.tableSize;
+  }
+  return total;
+}
+
+/**
+ * 大小盲分别已经算在谁头上。
+ *
+ * 盲注虽然作为死钱进了底池，但下盲注的人后续跟注时只需要补差额。
+ * 若不把他的盲注记进他的已投入，大盲跟一个 3bb 的开池会被算成再掏 3bb（实际只需 2bb），
+ * 底池反而比"完全不记盲注"偏得更多。
+ *
+ * 认不出身份的盲注（大盲在"其他人"里）不记：凭空挂到某个行动者名下
+ * 等于替一个没记录的人下注。它仍会通过 preflopPotBb 进底池，只是不参与差额计算。
+ */
+function postedBlinds(blinds: BlindConfig): Record<string, number> {
+  const posted: Record<string, number> = {};
+  const credit = (actor: ActorType, position: Position | '') => {
+    if (position === 'SB') posted[actor] = (posted[actor] || 0) + blinds.smallBlindBb;
+    else if (position === 'BB') posted[actor] = (posted[actor] || 0) + blinds.bigBlindBb;
+  };
+  credit('hero', blinds.heroPosition);
+  credit('villain', blinds.villainPosition);
+  return posted;
+}
+
+/**
+ * 盲注的展示文案，如 "小盲 0.5 / 大盲 1 bb"。没记录时返回空串，调用方据此决定要不要渲染
+ */
+export function blindsLabel(blinds: BlindConfig): string {
+  if (blindsAreZero(blinds)) return '';
+  const parts = [`小盲 ${formatBB(blinds.smallBlindBb)}`, `大盲 ${formatBB(blinds.bigBlindBb)}`];
+  if (blinds.anteBb > 0) parts.push(`前注 ${formatBB(blinds.anteBb)}`);
+  return `${parts.join(' / ')} bb`;
+}
+
 /** 一条街的底池推进 */
 export interface PotStep {
   street: Street;
@@ -135,11 +212,14 @@ export interface PotResult {
  * 跟注的金额不要求用户填 —— 它一定等于当前街的最高下注额，能推出来。
  * 加注记录的是"加到多少"，所以本街的净投入要用当前投入去减。
  *
- * 注意：不计入盲注与前注。UI 上必须标明是估算值，不能让用户以为这是精确底池。
+ * blinds 是手牌上记录的盲注与前注。传空或不传时行为与加这个功能之前完全一致。
+ * 与后端 utils/pot.go 的 ComputeStreetPots 是同一份契约，改动要两边同步。
+ *
+ * 注意：盲注有了之后仍然是估算值（抓头等变体不在记录范围内），UI 上必须继续标明。
  */
-export function computePots(streets: StreetRecord[]): PotResult {
+export function computePots(streets: StreetRecord[], blinds?: BlindConfig): PotResult {
   const byStreet: Partial<Record<Street, PotStep>> = {};
-  let pot = 0;
+  let pot = blinds ? preflopPotBb(blinds) : 0;
 
   for (const street of STREET_ORDER) {
     const record = streets.find((s) => s.street === street);
@@ -151,6 +231,15 @@ export function computePots(streets: StreetRecord[]): PotResult {
       const contributed: Record<string, number> = {};
       // 当前街的最高下注额，跟注要跟到这么多
       let currentBet = 0;
+
+      // 翻前要先摆好盲注的棋盘，否则第一条行动的差额会算错：
+      // 1) 大盲跟注要补的是"开池额 - 已下的大盲"，不是开池额本身
+      // 2) 大盲过牌是免费看翻牌；不预设 currentBet 的话，过牌后的跟注会少算
+      // 前注不进 contributed：它不参与"跟到多少"的抵消，只算死钱
+      if (street === 'preflop' && blinds) {
+        Object.assign(contributed, postedBlinds(blinds));
+        currentBet = blinds.bigBlindBb;
+      }
 
       for (const action of record.actions) {
         const actor = action.actor;

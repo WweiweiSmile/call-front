@@ -76,6 +76,12 @@ export interface ReviewHand {
   heroCards: string;
   heroStackBb: number;
   stakes: string;
+  /** 小盲(BB)。三项都是 0 表示没记录盲注，底池按不含盲注的老口径估算 */
+  smallBlindBb: number;
+  /** 大盲(BB) */
+  bigBlindBb: number;
+  /** 前注(BB)，每人一份，总额要乘人数 */
+  anteBb: number;
   /** 按发牌顺序拼接如 Qs7h2d3c9s，长度 0/6/8/10 */
   board: string;
   villainCount: number;
@@ -118,6 +124,9 @@ export interface FrontendReviewHand {
   heroCards: string;
   heroStackBb: number;
   stakes: string;
+  smallBlindBb: number;
+  bigBlindBb: number;
+  anteBb: number;
   board: string;
   villainCount: number;
   villains: VillainInfo[];
