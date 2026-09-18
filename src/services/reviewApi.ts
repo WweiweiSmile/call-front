@@ -4,7 +4,9 @@ import type {
   AskReviewMessageResponse,
   GetReviewHandsParams,
   GetReviewInsightsParams,
+  OpponentListResponse,
   RequestAnalysisResponse,
+  SearchOpponentsParams,
   ReviewAnalysisListResponse,
   ReviewAnalysisResponse,
   ReviewHandListResponse,
@@ -58,6 +60,17 @@ export const reviewApi = {
     return request<void>(`/reviews/hands/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  // 搜索我的对手名单（添加对手弹窗的下拉框用）
+  searchOpponents: (params?: SearchOpponentsParams) => {
+    const query = new URLSearchParams();
+    if (params?.keyword) query.append('keyword', params.keyword);
+    if (params?.limit) query.append('limit', params.limit.toString());
+    const queryString = query.toString();
+    return request<OpponentListResponse>(
+      `/reviews/opponents${queryString ? `?${queryString}` : ''}`
+    );
   },
 
   // 漏洞标签字典

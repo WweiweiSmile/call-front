@@ -140,6 +140,101 @@
   }
 
   // -------------------------------------------
+  // 对手列表
+  // -------------------------------------------
+
+  .opponent-row {
+    .flex-between();
+    margin-top: @spacing-sm;
+    padding: 10px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+
+    .opponent-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .opponent-line {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .opponent-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: @text-primary;
+    }
+
+    .opponent-position {
+      padding: 1px 6px;
+      font-size: 12px;
+      color: @text-secondary;
+      background: @bg-secondary;
+      border-radius: @radius-sm;
+
+      // 位置被清空（比如人数改小）时要显眼，否则用户看不出哪里没填完
+      &.missing {
+        color: @warning;
+        background: fade(@warning, 12%);
+      }
+    }
+
+    .key-badge {
+      padding: 1px 6px;
+      font-size: 11px;
+      color: @primary-dark;
+      background: fade(@primary, 12%);
+      border-radius: @radius-sm;
+    }
+
+    .opponent-meta {
+      display: block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+
+    .remove-opponent {
+      .flex-center();
+      width: 24px;
+      height: 24px;
+      margin-left: @spacing-sm;
+      border-radius: 50%;
+      background: fade(@danger, 10%);
+
+      .remove-icon {
+        font-size: 14px;
+        color: @danger;
+      }
+
+      &:active {
+        background: fade(@danger, 25%);
+      }
+    }
+  }
+
+  .add-opponent-btn {
+    .flex-center();
+    margin-top: @spacing-sm;
+    padding: 8px;
+    border: 1px dashed @border-color;
+    border-radius: @radius-sm;
+
+    .add-text {
+      font-size: 13px;
+      color: @primary;
+    }
+
+    &:active {
+      background: fade(@primary, 6%);
+    }
+  }
+
+  // -------------------------------------------
   // 关联场次
   // -------------------------------------------
 

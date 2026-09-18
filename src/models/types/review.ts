@@ -9,8 +9,16 @@ export type Street = 'preflop' | 'flop' | 'turn' | 'river';
 /** 行动类型 */
 export type ActionType = 'fold' | 'check' | 'call' | 'bet' | 'raise' | 'allin';
 
-/** 行动者。other 表示不关注的其他玩家，聚合成一个角色即可 */
-export type ActorType = 'hero' | 'villain' | 'other';
+/**
+ * 行动者。
+ *
+ * M7.1 起对手按**位置**指认（"CO"），一个位置在一手牌里唯一，翻前的 CO 与翻后的 CO
+ * 因此能认成同一个人。hero 是我。
+ *
+ * villain / other 是 M7.1 之前的聚合角色：那时只记一名关键对手，其余全归"其他人"。
+ * 老手牌里存的就是这两个值，必须继续认，否则一打开老数据行动者的标签就是空白
+ */
+export type ActorType = 'hero' | 'villain' | 'other' | Position;
 
 /**
  * 位置。取值随人数变化，合法组合见 utils/poker.ts 的 positionsForTableSize。
@@ -55,12 +63,29 @@ export interface StreetRecord {
   potStartBb?: number;
 }
 
-/** 对手信息。v1 只要求标出关键对手 */
+/**
+ * 一手牌里的对手。
+ *
+ * M7.1 起每个对手都是具名实体，位置在手内唯一。name 为空表示 M7.1 之前的老数据：
+ * 那时只记一名关键对手、没有名字，编辑老手牌时这类对手要原样保留、不能被当成"没填完"
+ */
 export interface VillainInfo {
   position: Position;
   stackBb?: number;
-  /** 是否为关键对手 */
+  /** 是否为关键对手，每手最多一个 */
   isKey?: boolean;
+  /** 对手表 id。由后端按 name 解析后写入，前端提交的值不会被采信 */
+  opponentId?: number;
+  /** 对手的称呼，进提示词。为空 = 老数据 */
+  name?: string;
+}
+
+/** 对手名单项（"对手表"，按用户隔离） */
+export interface Opponent {
+  id: number;
+  name: string;
+  /** 与该对手有关的已复盘手牌数，用于区分重名。只统计 M7.1 之后录入手牌 */
+  handCount: number;
 }
 
 /** 复盘手牌（后端原始模型） */

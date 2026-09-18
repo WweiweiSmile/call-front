@@ -7,18 +7,21 @@ import {
   DEFAULT_TABLE_SIZE,
   STREET_ORDER,
   bbToInput,
+  blindPositionsOf,
   buildDefaultTitle,
   computePots,
+  derivePotType,
   inputToBb,
   isValidPositionForTableSize,
+  positionLabel,
   positionsForTableSize,
   validateCardString,
 } from '../../utils/poker';
+import type { ActorOption } from '../../components/StreetActionEditor';
 import type { BlindConfig } from '../../utils/poker';
 import type {
   HandResult,
   Position,
-  PotType,
   Street,
   StreetAction,
   StreetRecord,
@@ -28,11 +31,28 @@ import type {
 /** 草稿在本地存储里的 key。小程序切后台被杀进程是常事，表单必须能恢复 */
 export const DRAFT_STORAGE_KEY = 'review_hand_draft';
 
+/** 对手名长度上限，与后端 models.OpponentNameMaxRunes 一致 */
+export const OPPONENT_NAME_MAX_LENGTH = 20;
+
+/**
+ * 表单里的一个对手。
+ *
+ * name 为空有两种来路：M7.1 之前的老手牌（那时对手没有名字），
+ * 以及从老草稿迁移过来的对手。两者都允许原样保存，不强制补名字
+ */
+export interface VillainFormItem {
+  name: string;
+  position: Position | '';
+  /** 筹码，输入过程中允许为空 */
+  stackBb: string;
+  isKey?: boolean;
+}
+
 /** 表单内部状态。数字字段用 string 存，输入过程中允许为空 */
 export interface ReviewFormState {
   gameId?: number;
   title: string;
-  /** 几人桌。它决定 heroPosition / villainPosition 的可选项，改动时要一起收拾 */
+  /** 几人桌。它决定 heroPosition / 对手位置的可选项，改动时要一起收拾 */
   tableSize: TableSize;
   heroPosition: Position | '';
   heroCards: string;
@@ -43,10 +63,8 @@ export interface ReviewFormState {
   bigBlindBb: string;
   anteBb: string;
   board: string;
-  villainCount: number;
-  /** v1 只记录一个关键对手，其余归入"其他人" */
-  villainPosition: Position | '';
-  villainStackBb: string;
+  /** 本手牌的对手（M7.1 起是具名列表，不再是"一个关键对手 + 其他人"） */
+  villains: VillainFormItem[];
   streets: StreetRecord[];
   heroThought: string;
   result: HandResult;
@@ -68,9 +86,7 @@ export const emptyFormState: ReviewFormState = {
   bigBlindBb: '',
   anteBb: '',
   board: '',
-  villainCount: 1,
-  villainPosition: '',
-  villainStackBb: '',
+  villains: [],
   streets: STREET_ORDER.map((street) => ({ street, actions: [] })),
   heroThought: '',
   result: 'unknown',
@@ -86,6 +102,21 @@ const BOARD_CARDS_TO_STREET: Record<number, Street> = {
   5: 'river',
 };
 
+/** 后端对手 → 表单项 */
+function toFormVillain(villain: {
+  position?: string;
+  stackBb?: number;
+  isKey?: boolean;
+  name?: string;
+}): VillainFormItem {
+  return {
+    name: villain.name || '',
+    position: (villain.position || '') as Position | '',
+    stackBb: villain.stackBb !== undefined ? String(villain.stackBb) : '',
+    isKey: !!villain.isKey,
+  };
+}
+
 export function useReviewForm(handId?: string) {
   const isEditMode = !!handId;
   const [form, setForm] = useState<ReviewFormState>(emptyFormState);
@@ -94,6 +125,12 @@ export function useReviewForm(handId?: string) {
   const [tagInput, setTagInput] = useState('');
   /** 草稿是否已读取完毕。没读完之前不允许自动保存，否则会覆盖存储里的草稿 */
   const [draftHydrated, setDraftHydrated] = useState(false);
+  /**
+   * 载入的老手牌里那个手填的"对手数量"。
+   * 老数据的对手没有名字，那个数字与现在的对手列表长度不是一回事——
+   * 顺手改成列表长度，内容指纹就变了，已有的 AI 分析会被判为"不对应当前内容"
+   */
+  const legacyVillainCountRef = useRef(0);
 
   // ---------- 编辑模式：载入手牌 ----------
   // ready 保证新建模式下不发请求，isFirstLoading 也就天然是 false，
@@ -109,6 +146,7 @@ export function useReviewForm(handId?: string) {
       refreshOnShow: false,
       onSuccess: (hand) => {
         if (!hand) return;
+        legacyVillainCountRef.current = hand.villainCount || 0;
         setForm({
           gameId: hand.gameId,
           title: hand.title,
@@ -122,12 +160,9 @@ export function useReviewForm(handId?: string) {
           bigBlindBb: bbToInput(hand.bigBlindBb),
           anteBb: bbToInput(hand.anteBb),
           board: hand.board || '',
-          villainCount: hand.villainCount || 1,
-          villainPosition: (hand.villains || []).find((v) => v.isKey)?.position || '',
-          villainStackBb: (() => {
-            const stack = (hand.villains || []).find((v) => v.isKey)?.stackBb;
-            return stack !== undefined ? String(stack) : '';
-          })(),
+          // 老手牌的对手没有名字，这里原样带进来：一旦改写（比如补个默认名），
+          // 内容指纹就变了，已有的 AI 分析会被判为"不对应当前内容"而白重算一次
+          villains: (hand.villains || []).map(toFormVillain),
           // 补齐缺失的街道，保证四条街都在，顺序固定
           streets: STREET_ORDER.map((street) => {
             const found = (hand.streets || []).find((s) => s.street === street);
@@ -163,6 +198,18 @@ export function useReviewForm(handId?: string) {
       if (raw) {
         const draft = typeof raw === 'string' ? JSON.parse(raw) : raw;
         draftHasBlindsRef.current = draft.smallBlindBb !== undefined;
+        // M7.1 之前的草稿存的是单个关键对手，迁移成对手列表，
+        // 否则用户填了一半的对手信息会凭空消失
+        if (!draft.villains && (draft.villainPosition || draft.villainStackBb)) {
+          draft.villains = [
+            {
+              name: '',
+              position: draft.villainPosition || '',
+              stackBb: draft.villainStackBb || '',
+              isKey: true,
+            },
+          ];
+        }
         setForm({ ...emptyFormState, ...draft });
         setExpandedStreets(
           STREET_ORDER.filter((street) =>
@@ -236,19 +283,42 @@ export function useReviewForm(handId?: string) {
    * 切换人数。位置的可选范围随之变化，原来选的位置可能已经不存在了
    * （比如 9 人桌选了 UTG+2，改成 6 人桌），这时必须清掉，
    * 否则会提交出一份"6 人桌 + UTG+2"的自相矛盾数据，后端也会直接拒收。
+   *
+   * 对手的位置同理，而且指向它的行动也要一起删：留着一份指不到人的行动，
+   * 提交时会被后端以"无效的行动者"拒掉，报错却看不出是人数改小导致的
    */
   const setTableSize = useCallback((size: TableSize) => {
-    setForm((prev) => {
-      const valid = positionsForTableSize(size);
-      return {
-        ...prev,
-        tableSize: size,
-        heroPosition: valid.indexOf(prev.heroPosition as Position) >= 0 ? prev.heroPosition : '',
-        villainPosition:
-          valid.indexOf(prev.villainPosition as Position) >= 0 ? prev.villainPosition : '',
-      };
+    const valid = positionsForTableSize(size);
+    const droppedPositions: string[] = [];
+    const villains = form.villains.map((villain) => {
+      if (villain.position && valid.indexOf(villain.position) < 0) {
+        droppedPositions.push(villain.position);
+        return { ...villain, position: '' as Position | '' };
+      }
+      return villain;
     });
-  }, []);
+
+    setForm({
+      ...form,
+      tableSize: size,
+      heroPosition: valid.indexOf(form.heroPosition as Position) >= 0 ? form.heroPosition : '',
+      villains,
+      streets: droppedPositions.length
+        ? form.streets.map((record) => ({
+            ...record,
+            actions: record.actions.filter((action) => droppedPositions.indexOf(action.actor) < 0),
+          }))
+        : form.streets,
+    });
+
+    if (droppedPositions.length > 0) {
+      Taro.showToast({
+        title: `${size} 人桌没有这些位置，已清掉相关对手与行动`,
+        icon: 'none',
+        duration: 2500,
+      });
+    }
+  }, [form]);
 
   const setStreetActions = useCallback((street: Street, actions: StreetAction[]) => {
     setForm((prev) => ({
@@ -263,6 +333,68 @@ export function useReviewForm(handId?: string) {
     );
   }, []);
 
+  // ---------- 对手 ----------
+  /** 已被占用的位置：我 + 其他对手。添加弹窗据此置灰 */
+  const takenPositions = useMemo<Position[]>(() => {
+    const taken: Position[] = [];
+    if (form.heroPosition) taken.push(form.heroPosition);
+    for (const villain of form.villains) {
+      if (villain.position) taken.push(villain.position);
+    }
+    return taken;
+  }, [form.heroPosition, form.villains]);
+
+  const hasKeyVillain = useMemo(
+    () => form.villains.some((villain) => villain.isKey),
+    [form.villains]
+  );
+
+  /** 添加一个对手。位置唯一由弹窗的置灰 + validate 双保险 */
+  const addVillain = useCallback((villain: VillainFormItem) => {
+    setForm((prev) => ({ ...prev, villains: [...prev.villains, villain] }));
+  }, []);
+
+  /** 就地改一个对手：改名字、改位置、改筹码都在这里 */
+  const updateVillain = useCallback((index: number, villain: VillainFormItem) => {
+    setForm((prev) => ({
+      ...prev,
+      villains: prev.villains.map((item, i) => (i === index ? villain : item)),
+    }));
+  }, []);
+
+  /**
+   * 删掉一个对手。他在行动记录里的行必须一起删 ——
+   * 否则那些行动会指向一个不在对手列表里的位置，提交时被后端拒收
+   */
+  const removeVillain = useCallback((index: number) => {
+    setForm((prev) => {
+      const target = prev.villains[index];
+      return {
+        ...prev,
+        villains: prev.villains.filter((_, i) => i !== index),
+        streets: target?.position
+          ? prev.streets.map((record) => ({
+              ...record,
+              actions: record.actions.filter((action) => action.actor !== target.position),
+            }))
+          : prev.streets,
+      };
+    });
+  }, []);
+
+  /** 行动可选的行动者：我 + 本手牌记了位置的对手 */
+  const actorOptions = useMemo<ActorOption[]>(() => {
+    const options: ActorOption[] = [{ value: 'hero', label: '我' }];
+    for (const villain of form.villains) {
+      if (!villain.position) continue;
+      options.push({
+        value: villain.position,
+        label: villain.name || positionLabel(villain.position, form.tableSize),
+      });
+    }
+    return options;
+  }, [form.villains, form.tableSize]);
+
   // ---------- 盲注 ----------
   // 位置要一起带上：底池推算靠它把大小盲认到具体行动者头上，否则大盲跟注会被多算
   const blinds: BlindConfig = useMemo(() => ({
@@ -271,14 +403,15 @@ export function useReviewForm(handId?: string) {
     anteBb: inputToBb(form.anteBb),
     tableSize: form.tableSize,
     heroPosition: form.heroPosition,
-    villainPosition: form.villainPosition,
+    // 有名字的对手按位置认人，没名字的老数据认在聚合角色上
+    ...blindPositionsOf(form.villains),
   }), [
     form.smallBlindBb,
     form.bigBlindBb,
     form.anteBb,
     form.tableSize,
     form.heroPosition,
-    form.villainPosition,
+    form.villains,
   ]);
 
   // ---------- 底池估算 ----------
@@ -296,8 +429,12 @@ export function useReviewForm(handId?: string) {
     }
   }, []);
 
-  // ---------- 有效筹码联动：底牌选好后允许自动带出 ----------
-  const potType: PotType = form.villainCount > 1 ? 'multi' : 'hu';
+  // ---------- 底池类型 ----------
+  // 不再手填：按翻后仍在池中的人数推断，翻前全弃到我就是一个单挑池
+  const potType = useMemo(
+    () => derivePotType(form.streets, form.villains),
+    [form.streets, form.villains]
+  );
 
   const defaultTitle = useMemo(
     () => buildDefaultTitle(form.heroPosition, form.heroCards, potType),
@@ -312,6 +449,40 @@ export function useReviewForm(handId?: string) {
     // 直接提交出去的话后端也会拒，但报错不如这里说得清楚
     if (!isValidPositionForTableSize(form.heroPosition, form.tableSize)) {
       return `${form.tableSize} 人桌没有「${form.heroPosition}」这个位置，请重新选择`;
+    }
+
+    // ---------- 对手 ----------
+    // 位置必须落在该人数的位置上、互相不重复、也不和我撞位。
+    // 与后端 ValidateReviewHand 是同一份口径，两边不能有分歧
+    const usedPositions: string[] = [];
+    for (const villain of form.villains) {
+      const label = villain.name || '对手';
+
+      if (villain.name.length > OPPONENT_NAME_MAX_LENGTH) {
+        return `对手名字不要超过 ${OPPONENT_NAME_MAX_LENGTH} 个字`;
+      }
+      // 名字必须坐在一个位置上，否则 AI 拿到"老王 加注"不知道说的是哪个位置的人
+      if (villain.name && !villain.position) {
+        return `请给「${villain.name}」选一个位置`;
+      }
+      if (!villain.name && !villain.position) {
+        return '有对手既没名字也没位置，请补全或删掉';
+      }
+      if (!villain.position) continue;
+
+      if (!isValidPositionForTableSize(villain.position, form.tableSize)) {
+        return `${form.tableSize} 人桌没有「${villain.position}」这个位置，请重新选择`;
+      }
+      if (villain.position === form.heroPosition) {
+        return `「${label}」的位置和我的位置重复了`;
+      }
+      if (usedPositions.indexOf(villain.position) >= 0) {
+        return `有两个对手都坐在 ${villain.position}`;
+      }
+      usedPositions.push(villain.position);
+    }
+    if (form.villains.length > form.tableSize - 1) {
+      return `${form.tableSize} 人桌最多记录 ${form.tableSize - 1} 个对手`;
     }
 
     // 盲注要么都不填（不记盲注），要么至少有大盲 —— 大盲是折算基准，
@@ -369,7 +540,7 @@ export function useReviewForm(handId?: string) {
     }
 
     return null;
-  }, [form]);
+  }, [form, blinds]);
 
   const addTag = useCallback(() => {
     const tag = tagInput.trim();
@@ -392,14 +563,18 @@ export function useReviewForm(handId?: string) {
 
   /** 组装提交给后端的请求体 */
   const buildPayload = useCallback(() => {
-    // 关键对手信息合并成 villains 数组
-    const villains = form.villainPosition
-      ? [{
-          position: form.villainPosition,
-          stackBb: form.villainStackBb ? Number(form.villainStackBb) : undefined,
-          isKey: true,
-        }]
-      : [];
+    // 对手逐个上报名字与位置；对手表的 id 由后端按名字解析，前端不参与。
+    // undefined 的字段会被 JSON.stringify 丢掉，与后端 omitempty 的口径一致
+    const villains = form.villains.map((villain) => ({
+      position: (villain.position || '') as Position,
+      stackBb: villain.stackBb ? Number(villain.stackBb) : undefined,
+      isKey: villain.isKey || undefined,
+      name: villain.name || undefined,
+    }));
+
+    // 一个名字都没有 = 老数据：对手数量保持原值（当时是手填的，与列表长度无关）。
+    // 只要有一处对不上，内容指纹就会变，AI 分析状态会被重置
+    const isLegacyVillains = villains.length > 0 && villains.every((v) => !v.name);
 
     return {
       gameId: form.gameId,
@@ -413,7 +588,7 @@ export function useReviewForm(handId?: string) {
       bigBlindBb: blinds.bigBlindBb,
       anteBb: blinds.anteBb,
       board: form.board,
-      villainCount: form.villainCount,
+      villainCount: isLegacyVillains ? legacyVillainCountRef.current : villains.length,
       villains,
       potType,
       // 只提交有行动的街，空街没必要占存储
@@ -494,6 +669,11 @@ export function useReviewForm(handId?: string) {
     heroUnavailableCards: form.board,
     /** 底牌已占用的牌，公共牌不能再选 */
     boardUnavailableCards: form.heroCards,
+    /** 行动可选的行动者：我 + 本手牌的对手 */
+    actorOptions,
+    /** 已被占用的位置，添加对手弹窗据此置灰 */
+    takenPositions,
+    hasKeyVillain,
 
     // 操作
     setField,
@@ -501,6 +681,9 @@ export function useReviewForm(handId?: string) {
     setStreetActions,
     toggleStreet,
     handleBoardChange,
+    addVillain,
+    updateVillain,
+    removeVillain,
     setTagInput,
     addTag,
     removeTag,

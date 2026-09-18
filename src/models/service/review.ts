@@ -11,6 +11,7 @@ import type {
   HandResult,
   LeakTagCategory,
   MessageRole,
+  Opponent,
   PotType,
   Position,
   ProfileLeakStat,
@@ -76,6 +77,18 @@ export interface ReviewHandResponse {
 
 /** 手牌列表响应 */
 export type ReviewHandListResponse = ListResponse<ReviewHandResponse>;
+
+/** 对手名单查询参数 */
+export interface SearchOpponentsParams {
+  keyword?: string;
+  /** 返回条数上限，后端默认 20、上限 50 */
+  limit?: number;
+}
+
+/** 对手名单响应 */
+export interface OpponentListResponse {
+  list: Opponent[];
+}
 
 /** 手牌列表查询参数 */
 export interface GetReviewHandsParams {

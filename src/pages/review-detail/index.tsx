@@ -21,11 +21,12 @@ import { transformReviewHandFromApi } from '../../models';
 import {
   ACTION_LABEL,
   ACTION_NEEDS_AMOUNT,
-  ACTOR_LABEL,
   POT_TYPE_LABEL,
   RESULT_LABEL,
   STREET_LABEL,
   STREET_ORDER,
+  actorLabel,
+  blindPositionsOf,
   blindsLabel,
   formatBB,
   positionLabel,
@@ -116,7 +117,7 @@ const ReviewDetailPage: React.FC = () => {
       anteBb: hand.anteBb,
       tableSize: hand.tableSize,
       heroPosition: hand.heroPosition,
-      villainPosition: (hand.villains || []).find((v) => v.isKey)?.position || '',
+      ...blindPositionsOf(hand.villains || []),
     });
   }, [hand]);
 
@@ -173,6 +174,21 @@ const ReviewDetailPage: React.FC = () => {
                 {tableSizeLabel(hand.tableSize)} · {POT_TYPE_LABEL[hand.potType]} · {hand.villainCount} 个对手
               </Text>
               {blindText && <Text className='meta-line'>{blindText}</Text>}
+              {/* 记了名字的对手逐个列出：老手牌的对手没有名字，那时这一行会退化成位置 */}
+              {hand.villains.length > 0 && (
+                <Text className='meta-line villain-line'>
+                  对手：
+                  {hand.villains
+                    .map((villain) => {
+                      const label = villain.name || villain.position || '未记录';
+                      const position = villain.name && villain.position ? `(${villain.position})` : '';
+                      const stack = villain.stackBb !== undefined ? ` ${formatBB(villain.stackBb)}bb` : '';
+                      const key = villain.isKey ? ' · 关键' : '';
+                      return `${label}${position}${stack}${key}`;
+                    })
+                    .join('，')}
+                </Text>
+              )}
             </View>
           </View>
 
@@ -228,7 +244,9 @@ const ReviewDetailPage: React.FC = () => {
 
                   {record.actions.map((action, index) => (
                     <View key={index} className='action-line'>
-                      <Text className={`actor-tag ${action.actor}`}>{ACTOR_LABEL[action.actor]}</Text>
+                      <Text className={`actor-tag ${action.actor}`}>
+                        {actorLabel(action.actor, hand.villains)}
+                      </Text>
                       <Text className='action-text'>{ACTION_LABEL[action.action]}</Text>
                       {ACTION_NEEDS_AMOUNT.indexOf(action.action) >= 0 && action.amountBb ? (
                         <Text className='amount-text'>{formatBB(action.amountBb)} bb</Text>

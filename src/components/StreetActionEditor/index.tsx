@@ -3,12 +3,18 @@ import { Input, Text, View } from '@tarojs/components';
 import {
   ACTION_LABEL,
   ACTION_NEEDS_AMOUNT,
-  ACTOR_LABEL,
   STREET_LABEL,
+  actorLabel,
   formatBB,
 } from '../../utils/poker';
 import type { ActionType, ActorType, Street, StreetAction } from '../../models/types/review';
 import './index.less';
+
+/** 一个可选的行动者。value 是位置（对手）或 hero（我） */
+export interface ActorOption {
+  value: ActorType;
+  label: string;
+}
 
 interface StreetActionEditorProps {
   street: Street;
@@ -21,9 +27,13 @@ interface StreetActionEditorProps {
   potStartBb?: number;
   /** 该街结束时的底池（BB） */
   potEndBb?: number;
+  /**
+   * 可选的行动者：我 + 本手牌已添加的对手（M7.1 起不再有"其他人"这个聚合角色）。
+   * 老手牌里已有的 villain / other 行仍要能显示，见 optionsFor
+   */
+  actors: ActorOption[];
 }
 
-const ACTORS: ActorType[] = ['hero', 'villain', 'other'];
 const ACTIONS: ActionType[] = ['check', 'bet', 'call', 'raise', 'fold', 'allin'];
 
 const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
@@ -34,6 +44,7 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
   onToggle,
   potStartBb,
   potEndBb,
+  actors,
 }) => {
   const updateAction = useCallback((index: number, patch: Partial<StreetAction>) => {
     const next = actions.map((a, i) => (i === index ? { ...a, ...patch } : a));
@@ -44,10 +55,23 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
     onChange(actions.filter((_, i) => i !== index));
   }, [actions, onChange]);
 
+  /**
+   * 一行可选的行动者。行里的 actor 是位置、而这个人已经被删掉时（或老数据的
+   * villain/other），把它顶在列表最前面：否则这一行会没有任何选中项，
+   * 用户既看不出是谁，也改不回来
+   */
+  const optionsFor = useCallback((actor: ActorType): ActorOption[] => {
+    if (actors.some((option) => option.value === actor)) return actors;
+    // 认不出的值（后端将来加了新角色）原样显示，总好过这一行没有选中项
+    return [{ value: actor, label: actorLabel(actor) }, ...actors];
+  }, [actors]);
+
   const addAction = useCallback(() => {
-    // 默认加一条"对手过牌"这种最常见的记录，减少用户点击次数
-    onChange([...actions, { actor: 'villain', action: 'check' }]);
-  }, [actions, onChange]);
+    // 默认加一条"对手过牌"这种最常见的记录，减少用户点击次数。
+    // actors[0] 是我，所以有对手时优先选第一个对手
+    const actor = actors.length > 1 ? actors[1].value : actors[0]?.value || 'hero';
+    onChange([...actions, { actor, action: 'check' }]);
+  }, [actions, actors, onChange]);
 
   // 切换行动类型时，清掉不再需要的金额，避免提交时后端报"该行动不需要金额"的困惑
   const handleActionChange = useCallback((index: number, action: ActionType) => {
@@ -88,13 +112,13 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
             <View key={index} className='action-row'>
               {/* 谁 */}
               <View className='actor-group'>
-                {ACTORS.map((actor) => (
+                {optionsFor(action.actor).map((option) => (
                   <View
-                    key={actor}
-                    className={`chip actor ${action.actor === actor ? 'active' : ''}`}
-                    onClick={() => updateAction(index, { actor })}
+                    key={option.value}
+                    className={`chip actor ${action.actor === option.value ? 'active' : ''}`}
+                    onClick={() => updateAction(index, { actor: option.value })}
                   >
-                    <Text className='chip-text'>{ACTOR_LABEL[actor]}</Text>
+                    <Text className='chip-text'>{option.label}</Text>
                   </View>
                 ))}
               </View>

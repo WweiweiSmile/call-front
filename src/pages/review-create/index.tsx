@@ -1,8 +1,9 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Input, ScrollView, Text, Textarea, View } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import Taro, { useRouter } from '@tarojs/taro';
 import {
+  AddOpponentDialog,
   CardPicker,
   ConfirmDialog,
   Loading,
@@ -17,13 +18,16 @@ import {
   STREET_ORDER,
   STREET_LABEL,
   TABLE_SIZE_OPTIONS,
+  UNNAMED_VILLAIN_LABEL,
   formatBB,
   positionLabel,
   positionsForTableSize,
   preflopPotBb,
 } from '../../utils/poker';
 import { useReviewForm } from './useReviewForm';
-import type { HandResult, TableSize } from '../../models/types/review';
+import type { OpponentDraft } from '../../components/AddOpponentDialog';
+import type { HandResult, Position, TableSize } from '../../models/types/review';
+import type { VillainFormItem } from './useReviewForm';
 import './index.less';
 
 const RESULTS: HandResult[] = ['win', 'lose', 'fold', 'unknown'];
@@ -47,11 +51,17 @@ const ReviewCreatePage: React.FC = () => {
     tagInput,
     heroUnavailableCards,
     boardUnavailableCards,
+    actorOptions,
+    takenPositions,
+    hasKeyVillain,
     setField,
     setTableSize,
     setStreetActions,
     toggleStreet,
     handleBoardChange,
+    addVillain,
+    updateVillain,
+    removeVillain,
     setTagInput,
     addTag,
     removeTag,
@@ -61,6 +71,72 @@ const ReviewCreatePage: React.FC = () => {
 
   // 「没写想法」的二次确认
   const [thoughtWarnVisible, setThoughtWarnVisible] = useState(false);
+
+  // 添加 / 编辑对手弹窗。editingIndex 为 null 表示新增
+  const [opponentDialogVisible, setOpponentDialogVisible] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  // 删除对手的二次确认下标
+  const [removeTarget, setRemoveTarget] = useState<number | null>(null);
+
+  const openAddOpponent = useCallback(() => {
+    setEditingIndex(null);
+    setOpponentDialogVisible(true);
+  }, []);
+
+  const openEditOpponent = useCallback((index: number) => {
+    setEditingIndex(index);
+    setOpponentDialogVisible(true);
+  }, []);
+
+  const handleOpponentConfirm = useCallback((draft: OpponentDraft) => {
+    const item: VillainFormItem = {
+      name: draft.name,
+      position: draft.position,
+      stackBb: draft.stackBb !== undefined ? String(draft.stackBb) : '',
+      isKey: draft.isKey,
+    };
+    if (editingIndex === null) {
+      addVillain(item);
+    } else {
+      updateVillain(editingIndex, item);
+    }
+    setOpponentDialogVisible(false);
+  }, [editingIndex, addVillain, updateVillain]);
+
+  // 删掉对手会连带删掉他在行动记录里的行，所以先算清楚有多少条要说给用户听
+  const removeTargetVillain = removeTarget !== null ? form.villains[removeTarget] : null;
+  const removeTargetActions = removeTargetVillain?.position
+    ? form.streets.reduce(
+        (sum, record) =>
+          sum + record.actions.filter((a) => a.actor === removeTargetVillain.position).length,
+        0
+      )
+    : 0;
+
+  const handleRemoveOpponent = useCallback(() => {
+    if (removeTarget === null) return;
+    removeVillain(removeTarget);
+    setRemoveTarget(null);
+  }, [removeTarget, removeVillain]);
+
+  // 弹窗的初始值。做成稳定引用：每次渲染都新建对象的话，
+  // 弹窗里那个"打开时重置"的 effect 会跟着每次渲染重跑，把用户正在填的内容冲掉
+  const editingVillain = editingIndex !== null ? form.villains[editingIndex] : undefined;
+  const editingInitial = useMemo<OpponentDraft | null>(() => {
+    if (!editingVillain) return null;
+    return {
+      name: editingVillain.name,
+      position: editingVillain.position as Position,
+      stackBb: editingVillain.stackBb ? Number(editingVillain.stackBb) : undefined,
+      isKey: editingVillain.isKey,
+    };
+  }, [editingVillain]);
+
+  // 编辑时要放开他自己占的那个位置，否则当前选中项会显示成"已占用"的灰态
+  const dialogTakenPositions = useMemo(
+    () => takenPositions.filter((pos) => pos !== editingVillain?.position),
+    [takenPositions, editingVillain]
+  );
 
   const handleSubmit = useCallback(async () => {
     // 想法是选填的，但它是复盘价值的来源 —— 空着不阻断保存，只提醒一次
@@ -289,55 +365,57 @@ const ReviewCreatePage: React.FC = () => {
         <View className='section'>
           <Text className='section-title'>对手</Text>
           <Text className='section-hint'>
-            v1 只需要标出关键对手，其他人会自动归为「其他人」
+            只加你关心的对手即可，其余位置默认弃牌。加过的对手下次能直接选
           </Text>
 
-          <View className='field'>
-            <Text className='field-label'>对手数量</Text>
-            <View className='position-grid'>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <View
-                  key={n}
-                  className={`position-btn ${form.villainCount === n ? 'active' : ''}`}
-                  onClick={() => setField('villainCount', n)}
-                >
-                  <Text className='pos-text'>{n}</Text>
+          {form.villains.length === 0 && (
+            <Text className='field-note'>还没有添加对手，下面记行动时只能选「我」</Text>
+          )}
+
+          {form.villains.map((villain, index) => {
+            const relatedActions = villain.position
+              ? form.streets.reduce(
+                  (sum, record) =>
+                    sum + record.actions.filter((a) => a.actor === villain.position).length,
+                  0
+                )
+              : 0;
+            return (
+              <View key={`${villain.position}-${index}`} className='opponent-row'>
+                <View className='opponent-main' onClick={() => openEditOpponent(index)}>
+                  <View className='opponent-line'>
+                    <Text className='opponent-name'>
+                      {villain.name || UNNAMED_VILLAIN_LABEL}
+                    </Text>
+                    {villain.position ? (
+                      <Text className='opponent-position'>
+                        {positionLabel(villain.position, form.tableSize)}
+                      </Text>
+                    ) : (
+                      <Text className='opponent-position missing'>位置待选</Text>
+                    )}
+                    {villain.isKey && <Text className='key-badge'>关键对手</Text>}
+                  </View>
+                  <Text className='opponent-meta'>
+                    {villain.stackBb ? `${villain.stackBb} bb` : '筹码未填'}
+                    {relatedActions > 0 ? ` · ${relatedActions} 条行动` : ''}
+                  </Text>
                 </View>
-              ))}
-            </View>
-            <Text className='field-note'>底池类型：{POT_TYPE_LABEL[potType]}</Text>
+                <View className='remove-opponent' onClick={() => setRemoveTarget(index)}>
+                  <Text className='remove-icon'>×</Text>
+                </View>
+              </View>
+            );
+          })}
+
+          <View className='add-opponent-btn' onClick={openAddOpponent}>
+            <Text className='add-text'>+ 添加对手</Text>
           </View>
 
-          <View className='field'>
-            <Text className='field-label'>关键对手位置</Text>
-            <View className='position-grid'>
-              {positionOptions.map((pos) => (
-                <View
-                  key={pos}
-                  className={`position-btn ${form.villainPosition === pos ? 'active' : ''}`}
-                  onClick={() =>
-                    setField('villainPosition', form.villainPosition === pos ? '' : pos)
-                  }
-                >
-                  <Text className='pos-text'>{positionLabel(pos, form.tableSize)}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View className='field'>
-            <Text className='field-label'>关键对手筹码</Text>
-            <View className='input-box'>
-              <Input
-                className='input'
-                type='digit'
-                value={form.villainStackBb}
-                placeholder='100'
-                onInput={(e) => setField('villainStackBb', e.detail.value)}
-              />
-              <Text className='unit'>bb</Text>
-            </View>
-          </View>
+          <Text className='field-note'>
+            底池类型：{POT_TYPE_LABEL[potType]}
+            （按翻牌时还有几个对手在池中自动判断）
+          </Text>
         </View>
 
         {/* ---------- 行动 ---------- */}
@@ -366,6 +444,7 @@ const ReviewCreatePage: React.FC = () => {
                   onToggle={() => toggleStreet(street)}
                   potStartBb={step?.potStartBb}
                   potEndBb={step?.potEndBb}
+                  actors={actorOptions}
                 />
                 {expandedStreets.indexOf(street) >= 0 && needsBoard && (
                   <Text className='board-warning'>
@@ -502,6 +581,32 @@ const ReviewCreatePage: React.FC = () => {
         onConfirm={handleConfirmNoThought}
         onCancel={() => setThoughtWarnVisible(false)}
         onClose={() => setThoughtWarnVisible(false)}
+      />
+
+      <AddOpponentDialog
+        visible={opponentDialogVisible}
+        positionOptions={positionOptions}
+        takenPositions={dialogTakenPositions}
+        hasKeyVillain={hasKeyVillain}
+        tableSize={form.tableSize}
+        initial={editingInitial}
+        onConfirm={handleOpponentConfirm}
+        onClose={() => setOpponentDialogVisible(false)}
+      />
+
+      <ConfirmDialog
+        visible={removeTarget !== null}
+        title='删除这个对手'
+        content={
+          removeTargetActions > 0
+            ? `他的 ${removeTargetActions} 条行动记录会一起删掉，确定吗？`
+            : '确定删掉这个对手吗？'
+        }
+        confirmText='删除'
+        confirmType='danger'
+        onConfirm={handleRemoveOpponent}
+        onCancel={() => setRemoveTarget(null)}
+        onClose={() => setRemoveTarget(null)}
       />
     </>
   );

@@ -1,0 +1,218 @@
+// ============================================
+// AddOpponentDialog - 添加 / 编辑对手弹窗
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+.add-opponent-dialog {
+  display: flex;
+  flex-direction: column;
+  // 给小程序端的键盘留出空间：内容可滚，按钮始终在底部
+  max-height: 80vh;
+  background: @bg-secondary;
+
+  .dialog-header {
+    .flex-between();
+    padding: @spacing-md;
+    border-bottom: 1px solid @divider-color;
+
+    .dialog-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: @text-primary;
+    }
+
+    .dialog-close {
+      padding: 0 4px;
+      font-size: 20px;
+      line-height: 1;
+      color: @text-tertiary;
+    }
+  }
+
+  .dialog-body {
+    flex: 1;
+    max-height: 60vh;
+    padding: 0 @spacing-md;
+  }
+
+  .dialog-field {
+    padding-top: @spacing-md;
+  }
+
+  .field-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .field-note {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  .list-hint {
+    display: block;
+    padding-top: 8px;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  .search-box {
+    margin-top: @spacing-sm;
+    padding: 8px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+
+    .search-input {
+      width: 100%;
+      font-size: 14px;
+      color: @text-primary;
+    }
+  }
+
+  .opponent-list {
+    margin-top: @spacing-sm;
+    max-height: 200px;
+    overflow: hidden;
+  }
+
+  .opponent-option {
+    .flex-between();
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border: 1px solid @border-color;
+    border-radius: @radius-sm;
+    background: @bg-secondary;
+
+    .option-name {
+      font-size: 14px;
+      color: @text-primary;
+    }
+
+    .option-hint {
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+
+    &:active {
+      background: @bg-tertiary;
+    }
+
+    &.selected {
+      border-color: @primary;
+      background: fade(@primary, 6%);
+
+      .option-name {
+        color: @primary-dark;
+        font-weight: 600;
+      }
+    }
+
+    // "新建对手"那一项与已有对手区分开
+    &.create {
+      border-style: dashed;
+      border-color: fade(@primary, 40%);
+
+      .option-name {
+        color: @primary;
+      }
+    }
+  }
+
+  .position-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: @spacing-sm;
+  }
+
+  .position-btn {
+    .flex-center();
+    min-width: 56px;
+    padding: 8px 10px;
+    border: 1px solid @border-color;
+    border-radius: @radius-sm;
+    background: @bg-secondary;
+
+    .pos-text {
+      font-size: 13px;
+      color: @text-secondary;
+    }
+
+    &:active {
+      background: @bg-tertiary;
+    }
+
+    &.active {
+      border-color: @primary;
+      background: fade(@primary, 12%);
+
+      .pos-text {
+        color: @primary-dark;
+        font-weight: 600;
+      }
+    }
+
+    // 有人坐了：显示但不可选，用户才知道这张桌子上还有谁
+    &.disabled {
+      background: @bg-tertiary;
+      border-color: @divider-color;
+
+      .pos-text {
+        color: @text-tertiary;
+      }
+    }
+  }
+
+  .input-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    margin-top: @spacing-sm;
+    padding: 8px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+
+    .input {
+      flex: 1;
+      font-size: 14px;
+      color: @text-primary;
+    }
+
+    .unit {
+      font-size: 12px;
+      color: @text-tertiary;
+    }
+  }
+
+  .key-field {
+    .flex-between();
+    padding-bottom: @spacing-md;
+
+    .key-text {
+      flex: 1;
+      padding-right: @spacing-sm;
+    }
+  }
+
+  .dialog-footer {
+    display: flex;
+    flex-direction: row;
+    gap: @spacing-sm;
+    padding: @spacing-md;
+    border-top: 1px solid @divider-color;
+    .safe-area-bottom();
+
+    // 两个按钮等宽
+    > * {
+      flex: 1;
+    }
+  }
+}

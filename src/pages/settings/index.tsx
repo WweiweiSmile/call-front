@@ -92,8 +92,10 @@ const SettingsPage: React.FC = () => {
     bigBlindBb: inputToBb(bigBlindBb),
     anteBb: inputToBb(anteBb),
     tableSize: DEFAULT_TABLE_SIZE,
+    // 这里只是拿默认人数举例说明前注怎么折算，不涉及具体的人
     heroPosition: '',
-    villainPosition: '',
+    villainPositions: [],
+    legacyVillainPosition: '',
   });
 
   return (

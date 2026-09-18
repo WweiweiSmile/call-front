@@ -12,6 +12,7 @@ import type {
   PotType,
   Street,
   StreetRecord,
+  VillainInfo,
 } from '../models/types/review';
 
 // 人数相关的常量定义在 models/types/review.ts（类型与其默认值放在一起），
@@ -39,12 +40,39 @@ export const ACTION_LABEL: Record<ActionType, string> = {
   allin: '全下',
 };
 
-/** 行动者中文名 */
-export const ACTOR_LABEL: Record<ActorType, string> = {
+/**
+ * 老口径的聚合角色名。M7.1 起对手按位置指认，名字由 actorLabel() 从本手牌的
+ * 对手列表里取，所以这张表里只有我和两个历史角色
+ */
+export const LEGACY_ACTOR_LABEL: Record<string, string> = {
   hero: '我',
   villain: '对手',
   other: '其他人',
 };
+
+/**
+ * 行动者的展示名。
+ *
+ * 位置能对上本手牌的对手就用对手的名字（"老王"），对不上退回位置名（"CO"）；
+ * 老数据的 villain / other 是聚合角色，没有具体的人可指
+ */
+export function actorLabel(actor: ActorType | string, villains: VillainInfo[] = []): string {
+  const villain = villains.find((v) => v.position === actor);
+  if (villain) return villain.name || villain.position;
+  return LEGACY_ACTOR_LABEL[actor] || actor;
+}
+
+/** 老手牌里没有名字、也没有位置的对手：界面上只能显示成"对手" */
+export const UNNAMED_VILLAIN_LABEL = '对手';
+
+/**
+ * 认人只需要"有没有名字"和"坐哪"，放宽成这个最小结构，
+ * 好让录入页的表单对象（筹码是输入中的字符串）也能直接传进来
+ */
+export interface OpponentLike {
+  name?: string;
+  position?: Position | '';
+}
 
 /** 需要填写金额的行动 */
 export const ACTION_NEEDS_AMOUNT: ActionType[] = ['bet', 'raise', 'allin'];
@@ -143,7 +171,35 @@ export interface BlindConfig {
   tableSize: number;
   /** 位置用来把大小盲认到具体行动者头上，见 postedBlinds */
   heroPosition: Position | '';
-  villainPosition: Position | '';
+  /** 记了位置的对手（M7.1 起是全部对手）。他们的账记在位置这个键上 */
+  villainPositions: Position[];
+  /** 老手牌里那个"关键对手"的位置。老数据的行动记在聚合角色 villain 上 */
+  legacyVillainPosition: Position | '';
+}
+
+/**
+ * 从对手列表里挑出记了位置的，供 BlindConfig 认人用。
+ *
+ * 形参放宽成最小结构而不是 VillainInfo：录入页的表单里筹码是字符串，
+ * 只需要名字与位置这两项，没必要为此在表单里再存一份 VillainInfo
+ */
+export function blindPositionsOf(villains: OpponentLike[] = []): Pick<
+  BlindConfig,
+  'villainPositions' | 'legacyVillainPosition'
+> {
+  const villainPositions: Position[] = [];
+  let legacyVillainPosition: Position | '' = '';
+  for (const villain of villains) {
+    if (!villain.position) continue;
+    // 有名字的是 M7.1 之后的记录，没名字的是老数据：两者的行动记录方式不同，
+    // 账也要记到不同的键上，否则盲注根本认不到人
+    if (villain.name) {
+      villainPositions.push(villain.position);
+    } else if (!legacyVillainPosition) {
+      legacyVillainPosition = villain.position;
+    }
+  }
+  return { villainPositions, legacyVillainPosition };
 }
 
 /** 没记录任何盲注 */
@@ -169,15 +225,20 @@ export function preflopPotBb(blinds: BlindConfig): number {
  *
  * 认不出身份的盲注（大盲在"其他人"里）不记：凭空挂到某个行动者名下
  * 等于替一个没记录的人下注。它仍会通过 preflopPotBb 进底池，只是不参与差额计算。
+ *
+ * 返回的键是**行动记录里的 actor 值**：我固定是 hero，对手是位置（M7.1 起），
+ * 老手牌则是聚合角色 villain。键对不上就等于没记账，所以两边必须一起改
+ * （与后端 models/blind.go 的 PostedBlinds 同构）
  */
 function postedBlinds(blinds: BlindConfig): Record<string, number> {
   const posted: Record<string, number> = {};
-  const credit = (actor: ActorType, position: Position | '') => {
+  const credit = (actor: string, position: Position | '') => {
     if (position === 'SB') posted[actor] = (posted[actor] || 0) + blinds.smallBlindBb;
     else if (position === 'BB') posted[actor] = (posted[actor] || 0) + blinds.bigBlindBb;
   };
   credit('hero', blinds.heroPosition);
-  credit('villain', blinds.villainPosition);
+  for (const position of blinds.villainPositions) credit(position, position);
+  credit('villain', blinds.legacyVillainPosition);
   return posted;
 }
 
@@ -275,6 +336,37 @@ export function computePots(streets: StreetRecord[], blinds?: BlindConfig): PotR
   }
 
   return { byStreet, finalPotBb: pot };
+}
+
+/**
+ * 底池类型（单挑 / 多人池）由翻后仍在池中的人数决定，不再让用户手填。
+ *
+ * 口径是"翻前有记录且没弃牌的对手"：翻前就弃了的不算，翻前压根没记录的也不算 ——
+ * 这与"从头到尾没出现在行动里的座位默认弃牌"是同一条规则（M7.2 会把这些人补成
+ * 弃牌行，届时两种写法结果一致）。
+ *
+ * 一条翻前行动都没记时退回按对手数推断：录入过程中标签会随记录逐步修正，
+ * 总比中途一直显示"单挑"要合理
+ */
+export function derivePotType(
+  streets: StreetRecord[],
+  villains: OpponentLike[] = []
+): PotType {
+  const preflop = streets.find((s) => s.street === 'preflop');
+  if (!preflop || preflop.actions.length === 0) {
+    return villains.length > 1 ? 'multi' : 'hu';
+  }
+
+  const inPot = new Set<string>();
+  for (const action of preflop.actions) {
+    if (action.action === 'fold') inPot.delete(action.actor);
+    else inPot.add(action.actor);
+  }
+
+  const opponentsInPot = villains.filter(
+    (v) => !!v.position && inPot.has(v.position)
+  ).length;
+  return opponentsInPot > 1 ? 'multi' : 'hu';
 }
 
 /**
