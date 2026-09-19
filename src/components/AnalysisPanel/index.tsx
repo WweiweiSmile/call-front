@@ -21,6 +21,13 @@ interface AnalysisPanelProps {
   /** 触发分析 / 重试 */
   onAnalyze: () => void;
   triggering: boolean;
+  /**
+   * 跳转到「模型设置」。没配模型时展示的引导按钮用它。
+   *
+   * 刻意让调用方传进来而不是在这里直接 Taro.navigateTo：这个组件现在零 Taro
+   * 依赖、纯展示 + 回调，为一个跳转破掉这个性质不值得
+   */
+  onConfigureModel?: () => void;
 }
 
 /** 逐街评价的结论样式 */
@@ -43,6 +50,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   tagNameByCode,
   onAnalyze,
   triggering,
+  onConfigureModel,
 }) => {
   const status = analysis?.status;
   const result = analysis?.result;
@@ -96,9 +104,26 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
         )}
       </View>
 
-      {/* ---------- 未启用 ---------- */}
+      {/* ---------- 未配置模型 ---------- */}
+      {/*
+        自 BYOK 起模型是自己的 Key 撑起来的，所以这里必须给一条能走的路：
+        光说"不可用"用户不知道该去哪儿。这也是升级后老用户唯一的发现路径
+      */}
       {aiStatus && !aiStatus.enabled && (
-        <Text className='state-text'>服务端未配置 AI，暂时无法分析</Text>
+        <View className='empty-state'>
+          <Text className='state-text'>还没配置 AI 模型，配置后就能分析这手牌</Text>
+          <Text className='cost-hint'>用自己的 API Key 接入，每日最多 30 次</Text>
+          {onConfigureModel && (
+            <Button
+              type='primary'
+              size='small'
+              onClick={onConfigureModel}
+              data-testid='btn-goto-model-settings'
+            >
+              去配置
+            </Button>
+          )}
+        </View>
       )}
 
       {/* ---------- 无分析：引导触发 ---------- */}

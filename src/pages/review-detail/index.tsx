@@ -297,6 +297,8 @@ const ReviewDetailPage: React.FC = () => {
             tagNameByCode={tagNameByCode}
             onAnalyze={handleAnalyze}
             triggering={triggering}
+            // 直达模型设置页而不是先回设置入口：用户意图很明确，少一跳
+            onConfigureModel={() => Taro.navigateTo({ url: '/pages/settings-model/index' })}
           />
         </View>
 

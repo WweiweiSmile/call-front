@@ -23,6 +23,8 @@ export default defineAppConfig({
     'pages/review-detail/index',
     'pages/review-profile/index',
     'pages/settings/index',
+    'pages/settings-blind/index',
+    'pages/settings-model/index',
   ],
   entryPagePath: 'pages/login/index',
   window: {

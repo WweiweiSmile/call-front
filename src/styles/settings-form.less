@@ -1,0 +1,261 @@
+// ============================================
+// 设置类页面共享样式
+// ============================================
+//
+// 三个页面（设置入口 / 盲注设置 / 模型设置）共用这份外观：表单区块、
+// 输入框、加载失败重试、底部保存栏。
+//
+// 项目里其它页面是各写一套 less（如 review-detail），这里破例抽出共享是因为
+// 这份样式从 1 个消费方变成了 3 个，而且三个页面是同一次改动落地的 ——
+// 正是复制粘贴开始漂移的时刻。
+//
+// ⚠️ 所有规则都必须挂在根类下（.settings-form / .settings-menu）。
+// 这是全局 CSS（不是 CSS Modules），裸的 `.field` / `.section` 会泄漏到别的页面 ——
+// review-create 的表单里就有语义相近的结构，撞车后症状会出现在那个页面上，
+// 极难联想到是这里改出来的
+//
+// 页面骨架（100vh flex 列布局、内容区滚动、box-sizing、底部安全区）全部交给
+// PageLayout，这里一个字都不要写。手写很容易漏掉 min-height: 0 与
+// box-sizing: border-box，症状分别是"内容区滚不动"和"整块内容右移、右侧被裁掉"
+
+@import './theme.less';
+@import './mixins.less';
+
+// -------------------------------------------
+// 表单页（盲注设置 / 模型设置）
+// -------------------------------------------
+.settings-form {
+  .settings-form-content {
+    padding: @spacing-md;
+  }
+
+  .section {
+    padding: @spacing-md;
+    margin-bottom: @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+    box-shadow: @shadow-sm;
+  }
+
+  .section-title {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .section-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: @text-tertiary;
+    line-height: 1.5;
+  }
+
+  // -------------------------------------------
+  // 字段
+  // -------------------------------------------
+
+  .field {
+    margin-top: @spacing-md;
+  }
+
+  .field-row {
+    display: flex;
+    flex-direction: row;
+    gap: @spacing-md;
+  }
+
+  .field.half {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .field-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: @text-secondary;
+  }
+
+  .field-note {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  .input-box {
+    .flex-between();
+    padding: 8px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+    gap: 6px;
+
+    .input {
+      flex: 1;
+      font-size: 15px;
+      color: @text-primary;
+    }
+
+    .unit {
+      font-size: 13px;
+      color: @text-tertiary;
+      flex-shrink: 0;
+    }
+
+    // 可点击的尾部图标（如密码框的显示/隐藏开关）
+    .unit-tap {
+      font-size: 16px;
+      flex-shrink: 0;
+      padding: 0 2px;
+    }
+  }
+
+  // -------------------------------------------
+  // 预览与重试
+  // -------------------------------------------
+
+  .pot-preview {
+    display: block;
+    margin-top: @spacing-md;
+    font-size: 13px;
+    color: @primary;
+    font-weight: 500;
+  }
+
+  .retry-btn {
+    .flex-center();
+    margin-top: @spacing-md;
+    padding: 8px 16px;
+    background: fade(@primary, 12%);
+    border-radius: @radius-sm;
+
+    .retry-text {
+      font-size: 13px;
+      color: @primary-dark;
+    }
+
+    &:active {
+      background: fade(@primary, 22%);
+    }
+  }
+
+  // -------------------------------------------
+  // 模型设置专用
+  // -------------------------------------------
+
+  // 当前 Key 的状态条。两种状态用颜色区分：
+  // 配好了是中性色，没配是要引导用户去填的，用警告色
+  .key-status {
+    margin-top: @spacing-md;
+    padding: 8px 12px;
+    border-radius: @radius-sm;
+
+    &.ok {
+      background: fade(@success, 10%);
+    }
+
+    &.warn {
+      background: fade(@warning, 12%);
+    }
+
+    .key-status-text {
+      font-size: 13px;
+      line-height: 1.5;
+
+      &.ok {
+        color: @success;
+      }
+
+      &.warn {
+        color: @warning;
+      }
+    }
+  }
+
+  // 预设供应商的 chip 行
+  .preset-chips {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: @spacing-sm;
+    margin-top: @spacing-md;
+  }
+
+  .preset-chip {
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: @bg-tertiary;
+    border: 1px solid transparent;
+
+    .preset-chip-text {
+      font-size: 13px;
+      color: @text-secondary;
+    }
+
+    &.active {
+      background: fade(@primary, 12%);
+      border-color: @primary;
+
+      .preset-chip-text {
+        color: @primary-dark;
+        font-weight: 600;
+      }
+    }
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+
+  // 文本型操作（如"清除已保存的 API Key"）
+  .link-btn {
+    display: block;
+    margin-top: @spacing-md;
+
+    .link-text {
+      font-size: 13px;
+      color: @danger;
+    }
+
+    &:active {
+      opacity: 0.6;
+    }
+  }
+
+  .bottom-space {
+    height: 24px;
+  }
+
+  // 底部安全区由 PageLayout 的 bottom 容器统一加，这里不重复处理
+  .page-footer {
+    padding: @spacing-md;
+    background: @bg-secondary;
+    border-top: 1px solid @divider-color;
+  }
+}
+
+// -------------------------------------------
+// 设置入口页：菜单卡片
+// -------------------------------------------
+//
+// 与 profile 的 .menu-section 是同一套外观。那边现在工作正常且不在本次改动范围内，
+// 所以没有去动它；将来它若也要改，可以直接引这份
+.settings-menu {
+  .settings-menu-content {
+    padding: @spacing-md;
+  }
+
+  .menu-section {
+    background: @bg-secondary;
+    border-radius: @radius-xl;
+    overflow: hidden;
+    border: 1px solid @border-color;
+    box-shadow: @shadow-sm;
+  }
+
+  .bottom-space {
+    height: 24px;
+  }
+}
