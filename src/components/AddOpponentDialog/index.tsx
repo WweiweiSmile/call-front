@@ -38,6 +38,9 @@ interface AddOpponentDialogProps {
  *
  * 对手名单是按用户隔离的"对手表"，这里只做搜索与选择：名字在库里没有时
  * **不在这里落库**，等提交手牌时由后端统一建 —— 用户中途放弃不该在库里留下名字。
+ *
+ * 名字是选填的，位置必填：只填位置表示"这个位置上有个我不认识/不想记名字的对手"，
+ * 显示时一律用位置代替，也不会在对手表里建人。
  */
 const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
   visible,
@@ -85,7 +88,9 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
   const canCreate = name.trim().length > 0 && !exactMatch;
 
   const taken = useMemo(() => new Set(takenPositions), [takenPositions]);
-  const canSubmit = name.trim().length > 0 && !!position;
+  // 名字是选填的：留空就只记位置，界面上显示成位置（"CO"），
+  // 提交时后端也不会在对手表里建人。位置仍然是必填 —— 位置才是这手牌认人的依据
+  const canSubmit = !!position;
 
   const handleConfirm = useCallback(() => {
     if (!canSubmit) return;
@@ -117,7 +122,10 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
         <ScrollView className='dialog-body' scrollY>
           {/* ---------- 1. 选人 ---------- */}
           <View className='dialog-field'>
-            <Text className='field-label'>对手</Text>
+            <Text className='field-label'>对手（选填）</Text>
+            <Text className='field-note'>
+              不填名字就只记位置，界面上显示成位置，不进对手名单
+            </Text>
             <View className='search-box'>
               <Input
                 className='search-input'

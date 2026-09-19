@@ -365,7 +365,8 @@ const ReviewCreatePage: React.FC = () => {
         <View className='section'>
           <Text className='section-title'>对手</Text>
           <Text className='section-hint'>
-            只加你关心的对手即可，其余位置默认弃牌。加过的对手下次能直接选
+            只加你关心的对手即可，其余位置默认弃牌。名字可以不填，不填就按位置显示。
+            加过的对手下次能直接选
           </Text>
 
           {form.villains.length === 0 && (
@@ -380,20 +381,29 @@ const ReviewCreatePage: React.FC = () => {
                   0
                 )
               : 0;
+            // 没名字就用位置当名字显示：位置才是这手牌里认人的依据。
+            // 名字为空且位置也空（只有老数据会这样）时才退回"对手"两个字
+            const nameText =
+              villain.name ||
+              (villain.position
+                ? positionLabel(villain.position, form.tableSize)
+                : UNNAMED_VILLAIN_LABEL);
+            // 名字为空时上面显示的就是位置，不必再挂一个重复的位置角标
+            const showPositionChip = !!villain.name || !villain.position;
+
             return (
               <View key={`${villain.position}-${index}`} className='opponent-row'>
                 <View className='opponent-main' onClick={() => openEditOpponent(index)}>
                   <View className='opponent-line'>
-                    <Text className='opponent-name'>
-                      {villain.name || UNNAMED_VILLAIN_LABEL}
-                    </Text>
-                    {villain.position ? (
-                      <Text className='opponent-position'>
-                        {positionLabel(villain.position, form.tableSize)}
-                      </Text>
-                    ) : (
-                      <Text className='opponent-position missing'>位置待选</Text>
-                    )}
+                    <Text className='opponent-name'>{nameText}</Text>
+                    {showPositionChip &&
+                      (villain.position ? (
+                        <Text className='opponent-position'>
+                          {positionLabel(villain.position, form.tableSize)}
+                        </Text>
+                      ) : (
+                        <Text className='opponent-position missing'>位置待选</Text>
+                      ))}
                     {villain.isKey && <Text className='key-badge'>关键对手</Text>}
                   </View>
                   <Text className='opponent-meta'>

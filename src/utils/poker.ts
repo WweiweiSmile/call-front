@@ -173,7 +173,11 @@ export interface BlindConfig {
   heroPosition: Position | '';
   /** 记了位置的对手（M7.1 起是全部对手）。他们的账记在位置这个键上 */
   villainPositions: Position[];
-  /** 老手牌里那个"关键对手"的位置。老数据的行动记在聚合角色 villain 上 */
+  /**
+   * 老手牌里那个"关键对手"的位置，作为聚合角色 villain 的兜底键。
+   * 老数据的行动记在 villain 这个角色上，位置键认不到；新记录两份都记，
+   * 但 villain 键不会命中，等于作废
+   */
   legacyVillainPosition: Position | '';
 }
 
@@ -191,11 +195,12 @@ export function blindPositionsOf(villains: OpponentLike[] = []): Pick<
   let legacyVillainPosition: Position | '' = '';
   for (const villain of villains) {
     if (!villain.position) continue;
-    // 有名字的是 M7.1 之后的记录，没名字的是老数据：两者的行动记录方式不同，
-    // 账也要记到不同的键上，否则盲注根本认不到人
-    if (villain.name) {
-      villainPositions.push(villain.position);
-    } else if (!legacyVillainPosition) {
+    // 有没有名字都按位置认账：名字只是称呼，且现在允许只记位置不记名字
+    villainPositions.push(villain.position);
+    // 老手牌的行动记在聚合角色 villain 上，位置这个键对不上，所以额外把第一个
+    // 没名字的对手认到 villain 键上兜底（老数据最多一个对手带位置）。
+    // 新记录的行动按位置记，这个键不会命中，等于没记
+    if (!villain.name && !legacyVillainPosition) {
       legacyVillainPosition = villain.position;
     }
   }

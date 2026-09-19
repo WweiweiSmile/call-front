@@ -37,8 +37,8 @@ export const OPPONENT_NAME_MAX_LENGTH = 20;
 /**
  * 表单里的一个对手。
  *
- * name 为空有两种来路：M7.1 之前的老手牌（那时对手没有名字），
- * 以及从老草稿迁移过来的对手。两者都允许原样保存，不强制补名字
+ * name 为空有三种来路：M7.1 之前的老手牌（那时对手没有名字）、从老草稿迁移过来的
+ * 对手，以及用户只记了位置没起名字。三种都允许原样保存，界面上用位置代替显示
  */
 export interface VillainFormItem {
   name: string;
@@ -131,6 +131,12 @@ export function useReviewForm(handId?: string) {
    * 顺手改成列表长度，内容指纹就变了，已有的 AI 分析会被判为"不对应当前内容"
    */
   const legacyVillainCountRef = useRef(0);
+  /**
+   * 载入的手牌是不是"对手全都没名字"的老数据。
+   * 无名字本身不再等于老数据（新记录允许只记位置），所以判断口径要看载入时的样子，
+   * 而不是提交时表单里的名字空不空
+   */
+  const loadedAllUnnamedRef = useRef(false);
 
   // ---------- 编辑模式：载入手牌 ----------
   // ready 保证新建模式下不发请求，isFirstLoading 也就天然是 false，
@@ -147,6 +153,8 @@ export function useReviewForm(handId?: string) {
       onSuccess: (hand) => {
         if (!hand) return;
         legacyVillainCountRef.current = hand.villainCount || 0;
+        loadedAllUnnamedRef.current =
+          (hand.villains || []).length > 0 && (hand.villains || []).every((v) => !v.name);
         setForm({
           gameId: hand.gameId,
           title: hand.title,
@@ -456,7 +464,10 @@ export function useReviewForm(handId?: string) {
     // 与后端 ValidateReviewHand 是同一份口径，两边不能有分歧
     const usedPositions: string[] = [];
     for (const villain of form.villains) {
-      const label = villain.name || '对手';
+      // 报错时优先用名字，没名字就用位置称呼他，与界面上的显示口径一致
+      const label =
+        villain.name ||
+        (villain.position ? positionLabel(villain.position, form.tableSize) : '对手');
 
       if (villain.name.length > OPPONENT_NAME_MAX_LENGTH) {
         return `对手名字不要超过 ${OPPONENT_NAME_MAX_LENGTH} 个字`;
@@ -572,9 +583,14 @@ export function useReviewForm(handId?: string) {
       name: villain.name || undefined,
     }));
 
-    // 一个名字都没有 = 老数据：对手数量保持原值（当时是手填的，与列表长度无关）。
-    // 只要有一处对不上，内容指纹就会变，AI 分析状态会被重置
-    const isLegacyVillains = villains.length > 0 && villains.every((v) => !v.name);
+    // 载入的老手牌（对手全都没名字）在编辑时保持原来手填的"对手数量"：那个数字与
+    // 列表长度不是一回事，改掉内容指纹就会变，已有的 AI 分析会被判为"不对应当前内容"。
+    // 新建的手牌没有这个包袱，无名字只是"没起名字"，数量按列表长度报
+    const isLegacyVillains =
+      isEditMode &&
+      loadedAllUnnamedRef.current &&
+      villains.length > 0 &&
+      villains.every((v) => !v.name);
 
     return {
       gameId: form.gameId,
@@ -598,7 +614,7 @@ export function useReviewForm(handId?: string) {
       resultAmount: form.resultAmount ? Number(form.resultAmount) : undefined,
       heroTags: form.heroTags,
     };
-  }, [form, potType, blinds]);
+  }, [form, potType, blinds, isEditMode]);
 
   // 提交。用 runAsync 是因为调用方要拿到成败来决定"是否返回上一页"
   const { runAsync: submitRequest, loading: submitting } = useRequest(
