@@ -54,9 +54,17 @@ export interface UnreadCountResponse {
   count: number;
 }
 
+/**
+ * 审批状态筛选。口径是"还要不要我处理"，不是消息自己的字段：
+ * `pending` 与 `handled` 互补，加起来正好是全部（`handled` 里既有我处理过的审批，
+ * 也有结果告知类消息）。与后端 models.MessageScope* 是同一份契约
+ */
+export type MessageScope = 'all' | 'pending' | 'handled';
+
 /** 消息列表查询参数 */
 export interface GetMessagesParams {
   is_read?: boolean;
+  scope?: MessageScope;
   page?: number;
   page_size?: number;
 }

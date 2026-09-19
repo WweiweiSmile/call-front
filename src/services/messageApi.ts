@@ -12,6 +12,7 @@ export const messageApi = {
   getList: (params?: GetMessagesParams) => {
     const query = new URLSearchParams();
     if (params?.is_read !== undefined) query.append('is_read', String(params.is_read));
+    if (params?.scope) query.append('scope', params.scope);
     if (params?.page) query.append('page', params.page.toString());
     if (params?.page_size) query.append('page_size', params.page_size.toString());
     const queryString = query.toString();

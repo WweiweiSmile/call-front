@@ -9,6 +9,22 @@
     padding: 16px;
   }
 
+  // 审批筛选标签。三个标签一屏放得下，不需要横向滚动
+  .scope-tabs {
+    padding: 0 16px 8px;
+  }
+
+  .loading-hint {
+    display: flex;
+    justify-content: center;
+    padding: 32px 0;
+
+    .hint-text {
+      font-size: 13px;
+      color: @text-tertiary;
+    }
+  }
+
   .message-card {
     background: @bg-secondary;
     border: 1px solid @border-color;
