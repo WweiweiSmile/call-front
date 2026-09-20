@@ -15,6 +15,7 @@ import {
   isValidPositionForTableSize,
   positionLabel,
   positionsForTableSize,
+  remainingStacksAtStreet,
   validateCardString,
 } from '../../utils/poker';
 import type { ActorOption } from '../../components/StreetActionEditor';
@@ -447,6 +448,25 @@ export function useReviewForm(handId?: string) {
     return [...folded];
   }, [form.streets]);
 
+  /**
+   * 各行动者带进这手牌的筹码（BB）。
+   *
+   * 没记筹码的人不进表 —— 全下金额算不出来时就该留空让用户手填，
+   * 用默认值兜一个数等于往库里写假数据
+   */
+  const startingStacks = useMemo<Record<string, number>>(() => {
+    const stacks: Record<string, number> = {};
+    const heroStack = inputToBb(form.heroStackBb);
+    if (heroStack > 0) stacks.hero = heroStack;
+
+    for (const villain of form.villains) {
+      if (!villain.position) continue;
+      const stack = inputToBb(villain.stackBb);
+      if (stack > 0) stacks[villain.position] = stack;
+    }
+    return stacks;
+  }, [form.heroStackBb, form.villains]);
+
   // ---------- 盲注 ----------
   // 位置要一起带上：底池推算靠它把大小盲认到具体行动者头上，否则大盲跟注会被多算
   const blinds: BlindConfig = useMemo(() => ({
@@ -465,6 +485,20 @@ export function useReviewForm(handId?: string) {
     form.heroPosition,
     form.villains,
   ]);
+
+  /**
+   * 每条街开始时各人还剩多少后手（BB），用于「全下」自动填金额。
+   *
+   * 按街预算好而不是在组件里现算：组件只看得到自己那条街的行动，
+   * 而"前面几条街投了多少"要看全量
+   */
+  const remainingStacksByStreet = useMemo(() => {
+    const byStreet: Partial<Record<Street, Record<string, number>>> = {};
+    for (const street of STREET_ORDER) {
+      byStreet[street] = remainingStacksAtStreet(form.streets, street, startingStacks, blinds);
+    }
+    return byStreet;
+  }, [form.streets, startingStacks, blinds]);
 
   // ---------- 底池估算 ----------
   const pots = useMemo(() => computePots(form.streets, blinds), [form.streets, blinds]);
@@ -733,6 +767,8 @@ export function useReviewForm(handId?: string) {
     actorOptions,
     /** 已弃牌的行动者（跨街累积）。弃牌即退出这手牌，录入页不再列出他们 */
     foldedActors,
+    /** 每条街开始时各人还剩多少后手（BB），用于「全下」自动填金额 */
+    remainingStacksByStreet,
     /** 已被占用的位置，添加对手弹窗据此置灰 */
     takenPositions,
     hasKeyVillain,

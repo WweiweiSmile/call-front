@@ -47,9 +47,19 @@ interface StreetActionEditorProps {
   foldedActors: ActorType[];
   /** 几人桌。单挑时"本街第一个说话的人"与别的人数不同，见 firstActorOfStreet */
   tableSize: TableSize;
+  /**
+   * 本街开始时各行动者还剩多少后手（BB），用于「全下」自动填金额。
+   *
+   * 只含**记了筹码**的人：算不出的人不在表里，此时全下金额留空让用户手填 ——
+   * 编一个数进去等于往库里写假数据
+   */
+  remainingStacks?: Record<string, number>;
 }
 
 const ACTIONS: ActionType[] = ['check', 'bet', 'call', 'raise', 'fold', 'allin'];
+
+/** 没有可算的后手时的空表。用常量而不是字面量，免得默认值的引用每轮都变 */
+const EMPTY_STACKS: Record<string, number> = {};
 
 const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
   street,
@@ -62,6 +72,7 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
   actors,
   foldedActors,
   tableSize,
+  remainingStacks = EMPTY_STACKS,
 }) => {
   const updateAction = useCallback((index: number, patch: Partial<StreetAction>) => {
     const next = actions.map((a, i) => (i === index ? { ...a, ...patch } : a));
@@ -108,14 +119,39 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
     onChange([...actions, { actor, action: 'check' }]);
   }, [actions, actorOrder, folded, street, tableSize, onChange]);
 
-  // 切换行动类型时，清掉不再需要的金额，避免提交时后端报"该行动不需要金额"的困惑
+  /**
+   * 切换行动类型时，清掉不再需要的金额，避免提交时后端报"该行动不需要金额"的困惑。
+   *
+   * 选中「全下」时**自动填上该行动者进本街时剩下的后手** —— 他推光本街，本街累计
+   * 投入正好是这个数。只在这一刻填一次，之后用户想改就改：对方后手更短时实际只能
+   * 跟到对方那么多，那种情况必须允许手动调小。
+   * 算不出后手时（没记筹码）保持原样，留空让用户手填
+   */
   const handleActionChange = useCallback((index: number, action: ActionType) => {
     const needsAmount = ACTION_NEEDS_AMOUNT.indexOf(action) >= 0;
-    updateAction(index, {
-      action,
-      amountBb: needsAmount ? actions[index].amountBb : undefined,
-    });
-  }, [actions, updateAction]);
+    const current = actions[index];
+
+    let amountBb = needsAmount ? current.amountBb : undefined;
+    if (action === 'allin') {
+      amountBb = remainingStacks[current.actor] ?? amountBb;
+    }
+
+    updateAction(index, { action, amountBb });
+  }, [actions, remainingStacks, updateAction]);
+
+  /**
+   * 换行动者。全下行的金额跟着行动者走 —— 换了人，他手里剩的就不是原来那个数了，
+   * 留着旧值只会是个错数
+   */
+  const handleActorChange = useCallback((index: number, actor: ActorType) => {
+    const current = actions[index];
+    const filled = remainingStacks[actor];
+    if (current.action === 'allin' && filled !== undefined) {
+      updateAction(index, { actor, amountBb: filled });
+      return;
+    }
+    updateAction(index, { actor });
+  }, [actions, remainingStacks, updateAction]);
 
   return (
     <View className={`street-editor ${expanded ? 'expanded' : ''}`}>
@@ -151,7 +187,7 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
                   <View
                     key={option.value}
                     className={`chip actor ${action.actor === option.value ? 'active' : ''}`}
-                    onClick={() => updateAction(index, { actor: option.value })}
+                    onClick={() => handleActorChange(index, option.value)}
                   >
                     <Text className='chip-text'>{option.label}</Text>
                   </View>

@@ -11,6 +11,7 @@ import type {
   Position,
   PotType,
   Street,
+  StreetAction,
   StreetRecord,
   VillainInfo,
 } from '../models/types/review';
@@ -335,6 +336,119 @@ export interface PotResult {
   finalPotBb: number;
 }
 
+function sumValues(map: Record<string, number>): number {
+  return Object.values(map).reduce((sum, value) => sum + value, 0);
+}
+
+/**
+ * 把一条街的行动过一遍，返回该街结束时"每人本街投了多少"与"本街最高下注额"。
+ *
+ * 抽出来是为了让**底池推算**和**全下该填多少**共用同一套差额规则。这套规则很容易
+ * 改歪（跟注要跟到多少、加注记的是"加到多少"而不是"加了多少"），散成两份必然走样。
+ * 与后端 utils/pot.go 的 ComputeStreetPots 也是同一份契约
+ *
+ * 入参的 contributed 不被修改；返回的 total 是本街净投入的合计（供累加底池）
+ */
+function walkStreetActions(
+  actions: StreetAction[],
+  contributed: Record<string, number>,
+  currentBet: number
+): { contributed: Record<string, number>; currentBet: number; total: number } {
+  const next = { ...contributed };
+  let bet = currentBet;
+  const before = sumValues(next);
+
+  for (const action of actions) {
+    const actor = action.actor;
+    const prev = next[actor] || 0;
+    let delta = 0;
+
+    switch (action.action) {
+      case 'bet':
+      case 'raise':
+      case 'allin':
+        // 三者记的都是"本街累计投到多少"，所以净投入要用当前投入去减。
+        // 全下同理：他推光本街，本街累计就是他进街时手里剩的全部
+        delta = Math.max(0, (action.amountBb || 0) - prev);
+        bet = Math.max(bet, action.amountBb || 0);
+        break;
+      case 'call':
+        delta = Math.max(0, bet - prev);
+        break;
+      case 'check':
+      case 'fold':
+      default:
+        delta = 0;
+    }
+
+    next[actor] = prev + delta;
+  }
+
+  return { contributed: next, currentBet: bet, total: sumValues(next) - before };
+}
+
+/**
+ * 每个行动者在本街**开始之前**已经投进底池的总额（BB）。
+ *
+ * 前注不在内 —— 它不参与"跟到多少"的抵消，与 computePots 同一口径
+ */
+export function contributionBeforeStreet(
+  streets: StreetRecord[],
+  street: Street,
+  blinds?: BlindConfig
+): Record<string, number> {
+  const spent: Record<string, number> = {};
+  const target = STREET_ORDER.indexOf(street);
+  if (target <= 0) return spent;
+
+  for (const earlier of STREET_ORDER.slice(0, target)) {
+    const record = streets.find((s) => s.street === earlier);
+    if (!record || record.actions.length === 0) continue;
+
+    let contributed: Record<string, number> = {};
+    let currentBet = 0;
+    // 翻前要先摆好盲注的棋盘，理由同 computePots：大盲跟注要补的是差额
+    if (earlier === 'preflop' && blinds) {
+      contributed = { ...postedBlinds(blinds) };
+      currentBet = blinds.bigBlindBb;
+    }
+
+    const walked = walkStreetActions(record.actions, contributed, currentBet);
+    for (const [actor, amount] of Object.entries(walked.contributed)) {
+      spent[actor] = (spent[actor] || 0) + amount;
+    }
+  }
+
+  return spent;
+}
+
+/**
+ * 本街开始时，每个行动者手里还剩多少后手（BB）。用于「全下」自动填金额 ——
+ * 他推光本街，本街累计投入正好等于进街时剩下的这些。
+ *
+ * stacks 是各行动者**带进这手牌的筹码**；没记录筹码的人不要放进表里。
+ * 返回的表里也只有算得出来的人，调用方据此决定能不能自动填（算不出就留空手填，
+ * 编一个数进去等于往库里写假数据）
+ */
+export function remainingStacksAtStreet(
+  streets: StreetRecord[],
+  street: Street,
+  stacks: Record<string, number>,
+  blinds?: BlindConfig
+): Record<string, number> {
+  const spent = contributionBeforeStreet(streets, street, blinds);
+  const remaining: Record<string, number> = {};
+
+  for (const [actor, stack] of Object.entries(stacks)) {
+    // 两位小数沿用 formatBB 的口径：浮点减法会留下 97.30000000000001 这种尾巴
+    const left = Math.round((stack - (spent[actor] || 0)) * 100) / 100;
+    // 负数只可能来自记录有误（投得比带进来的还多），夹到 0，别把负数填进金额框
+    remaining[actor] = Math.max(0, left);
+  }
+
+  return remaining;
+}
+
 /**
  * 按记录的行动估算底池。
  *
@@ -357,7 +471,7 @@ export function computePots(streets: StreetRecord[], blinds?: BlindConfig): PotR
     if (record && record.actions.length > 0) {
       // 本街每个行动者的已投入，用于算跟注差额和加注差额。
       // other 是聚合角色，多个"其他人"共用一个桶，是简化处理
-      const contributed: Record<string, number> = {};
+      let contributed: Record<string, number> = {};
       // 当前街的最高下注额，跟注要跟到这么多
       let currentBet = 0;
 
@@ -366,38 +480,12 @@ export function computePots(streets: StreetRecord[], blinds?: BlindConfig): PotR
       // 2) 大盲过牌是免费看翻牌；不预设 currentBet 的话，过牌后的跟注会少算
       // 前注不进 contributed：它不参与"跟到多少"的抵消，只算死钱
       if (street === 'preflop' && blinds) {
-        Object.assign(contributed, postedBlinds(blinds));
+        contributed = { ...postedBlinds(blinds) };
         currentBet = blinds.bigBlindBb;
       }
 
-      for (const action of record.actions) {
-        const actor = action.actor;
-        const prev = contributed[actor] || 0;
-        let delta = 0;
-
-        switch (action.action) {
-          case 'bet':
-          case 'allin':
-            // allin 记录的是总投入额
-            delta = Math.max(0, (action.amountBb || 0) - prev);
-            currentBet = Math.max(currentBet, action.amountBb || 0);
-            break;
-          case 'raise':
-            delta = Math.max(0, (action.amountBb || 0) - prev);
-            currentBet = Math.max(currentBet, action.amountBb || 0);
-            break;
-          case 'call':
-            delta = Math.max(0, currentBet - prev);
-            break;
-          case 'check':
-          case 'fold':
-          default:
-            delta = 0;
-        }
-
-        contributed[actor] = prev + delta;
-        pot += delta;
-      }
+      // 只把本街的**净投入**加进底池：翻前的盲注已经由 preflopPotBb 记过了
+      pot += walkStreetActions(record.actions, contributed, currentBet).total;
     }
 
     byStreet[street] = { street, potStartBb: potStart, potEndBb: pot };
