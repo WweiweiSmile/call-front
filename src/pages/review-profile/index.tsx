@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useRequest } from 'ahooks';
@@ -14,7 +14,7 @@ import { reviewApi } from '../../services/api';
 import { transformReviewInsightListFromApi, transformReviewProfileFromApi } from '../../models';
 import { usePageData } from '../../hooks';
 import { positionLabel } from '../../utils/poker';
-import type { ProfileLeakStat } from '../../models/types/review';
+import type { AnalysisStatus, ProfileLeakStat } from '../../models/types/review';
 import './index.less';
 
 /**
@@ -22,6 +22,20 @@ import './index.less';
  * 后端只统计最近这么多手，前端拿它解释"为什么这条显示已改善"
  */
 const PROFILE_WINDOW_HANDS = 30;
+
+/** 轮询间隔 */
+const POLL_INTERVAL_MS = 2000;
+/**
+ * 最大轮询次数，2 秒 × 450 = 15 分钟。
+ * 与后端的 profileInflightWindow 对齐即可 —— 后端超过这个时长就把任务判成中断，
+ * 前端轮得比它久没有意义
+ */
+const MAX_POLLS = 450;
+
+/** 是否已经结束（成功或失败都算结束） */
+function isFinished(status: AnalysisStatus): boolean {
+  return status === 'done' || status === 'failed';
+}
 
 /** 严重度的展示文案与配色档位，与 AnalysisPanel 的口径保持一致 */
 const SEVERITY_TEXT: Record<number, string> = {
@@ -42,6 +56,57 @@ const ReviewProfilePage: React.FC = () => {
 
   /** 当前展开的漏洞标签，同时用于钻取 */
   const [expandedTag, setExpandedTag] = useState<string>('');
+  /** 轮询开关。ahooks 靠监听 pollingInterval 变假值来停表，不能调 cancel() */
+  const [polling, setPolling] = useState(false);
+  /** beginPolling 的幂等开关：usePageData 每次刷新成功都会再调一次它 */
+  const pollingRef = useRef(false);
+  const pollCountRef = useRef(0);
+
+  const stopPolling = useCallback(() => {
+    pollingRef.current = false;
+    setPolling(false);
+  }, []);
+
+  const beginPolling = useCallback((run: () => void) => {
+    if (pollingRef.current) return;
+    pollCountRef.current = 0;
+    pollingRef.current = true;
+    setPolling(true);
+    run();
+  }, []);
+
+  // ---------- 轮询总结重写状态 ----------
+  //
+  // 刻意用独立的请求而不是把 pollingInterval 挂到 usePageData 上：
+  // 后者带 useRefreshOnShow，页面重新可见时会并发 refresh，两条链路打架
+  const { run: pollProfile } = useRequest(
+    async () => transformReviewProfileFromApi(await reviewApi.getProfile()),
+    {
+      manual: true,
+      pollingInterval: polling ? POLL_INTERVAL_MS : undefined,
+      pollingWhenHidden: false,
+      // 计数放 onFinally：onSuccess 只在成功时触发，网络一直失败就永远撞不到上限
+      onFinally: (_params, data) => {
+        if (data) setProfile(data);
+
+        pollCountRef.current += 1;
+        if (pollCountRef.current > MAX_POLLS) {
+          stopPolling();
+          Taro.showToast({ title: '生成耗时异常，稍后刷新页面看看', icon: 'none', duration: 2500 });
+          return;
+        }
+
+        // 判到终态才停表，并在这一刻告诉用户结果 ——
+        // 触发接口返回的是 pending，那时弹"已更新"是撒谎
+        if (data && isFinished(data.summaryStatus)) {
+          stopPolling();
+          if (data.summaryStatus === 'done') {
+            Taro.showToast({ title: '总结已更新', icon: 'success' });
+          }
+        }
+      },
+    }
+  );
 
   // usePageData 内置了"回到本页时重拉"：从小程序的手牌详情返回时组件不会重新挂载，
   // 只在 useEffect 里拉数据会一直显示旧画像（详情页编辑后同样踩过这个坑）
@@ -52,6 +117,12 @@ const ReviewProfilePage: React.FC = () => {
   } = usePageData(
     async () => transformReviewProfileFromApi(await reviewApi.getProfile()),
     {
+      onSuccess: (next) => {
+        // 上次退出时总结可能还在生成，这里接着轮询。beginPolling 自身幂等
+        if (!isFinished(next.summaryStatus)) {
+          beginPolling(() => pollProfile());
+        }
+      },
       onError: () => Taro.showToast({ title: '画像加载失败', icon: 'none' }),
     }
   );
@@ -93,8 +164,12 @@ const ReviewProfilePage: React.FC = () => {
     {
       manual: true,
       onSuccess: (next) => {
+        // 这个接口现在是异步的，返回的是 status=pending 的画像 ——
+        // 此刻弹"总结已更新"是撒谎，那句话要等轮询判到终态再说
         setProfile(next);
-        Taro.showToast({ title: '总结已更新', icon: 'success' });
+        if (!isFinished(next.summaryStatus)) {
+          beginPolling(() => pollProfile());
+        }
       },
       onError: (e) =>
         Taro.showToast({ title: e?.message || '重写失败', icon: 'none', duration: 2500 }),
@@ -120,6 +195,8 @@ const ReviewProfilePage: React.FC = () => {
 
   const hasData =
     !!profile && (profile.handsReviewed > 0 || profile.leaks.length > 0 || !!profile.summary);
+  /** 总结正在重写。按钮与文案都以它为准，而不是那个只覆盖"触发请求在飞"的 loading */
+  const isSummaryRunning = !!profile && !isFinished(profile.summaryStatus);
 
   return (
     <PageLayout
@@ -164,14 +241,27 @@ const ReviewProfilePage: React.FC = () => {
               </Text>
             )}
 
+            {/* 生成中时不显示旧总结是错的：下面这段提示说明它正在被替换 */}
+            {isSummaryRunning && (
+              <Text className='summary-empty'>
+                正在重写这份总结，需要模型想一会儿，稍等…
+              </Text>
+            )}
+            {profile!.summaryStatus === 'failed' && (
+              <Text className='summary-empty'>
+                {profile!.summaryError || '上次重写没成功，可以再试一次'}
+              </Text>
+            )}
+
             <Button
               type='default'
               size='small'
-              loading={refreshingSummary}
+              loading={refreshingSummary || isSummaryRunning}
+              disabled={isSummaryRunning}
               onClick={handleRefreshSummary}
               data-testid='btn-refresh-summary'
             >
-              {refreshingSummary ? '生成中…' : '重新生成总结'}
+              {refreshingSummary || isSummaryRunning ? '生成中…' : '重新生成总结'}
             </Button>
             <Text className='section-hint'>
               重新生成会调用一次模型，但不会占用你每日的分析次数。

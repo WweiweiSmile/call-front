@@ -147,7 +147,11 @@ export interface ReviewAnalysisListResponse {
 /** 触发分析的响应 */
 export interface RequestAnalysisResponse {
   analysis: ReviewAnalysisResponse;
-  /** 内容未变、直接复用了上次结论（没有调用模型，也没扣额度） */
+  /**
+   * 没有新建分析，返回的是已有的一条（没有调用模型，也没扣额度）。两种来源：
+   * 内容未变、复用上次结论；或这手牌正在分析中，把那条还给你了。
+   * 两种的 status 不同，要不要说"内容没变"得看它
+   */
   reused: boolean;
 }
 
@@ -173,6 +177,13 @@ export interface ReviewProfileResponse {
   summary: string;
   summaryVersion: number;
   lastSummaryAt?: string;
+  /**
+   * 总结重写任务的状态。pending/running 时 summary 还是上一版，
+   * 应当显示"生成中"并轮询，而不是把旧总结当成刚生成的结果
+   */
+  summaryStatus: AnalysisStatus;
+  /** 只有 failed 时有值 */
+  summaryError?: string;
 }
 
 /** 某漏洞的历史证据响应 */
@@ -201,7 +212,15 @@ export interface AskReviewMessageRequest {
 export interface ReviewMessageResponse {
   id: number;
   role: MessageRole;
+  /**
+   * 消息正文。assistant 消息在后台答完之前是空串，**不能拿它当完成判据**——
+   * 要看 status（模型也可能返回空内容，那种情况下两者都空）
+   */
   content: string;
+  /** pending/running/done/failed。user 消息恒为 done */
+  status: AnalysisStatus;
+  /** 只有 failed 的 assistant 消息有值 */
+  errorMsg?: string;
   /** 只有 assistant 消息有值 */
   tokensIn?: number;
   tokensOut?: number;
@@ -209,12 +228,15 @@ export interface ReviewMessageResponse {
 }
 
 /**
- * 追问结果。用户那条也由后端返回：
- * 消息何时落库由后端决定（模型答成功才写），前端据权威 id 渲染
+ * 追问结果。用户那条也由后端返回，前端据权威 id 渲染。
+ *
+ * 异步：answer 通常是 status=pending 的占位记录（content 为空），要轮询
  */
 export interface AskReviewMessageResponse {
   question: ReviewMessageResponse;
   answer: ReviewMessageResponse;
+  /** 本次没有新建任务，返回的是这手牌正在跑的那对：别清空输入框，提示用户等待 */
+  inflight: boolean;
 }
 
 /** 对话历史 */

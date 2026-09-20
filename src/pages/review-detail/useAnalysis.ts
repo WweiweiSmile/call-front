@@ -11,8 +11,16 @@ import type { AnalysisStatus, FrontendAIStatus, FrontendAnalysis } from '../../m
 
 /** 轮询间隔 */
 const POLL_INTERVAL_MS = 2000;
-/** 最大轮询次数，2 秒 × 90 = 3 分钟，超出就认为卡死了 */
-const MAX_POLLS = 90;
+/**
+ * 最大轮询次数，2 秒 × 900 = 30 分钟。
+ *
+ * 后端对模型调用不限时，K3 这类「始终推理」模型实测一次分析要超过 10 分钟，
+ * 所以不能再按"3 分钟算卡死"来卡 —— 那道闸会让后端还在跑、前端先报失败。
+ *
+ * 保留这个上限只为兜"后端真的挂了"：撞上时用户刷新页面会重新拉最新状态并接着
+ * 轮询，所以它不必覆盖最坏情况，够长就行
+ */
+const MAX_POLLS = 900;
 
 /** 标签字典没拉到时的空表。用常量而不是每次字面量，避免 useRequest 的 data 引用每轮都变 */
 const EMPTY_TAG_NAMES: Record<string, string> = {};
@@ -139,7 +147,10 @@ export function useAnalysis(handId?: string) {
       const res = await requestAnalysis(handId);
       const next = transformAnalysisFromApi(res.analysis);
 
-      if (res.reused) {
+      // reused 也可能是"这手牌正在分析中，后端把那条还给你了"，
+      // 那种情况后端的 status 是 running，说"内容没变"就撒谎了。
+      // 只有真拿回一条已结束的结论才是复用上次结果
+      if (res.reused && isFinished(next.status)) {
         Taro.showToast({ title: '内容没变，直接用了上次的结论', icon: 'none', duration: 2000 });
       }
 

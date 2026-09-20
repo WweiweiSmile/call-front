@@ -107,7 +107,8 @@ export const reviewApi = {
     return request<ReviewProfileResponse>('/reviews/profile');
   },
 
-  // 手动触发画像总结重写。同步接口，会真实调用模型，耗时约十几秒
+  // 手动触发画像总结重写。异步接口：立即返回 summaryStatus=pending 的画像，
+  // 真实调用在后台，靠轮询 getProfile 等它变成终态
   refreshProfileSummary: () => {
     return request<ReviewProfileResponse>('/reviews/profile/summary/refresh', {
       method: 'POST',
@@ -127,7 +128,9 @@ export const reviewApi = {
 
   // ---------- 追问对话（M5）----------
 
-  // 追问。同步接口：后端会真实调用模型，耗时约十几秒
+  // 追问。异步接口：立即返回一问一答两条记录，其中 answer 是 status=pending 的
+  // 占位行；真实调用在后台，靠轮询 getMessages 等它变成终态。
+  // 响应里的 inflight=true 表示没有新建（被在飞闸挡住了，返回的是正在跑的那对）
   askQuestion: (handId: string, content: string) => {
     return request<AskReviewMessageResponse>(`/reviews/hands/${handId}/messages`, {
       method: 'POST',

@@ -338,6 +338,9 @@ export function transformReviewProfileFromApi(
     summary: api.summary,
     summaryVersion: api.summaryVersion,
     lastSummaryAt: api.lastSummaryAt,
+    // 老后端还没有这个字段，兜成终态：不然前端会以为总结一直在生成、永远转圈
+    summaryStatus: api.summaryStatus || 'done',
+    summaryError: api.summaryError,
   };
 }
 
@@ -351,6 +354,9 @@ export function transformReviewMessageFromApi(
     id: String(api.id),
     role: api.role,
     content: api.content,
+    // 兜底同画像：拿不到 status 时当成已完成，绝不能让输入框被永久禁用
+    status: api.status || 'done',
+    errorMsg: api.errorMsg,
     createdAt: api.createdAt,
   };
 }

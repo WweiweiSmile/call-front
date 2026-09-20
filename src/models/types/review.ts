@@ -322,6 +322,9 @@ export interface FrontendReviewProfile {
   summary: string;
   summaryVersion: number;
   lastSummaryAt?: string;
+  /** pending/running 时 summary 还是上一版，页面该显示"生成中"并轮询 */
+  summaryStatus: AnalysisStatus;
+  summaryError?: string;
 }
 
 /** 一条历史洞察（画像页点击漏洞后钻取到的证据） */
@@ -362,7 +365,11 @@ export type MessageRole = 'user' | 'assistant';
 export interface FrontendReviewMessage {
   id: string;
   role: MessageRole;
+  /** assistant 消息在 status 为终态前是空串，渲染时看 status 不看它 */
   content: string;
+  /** pending/running 时前端显示"教练正在想"，failed 时显示 errorMsg */
+  status: AnalysisStatus;
+  errorMsg?: string;
   createdAt: string;
 }
 
