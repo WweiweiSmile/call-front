@@ -5,17 +5,10 @@ import {
   ACTION_NEEDS_AMOUNT,
   STREET_LABEL,
   actorLabel,
-  firstActorOfStreet,
   formatBB,
   nextActorAfter,
 } from '../../utils/poker';
-import type {
-  ActionType,
-  ActorType,
-  Street,
-  StreetAction,
-  TableSize,
-} from '../../models/types/review';
+import type { ActionType, ActorType, Street, StreetAction } from '../../models/types/review';
 import './index.less';
 
 /** 一个可选的行动者。value 是位置（对手）或 hero（我） */
@@ -45,8 +38,13 @@ interface StreetActionEditorProps {
   actors: ActorOption[];
   /** 已弃牌的行动者（跨街累积）。弃牌即退出这手牌，不再出现在可点选项里 */
   foldedActors: ActorType[];
-  /** 几人桌。单挑时"本街第一个说话的人"与别的人数不同，见 firstActorOfStreet */
-  tableSize: TableSize;
+  /**
+   * 本街第一个该说话的人，已跳过弃牌者；空串表示算不出来。
+   *
+   * 由父级按**完整位置表**算好传进来，不能拿 actors 自己找 —— 见 firstActorOfStreet：
+   * 我自己坐 BB 时，那个座位的行动者值是 'hero' 而不是 'BB'
+   */
+  firstActor: ActorType | '';
   /**
    * 本街开始时各行动者还剩多少后手（BB），用于「全下」自动填金额。
    *
@@ -71,7 +69,7 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
   potEndBb,
   actors,
   foldedActors,
-  tableSize,
+  firstActor,
   remainingStacks = EMPTY_STACKS,
 }) => {
   const updateAction = useCallback((index: number, patch: Partial<StreetAction>) => {
@@ -115,9 +113,9 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
     const last = actions[actions.length - 1];
     const actor = last
       ? nextActorAfter(actorOrder, folded, last.actor) ?? last.actor
-      : firstActorOfStreet(actorOrder, folded, street, tableSize) ?? 'hero';
+      : firstActor || actorOrder.find((value) => !folded.has(value)) || 'hero';
     onChange([...actions, { actor, action: 'check' }]);
-  }, [actions, actorOrder, folded, street, tableSize, onChange]);
+  }, [actions, actorOrder, folded, firstActor, onChange]);
 
   /**
    * 切换行动类型时，清掉不再需要的金额，避免提交时后端报"该行动不需要金额"的困惑。

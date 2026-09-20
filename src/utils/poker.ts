@@ -137,37 +137,42 @@ export function nextActorAfter<T extends string>(
 }
 
 /**
- * 本街第一个该说话的人，已跳过弃牌者；没人可行动时返回 null。
+ * 本街的位置轮转顺序：从该街第一个说话的座位起，绕一圈。
  *
- * 三种起点，别混：
- * - 翻前：盲注之后才轮到 UTG，所以从 BB 的下一位起数
- * - 翻后 3 人及以上：表头就是 SB（位置表本就按行动顺序排）
- * - **翻后单挑**：按钮位和小盲是同一个座位，所以先说话的是 BB —— 取表头（SB）
- *   是错的。2 人桌是唯一会出现这种重合的人数
- *
- * tableSize 是必要的：光看 order 分不清"表头是 SB"和"表头是同时兼任 BTN 的 SB"
+ * 翻前从大盲的下一位起（盲注之后才轮到 UTG）；翻后从按钮位的下一位起 ——
+ * 3 人及以上那是 SB，**单挑时按钮位与小盲同位**，所以轮到 BB
  */
-export function firstActorOfStreet<T extends string>(
-  order: T[],
-  folded: ReadonlySet<T>,
-  street: Street,
-  tableSize: number
-): T | null {
-  if (order.length === 0) return null;
-
+function streetPositionOrder(street: Street, positions: Position[]): Position[] {
   let start = 0;
   if (street === 'preflop') {
-    const bb = order.indexOf('BB' as T);
-    // 没把 BB 记成对手时退回表头，总好过整条街选不出人
-    if (bb >= 0) start = (bb + 1) % order.length;
-  } else if (tableSize === 2) {
-    const bb = order.indexOf('BB' as T);
-    if (bb >= 0) start = bb;
+    start = (positions.indexOf('BB') + 1) % positions.length;
+  } else if (positions.length === 2) {
+    start = positions.indexOf('BB');
   }
+  return [...positions.slice(start), ...positions.slice(0, start)];
+}
 
-  for (let step = 0; step < order.length; step += 1) {
-    const candidate = order[(start + step) % order.length];
-    if (!folded.has(candidate)) return candidate;
+/**
+ * 本街第一个该说话的人，已跳过弃牌者；没人可行动时返回 null。
+ *
+ * positionActors 是**位置 → 行动者**，只放在场的人。
+ *
+ * **必须按完整位置表轮转，不能只看在场的行动者**。之前就是栽在这里：
+ * - 没把 BB 记成对手时，行动者里根本没有 'BB' 这个值
+ * - 我自己就是 BB 时，那个座位的行动者值是 'hero'，同样不是 'BB'
+ *
+ * 两种情况下"大盲的下一位"都找不到，退回表头就把 SB 当成了翻前第一个说话的人 ——
+ * 而翻前的顺序是 UTG…BTN、SB、BB，SB 是倒数第二个
+ */
+export function firstActorOfStreet(
+  positionActors: Partial<Record<Position, ActorType>>,
+  folded: ReadonlySet<ActorType>,
+  street: Street,
+  tableSize: number
+): ActorType | null {
+  for (const position of streetPositionOrder(street, positionsForTableSize(tableSize))) {
+    const actor = positionActors[position];
+    if (actor && !folded.has(actor)) return actor;
   }
   return null;
 }

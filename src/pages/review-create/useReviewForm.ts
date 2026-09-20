@@ -12,6 +12,7 @@ import {
   computePots,
   derivePotType,
   inputToBb,
+  firstActorOfStreet,
   isValidPositionForTableSize,
   positionLabel,
   positionsForTableSize,
@@ -467,6 +468,31 @@ export function useReviewForm(handId?: string) {
     return stacks;
   }, [form.heroStackBb, form.villains]);
 
+  /**
+   * 位置 → 行动者，只放在场的人。算"本街第一个说话的人"要用它配合**完整位置表**
+   * 轮转，见 firstActorOfStreet —— 直接拿在场行动者找 'BB' 是错的
+   */
+  const positionActors = useMemo<Partial<Record<Position, ActorType>>>(() => {
+    const map: Partial<Record<Position, ActorType>> = {};
+    for (const villain of form.villains) {
+      if (!villain.position) continue;
+      map[villain.position] = villain.position;
+    }
+    // 我自己占一个座位。这个座位的行动者值是 'hero'，认人时不能用位置值去找
+    if (form.heroPosition) map[form.heroPosition] = 'hero';
+    return map;
+  }, [form.villains, form.heroPosition]);
+
+  /** 每条街第一个该说话的人（已跳过弃牌者）。空街新增行动时默认选他 */
+  const firstActorByStreet = useMemo(() => {
+    const byStreet: Partial<Record<Street, ActorType | ''>> = {};
+    const folded = new Set(foldedActors);
+    for (const street of STREET_ORDER) {
+      byStreet[street] = firstActorOfStreet(positionActors, folded, street, form.tableSize) ?? '';
+    }
+    return byStreet;
+  }, [positionActors, foldedActors, form.tableSize]);
+
   // ---------- 盲注 ----------
   // 位置要一起带上：底池推算靠它把大小盲认到具体行动者头上，否则大盲跟注会被多算
   const blinds: BlindConfig = useMemo(() => ({
@@ -767,6 +793,8 @@ export function useReviewForm(handId?: string) {
     actorOptions,
     /** 已弃牌的行动者（跨街累积）。弃牌即退出这手牌，录入页不再列出他们 */
     foldedActors,
+    /** 每条街第一个该说话的人（已跳过弃牌者），空街新增行动时默认选他 */
+    firstActorByStreet,
     /** 每条街开始时各人还剩多少后手（BB），用于「全下」自动填金额 */
     remainingStacksByStreet,
     /** 已被占用的位置，添加对手弹窗据此置灰 */

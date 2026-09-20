@@ -53,6 +53,7 @@ const ReviewCreatePage: React.FC = () => {
     boardUnavailableCards,
     actorOptions,
     foldedActors,
+    firstActorByStreet,
     remainingStacksByStreet,
     takenPositions,
     hasKeyVillain,
@@ -458,7 +459,7 @@ const ReviewCreatePage: React.FC = () => {
                   potEndBb={step?.potEndBb}
                   actors={actorOptions}
                   foldedActors={foldedActors}
-                  tableSize={form.tableSize}
+                  firstActor={firstActorByStreet[street] || ''}
                   remainingStacks={remainingStacksByStreet[street]}
                 />
                 {expandedStreets.indexOf(street) >= 0 && needsBoard && (
