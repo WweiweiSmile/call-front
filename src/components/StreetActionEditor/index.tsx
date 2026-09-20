@@ -1,13 +1,21 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Input, Text, View } from '@tarojs/components';
 import {
   ACTION_LABEL,
   ACTION_NEEDS_AMOUNT,
   STREET_LABEL,
   actorLabel,
+  firstActorOfStreet,
   formatBB,
+  nextActorAfter,
 } from '../../utils/poker';
-import type { ActionType, ActorType, Street, StreetAction } from '../../models/types/review';
+import type {
+  ActionType,
+  ActorType,
+  Street,
+  StreetAction,
+  TableSize,
+} from '../../models/types/review';
 import './index.less';
 
 /** 一个可选的行动者。value 是位置（对手）或 hero（我） */
@@ -28,10 +36,17 @@ interface StreetActionEditorProps {
   /** 该街结束时的底池（BB） */
   potEndBb?: number;
   /**
-   * 可选的行动者：我 + 本手牌已添加的对手（M7.1 起不再有"其他人"这个聚合角色）。
-   * 老手牌里已有的 villain / other 行仍要能显示，见 optionsFor
+   * 可选的行动者：我 + 本手牌已添加的对手（M7.1 起不再有"其他人"这个聚合角色），
+   * **按牌桌行动顺序排列**。老手牌里已有的 villain / other 行仍要能显示，见 optionsFor
+   *
+   * 已弃牌的人**仍然留在这个数组里**：自动轮转要按完整顺序走 ——
+   * 上一条恰好是"某人弃牌"时，得先找到他在桌上的次序才知道下一位是谁
    */
   actors: ActorOption[];
+  /** 已弃牌的行动者（跨街累积）。弃牌即退出这手牌，不再出现在可点选项里 */
+  foldedActors: ActorType[];
+  /** 几人桌。单挑时"本街第一个说话的人"与别的人数不同，见 firstActorOfStreet */
+  tableSize: TableSize;
 }
 
 const ACTIONS: ActionType[] = ['check', 'bet', 'call', 'raise', 'fold', 'allin'];
@@ -45,6 +60,8 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
   potStartBb,
   potEndBb,
   actors,
+  foldedActors,
+  tableSize,
 }) => {
   const updateAction = useCallback((index: number, patch: Partial<StreetAction>) => {
     const next = actions.map((a, i) => (i === index ? { ...a, ...patch } : a));
@@ -55,23 +72,41 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
     onChange(actions.filter((_, i) => i !== index));
   }, [actions, onChange]);
 
+  const folded = useMemo(() => new Set(foldedActors), [foldedActors]);
+
   /**
-   * 一行可选的行动者。行里的 actor 是位置、而这个人已经被删掉时（或老数据的
-   * villain/other），把它顶在列表最前面：否则这一行会没有任何选中项，
+   * 一行可选的行动者。**已弃牌的人不再列出** —— 弃牌就是退出这手牌。
+   *
+   * 但这一行自己的行动者永远保留：行里的 actor 是位置、而这个人已经被删掉或已弃牌时
+   * （或老数据的 villain/other），把它顶在列表最前面，否则这一行会没有任何选中项，
    * 用户既看不出是谁，也改不回来
    */
   const optionsFor = useCallback((actor: ActorType): ActorOption[] => {
-    if (actors.some((option) => option.value === actor)) return actors;
+    const visible = actors.filter(
+      (option) => option.value === actor || !folded.has(option.value)
+    );
+    if (visible.some((option) => option.value === actor)) return visible;
     // 认不出的值（后端将来加了新角色）原样显示，总好过这一行没有选中项
-    return [{ value: actor, label: actorLabel(actor) }, ...actors];
-  }, [actors]);
+    return [{ value: actor, label: actorLabel(actor) }, ...visible];
+  }, [actors, folded]);
 
+  /** 按行动顺序排的座位表。**含已弃牌的人** —— 轮转要按完整顺序走，见 nextActorAfter */
+  const actorOrder = useMemo(() => actors.map((option) => option.value), [actors]);
+
+  /**
+   * 默认加一条"过牌"，并**自动选好行动者**，省掉一次点击：
+   * 接着上一条按牌桌顺序往后轮转、弃牌的人跳过；这条街还没有行动时，
+   * 选本街第一个该说话的人
+   *
+   * 全桌都弃牌时（只有记录有误才会这样）退回上一条的行动者，别硬塞一个不相干的人
+   */
   const addAction = useCallback(() => {
-    // 默认加一条"对手过牌"这种最常见的记录，减少用户点击次数。
-    // actors[0] 是我，所以有对手时优先选第一个对手
-    const actor = actors.length > 1 ? actors[1].value : actors[0]?.value || 'hero';
+    const last = actions[actions.length - 1];
+    const actor = last
+      ? nextActorAfter(actorOrder, folded, last.actor) ?? last.actor
+      : firstActorOfStreet(actorOrder, folded, street, tableSize) ?? 'hero';
     onChange([...actions, { actor, action: 'check' }]);
-  }, [actions, actors, onChange]);
+  }, [actions, actorOrder, folded, street, tableSize, onChange]);
 
   // 切换行动类型时，清掉不再需要的金额，避免提交时后端报"该行动不需要金额"的困惑
   const handleActionChange = useCallback((index: number, action: ActionType) => {

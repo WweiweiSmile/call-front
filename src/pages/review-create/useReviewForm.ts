@@ -20,6 +20,7 @@ import {
 import type { ActorOption } from '../../components/StreetActionEditor';
 import type { BlindConfig } from '../../utils/poker';
 import type {
+  ActorType,
   HandResult,
   Position,
   Street,
@@ -33,6 +34,14 @@ export const DRAFT_STORAGE_KEY = 'review_hand_draft';
 
 /** 对手名长度上限，与后端 models.OpponentNameMaxRunes 一致 */
 export const OPPONENT_NAME_MAX_LENGTH = 20;
+
+/**
+ * 我自己这个行动者。
+ *
+ * 不写成字面量散在各处：它在 actorOptions 里的**位置不固定** —— 要按 heroPosition
+ * 坐进牌桌顺序里，否则自动轮转会把"下一个该谁"算错
+ */
+const HERO_ACTOR: ActorOption = { value: 'hero', label: '我' };
 
 /**
  * 表单里的一个对手。
@@ -390,18 +399,53 @@ export function useReviewForm(handId?: string) {
     });
   }, []);
 
-  /** 行动可选的行动者：我 + 本手牌记了位置的对手 */
+  /**
+   * 行动可选的行动者：我 + 本手牌记了位置的对手，**按牌桌行动顺序排列**。
+   *
+   * 顺序很要紧：录入页靠它把"下一条行动该谁"自动选出来。原来的顺序是用户添加对手
+   * 的先后，跟牌桌上的实际顺序无关，没法拿来轮转
+   */
   const actorOptions = useMemo<ActorOption[]>(() => {
-    const options: ActorOption[] = [{ value: 'hero', label: '我' }];
+    const villainByPosition = new Map<Position, ActorOption>();
     for (const villain of form.villains) {
       if (!villain.position) continue;
-      options.push({
+      villainByPosition.set(villain.position, {
         value: villain.position,
         label: villain.name || positionLabel(villain.position, form.tableSize),
       });
     }
-    return options;
-  }, [form.villains, form.tableSize]);
+
+    const ordered: ActorOption[] = [];
+    let heroPlaced = false;
+    for (const position of positionsForTableSize(form.tableSize)) {
+      if (position === form.heroPosition) {
+        ordered.push(HERO_ACTOR);
+        heroPlaced = true;
+        continue;
+      }
+      const villain = villainByPosition.get(position);
+      if (villain) ordered.push(villain);
+    }
+
+    // 还没选自己的位置时也要能记我的行动，顶在最前面（此时顺序无从谈起）
+    return heroPlaced ? ordered : [HERO_ACTOR, ...ordered];
+  }, [form.villains, form.tableSize, form.heroPosition]);
+
+  /**
+   * 已弃牌的行动者，跨街累积。
+   *
+   * 弃牌 = 退出这手牌，所以翻前弃了的人在翻牌/转牌/河牌都不该再出现。
+   * 只按"当前街的上一条"判是不够的：一过街，弃牌的人又冒出来了
+   */
+  const foldedActors = useMemo<ActorType[]>(() => {
+    const folded = new Set<ActorType>();
+    for (const record of form.streets) {
+      for (const action of record.actions || []) {
+        if (action.action === 'fold') folded.add(action.actor);
+      }
+    }
+    return [...folded];
+  }, [form.streets]);
 
   // ---------- 盲注 ----------
   // 位置要一起带上：底池推算靠它把大小盲认到具体行动者头上，否则大盲跟注会被多算
@@ -685,8 +729,10 @@ export function useReviewForm(handId?: string) {
     heroUnavailableCards: form.board,
     /** 底牌已占用的牌，公共牌不能再选 */
     boardUnavailableCards: form.heroCards,
-    /** 行动可选的行动者：我 + 本手牌的对手 */
+    /** 行动可选的行动者：我 + 本手牌的对手，**按牌桌行动顺序** */
     actorOptions,
+    /** 已弃牌的行动者（跨街累积）。弃牌即退出这手牌，录入页不再列出他们 */
+    foldedActors,
     /** 已被占用的位置，添加对手弹窗据此置灰 */
     takenPositions,
     hasKeyVillain,

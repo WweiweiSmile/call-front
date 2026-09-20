@@ -52,6 +52,7 @@ const ReviewCreatePage: React.FC = () => {
     heroUnavailableCards,
     boardUnavailableCards,
     actorOptions,
+    foldedActors,
     takenPositions,
     hasKeyVillain,
     setField,
@@ -455,6 +456,8 @@ const ReviewCreatePage: React.FC = () => {
                   potStartBb={step?.potStartBb}
                   potEndBb={step?.potEndBb}
                   actors={actorOptions}
+                  foldedActors={foldedActors}
+                  tableSize={form.tableSize}
                 />
                 {expandedStreets.indexOf(street) >= 0 && needsBoard && (
                   <Text className='board-warning'>

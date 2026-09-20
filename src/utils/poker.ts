@@ -109,6 +109,69 @@ export function isValidPositionForTableSize(position: string, tableSize: number)
 }
 
 /**
+ * 从 from 之后按牌桌顺序找下一个还没弃牌的行动者，最多绕一圈；找不到时返回 null。
+ *
+ * order 必须是**按行动顺序排好的完整座位表，且含已弃牌的人**。不能传"已滤掉弃牌者"
+ * 的列表：上一条恰好是"某人弃牌"时，要先能在表里找到他的次序，才知道下一位是谁 ——
+ * 他一被滤掉，轮转就从这里断了。
+ *
+ * from 不在表里时（老手牌把行动记在聚合角色 villain/other 上）从表头起数，
+ * 等价于"随便找一个还能行动的人"
+ */
+export function nextActorAfter<T extends string>(
+  order: T[],
+  folded: ReadonlySet<T>,
+  from: T
+): T | null {
+  if (order.length === 0) return null;
+
+  const start = order.indexOf(from);
+  const base = start < 0 ? -1 : start;
+
+  for (let step = 1; step <= order.length; step += 1) {
+    const candidate = order[(base + step + order.length) % order.length];
+    if (!folded.has(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * 本街第一个该说话的人，已跳过弃牌者；没人可行动时返回 null。
+ *
+ * 三种起点，别混：
+ * - 翻前：盲注之后才轮到 UTG，所以从 BB 的下一位起数
+ * - 翻后 3 人及以上：表头就是 SB（位置表本就按行动顺序排）
+ * - **翻后单挑**：按钮位和小盲是同一个座位，所以先说话的是 BB —— 取表头（SB）
+ *   是错的。2 人桌是唯一会出现这种重合的人数
+ *
+ * tableSize 是必要的：光看 order 分不清"表头是 SB"和"表头是同时兼任 BTN 的 SB"
+ */
+export function firstActorOfStreet<T extends string>(
+  order: T[],
+  folded: ReadonlySet<T>,
+  street: Street,
+  tableSize: number
+): T | null {
+  if (order.length === 0) return null;
+
+  let start = 0;
+  if (street === 'preflop') {
+    const bb = order.indexOf('BB' as T);
+    // 没把 BB 记成对手时退回表头，总好过整条街选不出人
+    if (bb >= 0) start = (bb + 1) % order.length;
+  } else if (tableSize === 2) {
+    const bb = order.indexOf('BB' as T);
+    if (bb >= 0) start = bb;
+  }
+
+  for (let step = 0; step < order.length; step += 1) {
+    const candidate = order[(start + step) % order.length];
+    if (!folded.has(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
  * 位置的展示名。2 人桌的 SB 同时是 BTN，标出来免得用户以为界面上漏了按钮位。
  * 存库的值始终是 SB——加个后缀只是为了显示，不参与任何匹配。
  */
