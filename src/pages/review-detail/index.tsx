@@ -305,7 +305,7 @@ const ReviewDetailPage: React.FC = () => {
         {/* ---------- 追问对话 ---------- */}
         <View className='section'>
           <ReviewChatPanel
-            handId={handId || ''}
+            analysisId={analysis?.id ?? ''}
             enabled={!!analysis && analysis.status === 'done'}
             testId='review-chat-panel'
           />

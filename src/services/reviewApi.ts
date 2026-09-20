@@ -131,15 +131,18 @@ export const reviewApi = {
   // 追问。异步接口：立即返回一问一答两条记录，其中 answer 是 status=pending 的
   // 占位行；真实调用在后台，靠轮询 getMessages 等它变成终态。
   // 响应里的 inflight=true 表示没有新建（被在飞闸挡住了，返回的是正在跑的那对）
-  askQuestion: (handId: string, content: string) => {
-    return request<AskReviewMessageResponse>(`/reviews/hands/${handId}/messages`, {
+  //
+  // 传的是 analysisId 而不是 handId：对话绑定一次分析。手牌改过并重新分析后
+  // 是新的一条 analysis，会从空白对话开始
+  askQuestion: (analysisId: string, content: string) => {
+    return request<AskReviewMessageResponse>(`/reviews/analyses/${analysisId}/messages`, {
       method: 'POST',
       data: { content },
     });
   },
 
-  // 某手牌的对话历史，按时间升序
-  getMessages: (handId: string) => {
-    return request<ReviewMessageListResponse>(`/reviews/hands/${handId}/messages`);
+  // 某次分析的对话历史，按时间升序
+  getMessages: (analysisId: string) => {
+    return request<ReviewMessageListResponse>(`/reviews/analyses/${analysisId}/messages`);
   },
 };

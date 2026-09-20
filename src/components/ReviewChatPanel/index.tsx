@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Input, Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useRequest } from 'ahooks';
@@ -9,7 +9,9 @@ import type { AnalysisStatus, FrontendReviewMessage } from '../../models/types/r
 import './index.less';
 
 interface ReviewChatPanelProps {
-  handId: string;
+  /** 这次分析（AI 复盘）的 id。对话绑定一次分析，不是手牌 ——
+   *  手牌改过并重新分析后是新的一条 analysis，会从空白对话开始 */
+  analysisId: string;
   /** 是否已经有分析结论。没有结论就没有可追问的对象 */
   enabled: boolean;
   /** 测试用 id */
@@ -47,7 +49,7 @@ function bubbleText(msg: FrontendReviewMessage): string {
   return msg.content;
 }
 
-const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({ handId, enabled, testId }) => {
+const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({ analysisId, enabled, testId }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<FrontendReviewMessage[]>([]);
   /** 轮询开关。ahooks 靠 useUpdateEffect 监听 pollingInterval 变假值来停表，
@@ -75,9 +77,17 @@ const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({ handId, enabled, test
     setPolling(false);
   }, []);
 
+  // analysisId 变了就是另一段对话：重新分析会产生新的一条 analysis，
+  // 上一段的问答和轮询状态都必须清掉，否则旧问答会挂在新结论下面
+  useEffect(() => {
+    setMessages([]);
+    setTimedOut(false);
+    stopPolling();
+  }, [analysisId, stopPolling]);
+
   // ---------- 轮询追问状态 ----------
   const { run: pollOnce } = useRequest(
-    async () => transformReviewMessageListFromApi((await reviewApi.getMessages(handId)).list),
+    async () => transformReviewMessageListFromApi((await reviewApi.getMessages(analysisId)).list),
     {
       manual: true,
       pollingInterval: polling ? POLL_INTERVAL_MS : undefined,
@@ -114,9 +124,14 @@ const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({ handId, enabled, test
 
   // ---------- 对话历史 ----------
   const { loading: messagesLoading } = useRequest(
-    async () => transformReviewMessageListFromApi((await reviewApi.getMessages(handId)).list),
+    async () => transformReviewMessageListFromApi((await reviewApi.getMessages(analysisId)).list),
     {
-      ready: enabled,
+      // analysisId 为空（分析还没载入）时不能发请求，否则会打到 /analyses//messages
+      ready: enabled && !!analysisId,
+      // analysisId 变了要重新拉：新的一条分析是另一段对话。
+      // 重新分析会经过 pending→done 让 ready 翻一次，本来也会重跑；
+      // 这里是防"id 变了但 enabled 一直是 true"的路径漏掉刷新
+      refreshDeps: [analysisId],
       onSuccess: (list) => {
         setMessages(list);
         // 上次离开时可能还没答完，接着轮询 —— beginPolling 自身幂等
@@ -129,7 +144,7 @@ const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({ handId, enabled, test
 
   // ---------- 追问 ----------
   const { runAsync: askQuestion, loading: sending } = useRequest(
-    (content: string) => reviewApi.askQuestion(handId, content),
+    (content: string) => reviewApi.askQuestion(analysisId, content),
     {
       manual: true,
       onSuccess: (res) => {
