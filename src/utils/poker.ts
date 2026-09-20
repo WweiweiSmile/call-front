@@ -78,6 +78,65 @@ export interface OpponentLike {
 /** 需要填写金额的行动 */
 export const ACTION_NEEDS_AMOUNT: ActionType[] = ['bet', 'raise', 'allin'];
 
+/** 全部候选动作。本街实际能选哪些由 availableActionsFor 决定（过牌不是哪儿都能用） */
+const ALL_ACTIONS: ActionType[] = ['check', 'bet', 'call', 'raise', 'fold', 'allin'];
+
+/** 会让当前下注额抬高的行动。跟注只是跟到它，过牌/弃牌则什么都不做 */
+const AGGRESSIVE_ACTIONS: ActionType[] = ['bet', 'raise', 'allin'];
+
+/**
+ * 一条行动是否让该行动者退出了后续行动。
+ *
+ * 弃牌退出牌局；**全下还在牌局里、筹码也在底池里，但不再有行动机会**。
+ * 两者都该从后续行动的候选里消失
+ */
+export function retiresActor(action: ActionType): boolean {
+  return action === 'fold' || action === 'allin';
+}
+
+/**
+ * 已经不能再行动的人，跨街累积。
+ *
+ * 累积是必须的：翻前弃了或全下的人，到翻牌/转牌/河牌都不该再出现。只按"当前街的
+ * 上一条"判是不够的 —— 一过街，这些人又冒出来了。同时也覆盖当前街：某人刚全下，
+ * 紧接着的下一条行动就不该轮到他
+ */
+export function actorsOutOfAction(streets: StreetRecord[]): ActorType[] {
+  const out = new Set<ActorType>();
+  for (const record of streets) {
+    for (const action of record.actions || []) {
+      if (retiresActor(action.action)) out.add(action.actor);
+    }
+  }
+  return [...out];
+}
+
+/**
+ * 本街可选的动作。
+ *
+ * 过牌只在"还没人下注的翻后"合法：
+ * - 翻前必须至少补齐大盲，没有过牌这回事
+ * - 翻后一旦有人下注/加注/全下，面对下注只能跟、加、弃
+ *
+ * 判据只看 streets 里记的行动，不看底池推算 —— 两者口径一致
+ * （computePots 里也只有这三个动作会抬高 currentBet）
+ */
+export function availableActionsFor(street: Street, actions: StreetAction[]): ActionType[] {
+  const hasBet = actions.some((action) => AGGRESSIVE_ACTIONS.indexOf(action.action) >= 0);
+  if (street === 'preflop' || hasBet) {
+    return ALL_ACTIONS.filter((action) => action !== 'check');
+  }
+  return ALL_ACTIONS;
+}
+
+/**
+ * 新增一条行动时的默认动作：翻前跟注；翻后没人下注时过牌、有人下注了跟注。
+ * 三种都是这一手最可能的记录，省掉一次点击
+ */
+export function defaultActionFor(street: Street, actions: StreetAction[]): ActionType {
+  return availableActionsFor(street, actions).indexOf('check') >= 0 ? 'check' : 'call';
+}
+
 /**
  * 各人数下的合法位置，按翻前行动顺序（SB 先说话，BTN 最后）。
  *

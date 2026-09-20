@@ -52,7 +52,7 @@ const ReviewCreatePage: React.FC = () => {
     heroUnavailableCards,
     boardUnavailableCards,
     actorOptions,
-    foldedActors,
+    outActors,
     firstActorByStreet,
     remainingStacksByStreet,
     takenPositions,
@@ -458,7 +458,7 @@ const ReviewCreatePage: React.FC = () => {
                   potStartBb={step?.potStartBb}
                   potEndBb={step?.potEndBb}
                   actors={actorOptions}
-                  foldedActors={foldedActors}
+                  outActors={outActors}
                   firstActor={firstActorByStreet[street] || ''}
                   remainingStacks={remainingStacksByStreet[street]}
                 />

@@ -5,6 +5,8 @@ import {
   ACTION_NEEDS_AMOUNT,
   STREET_LABEL,
   actorLabel,
+  availableActionsFor,
+  defaultActionFor,
   formatBB,
   nextActorAfter,
 } from '../../utils/poker';
@@ -36,8 +38,14 @@ interface StreetActionEditorProps {
    * 上一条恰好是"某人弃牌"时，得先找到他在桌上的次序才知道下一位是谁
    */
   actors: ActorOption[];
-  /** 已弃牌的行动者（跨街累积）。弃牌即退出这手牌，不再出现在可点选项里 */
-  foldedActors: ActorType[];
+  /**
+   * 已经不能再行动的人：**弃牌 + 全下**，跨街累积。
+   *
+   * 两者都退出了"行动"这件事 —— 弃牌的退出了牌局，全下的人还在牌局里但不再有行动
+   * 机会。所以后续行动既不自动选他们，也不再把他们列出来。
+   * **当前街内同样生效**：某人刚全下，紧接着的下一条行动就不该轮到他
+   */
+  outActors: ActorType[];
   /**
    * 本街第一个该说话的人，已跳过弃牌者；空串表示算不出来。
    *
@@ -54,8 +62,6 @@ interface StreetActionEditorProps {
   remainingStacks?: Record<string, number>;
 }
 
-const ACTIONS: ActionType[] = ['check', 'bet', 'call', 'raise', 'fold', 'allin'];
-
 /** 没有可算的后手时的空表。用常量而不是字面量，免得默认值的引用每轮都变 */
 const EMPTY_STACKS: Record<string, number> = {};
 
@@ -68,7 +74,7 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
   potStartBb,
   potEndBb,
   actors,
-  foldedActors,
+  outActors,
   firstActor,
   remainingStacks = EMPTY_STACKS,
 }) => {
@@ -81,41 +87,63 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
     onChange(actions.filter((_, i) => i !== index));
   }, [actions, onChange]);
 
-  const folded = useMemo(() => new Set(foldedActors), [foldedActors]);
+  const out = useMemo(() => new Set(outActors), [outActors]);
+
+  /** 本街可选的动作。过牌只在"还没人下注的翻后"合法，规则见 availableActionsFor */
+  const availableActions = useMemo(
+    () => availableActionsFor(street, actions),
+    [street, actions]
+  );
+
+  /** 新增行的默认动作：翻前跟注；翻后没人下注时过牌、有人下注了跟注 */
+  const defaultAction = useMemo(
+    () => defaultActionFor(street, actions),
+    [street, actions]
+  );
 
   /**
-   * 一行可选的行动者。**已弃牌的人不再列出** —— 弃牌就是退出这手牌。
+   * 一行可选的动作。这一行自己的动作永远保留，道理同 optionsFor：
+   * 记了"过牌"之后有人下注，过牌按钮就没了，那一行会变成一排全没选中的按钮 ——
+   * 用户既看不出记的是什么，也改不回来
+   */
+  const actionsForRow = useCallback((current: ActionType): ActionType[] => {
+    if (availableActions.indexOf(current) >= 0) return availableActions;
+    return [current, ...availableActions];
+  }, [availableActions]);
+
+  /**
+   * 一行可选的行动者。**已经不能再行动的人不再列出**（弃牌 / 全下）。
    *
-   * 但这一行自己的行动者永远保留：行里的 actor 是位置、而这个人已经被删掉或已弃牌时
+   * 但这一行自己的行动者永远保留：行里的 actor 是位置、而这个人已经被删掉或已退出时
    * （或老数据的 villain/other），把它顶在列表最前面，否则这一行会没有任何选中项，
    * 用户既看不出是谁，也改不回来
    */
   const optionsFor = useCallback((actor: ActorType): ActorOption[] => {
-    const visible = actors.filter(
-      (option) => option.value === actor || !folded.has(option.value)
-    );
+    const visible = actors.filter((option) => option.value === actor || !out.has(option.value));
     if (visible.some((option) => option.value === actor)) return visible;
     // 认不出的值（后端将来加了新角色）原样显示，总好过这一行没有选中项
     return [{ value: actor, label: actorLabel(actor) }, ...visible];
-  }, [actors, folded]);
+  }, [actors, out]);
 
-  /** 按行动顺序排的座位表。**含已弃牌的人** —— 轮转要按完整顺序走，见 nextActorAfter */
+  /** 按行动顺序排的座位表。**含已退出的人** —— 轮转要按完整顺序走，见 nextActorAfter */
   const actorOrder = useMemo(() => actors.map((option) => option.value), [actors]);
 
   /**
-   * 默认加一条"过牌"，并**自动选好行动者**，省掉一次点击：
-   * 接着上一条按牌桌顺序往后轮转、弃牌的人跳过；这条街还没有行动时，
-   * 选本街第一个该说话的人
+   * 新增一条行动：**行动者与动作都自动选好**，省掉两次点击。
    *
-   * 全桌都弃牌时（只有记录有误才会这样）退回上一条的行动者，别硬塞一个不相干的人
+   * 行动者接着上一条按牌桌顺序往后轮转（弃牌 / 已全下的人跳过）；这条街还没有行动时，
+   * 选本街第一个该说话的人。动作见 defaultAction
+   *
+   * 全桌都不能再行动时（只有记录有误才会这样）退回上一条的行动者，
+   * 别硬塞一个不相干的人
    */
   const addAction = useCallback(() => {
     const last = actions[actions.length - 1];
     const actor = last
-      ? nextActorAfter(actorOrder, folded, last.actor) ?? last.actor
-      : firstActor || actorOrder.find((value) => !folded.has(value)) || 'hero';
-    onChange([...actions, { actor, action: 'check' }]);
-  }, [actions, actorOrder, folded, firstActor, onChange]);
+      ? nextActorAfter(actorOrder, out, last.actor) ?? last.actor
+      : firstActor || actorOrder.find((value) => !out.has(value)) || 'hero';
+    onChange([...actions, { actor, action: defaultAction }]);
+  }, [actions, actorOrder, out, firstActor, defaultAction, onChange]);
 
   /**
    * 切换行动类型时，清掉不再需要的金额，避免提交时后端报"该行动不需要金额"的困惑。
@@ -194,7 +222,7 @@ const StreetActionEditor: React.FC<StreetActionEditorProps> = ({
 
               {/* 做了什么 */}
               <View className='action-group'>
-                {ACTIONS.map((act) => (
+                {actionsForRow(action.action).map((act) => (
                   <View
                     key={act}
                     className={`chip action ${action.action === act ? 'active' : ''}`}

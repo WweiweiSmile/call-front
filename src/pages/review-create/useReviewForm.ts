@@ -6,6 +6,7 @@ import { gameApi, preferenceApi, reviewApi } from '../../services/api';
 import {
   DEFAULT_TABLE_SIZE,
   STREET_ORDER,
+  actorsOutOfAction,
   bbToInput,
   blindPositionsOf,
   buildDefaultTitle,
@@ -434,20 +435,18 @@ export function useReviewForm(handId?: string) {
   }, [form.villains, form.tableSize, form.heroPosition]);
 
   /**
-   * 已弃牌的行动者，跨街累积。
+   * 已经不能再行动的人：**弃牌 + 全下**，跨街累积。
    *
-   * 弃牌 = 退出这手牌，所以翻前弃了的人在翻牌/转牌/河牌都不该再出现。
-   * 只按"当前街的上一条"判是不够的：一过街，弃牌的人又冒出来了
+   * 两者都退出了"行动"这件事：弃牌的退出了牌局；全下的人还在牌局里、筹码也在底池里，
+   * 但不再有行动机会，所以后续行动也不该轮到他。
+   *
+   * 跨街累积是必须的：翻前弃了或全下的人，到翻牌/转牌/河牌都不该再出现。只按
+   * "当前街的上一条"判是不够的 —— 一过街，这些人又冒出来了
    */
-  const foldedActors = useMemo<ActorType[]>(() => {
-    const folded = new Set<ActorType>();
-    for (const record of form.streets) {
-      for (const action of record.actions || []) {
-        if (action.action === 'fold') folded.add(action.actor);
-      }
-    }
-    return [...folded];
-  }, [form.streets]);
+  const outActors = useMemo<ActorType[]>(
+    () => actorsOutOfAction(form.streets),
+    [form.streets]
+  );
 
   /**
    * 各行动者带进这手牌的筹码（BB）。
@@ -483,15 +482,15 @@ export function useReviewForm(handId?: string) {
     return map;
   }, [form.villains, form.heroPosition]);
 
-  /** 每条街第一个该说话的人（已跳过弃牌者）。空街新增行动时默认选他 */
+  /** 每条街第一个该说话的人（已跳过弃牌/已全下者）。空街新增行动时默认选他 */
   const firstActorByStreet = useMemo(() => {
     const byStreet: Partial<Record<Street, ActorType | ''>> = {};
-    const folded = new Set(foldedActors);
+    const out = new Set(outActors);
     for (const street of STREET_ORDER) {
-      byStreet[street] = firstActorOfStreet(positionActors, folded, street, form.tableSize) ?? '';
+      byStreet[street] = firstActorOfStreet(positionActors, out, street, form.tableSize) ?? '';
     }
     return byStreet;
-  }, [positionActors, foldedActors, form.tableSize]);
+  }, [positionActors, outActors, form.tableSize]);
 
   // ---------- 盲注 ----------
   // 位置要一起带上：底池推算靠它把大小盲认到具体行动者头上，否则大盲跟注会被多算
@@ -791,8 +790,8 @@ export function useReviewForm(handId?: string) {
     boardUnavailableCards: form.heroCards,
     /** 行动可选的行动者：我 + 本手牌的对手，**按牌桌行动顺序** */
     actorOptions,
-    /** 已弃牌的行动者（跨街累积）。弃牌即退出这手牌，录入页不再列出他们 */
-    foldedActors,
+    /** 已不能再行动的人（弃牌 + 全下，跨街累积）。录入页不再列出、也不再自动选他们 */
+    outActors,
     /** 每条街第一个该说话的人（已跳过弃牌者），空街新增行动时默认选他 */
     firstActorByStreet,
     /** 每条街开始时各人还剩多少后手（BB），用于「全下」自动填金额 */
