@@ -223,9 +223,70 @@ export interface SuggestedTagItem {
   reason: string;
 }
 
+/**
+ * 对手形象的五格分类。与后端 models.Profile* 常量一一对应。
+ *
+ * 'unknown' 是样本不足时的兜底，刻意不用空字符串表示"没推断"：
+ * 「不知道他是哪种人」本身是一条要展示给用户的结论 —— 提示用户补信息
+ */
+export type OpponentProfile =
+  | 'loosePassive'
+  | 'tightPassive'
+  | 'looseAggressive'
+  | 'tightAggressive'
+  | 'unknown';
+
+/** 单条街的范围变化 */
+export interface RangeStreetItem {
+  street: Street;
+  /** 对手在这一街做了什么，把范围变化锚定到具体动作 */
+  action: string;
+  /** 这个行动保留了他范围里的哪些牌 */
+  rangeKept: string;
+  /** 去掉了哪些牌 */
+  rangeDropped: string;
+}
+
+/** 对手形象与手牌范围推断 */
+export interface OpponentRead {
+  profile: OpponentProfile;
+  /** 归类的依据，引用本手牌里对手的实际行动 */
+  profileReason: string;
+  streets: RangeStreetItem[];
+  /**
+   * 范围倾向的量级结论（如「成牌约六成、听牌三成」）。
+   * 后端刻意用文字而不是结构化概率 —— 模型给不出可靠的概率分布
+   */
+  conclusion: string;
+}
+
+/** 行动建议的动作 */
+export type AdviceAction = 'bet' | 'raise' | 'check' | 'fold';
+
+/** 单条街的行动建议 */
+export interface ActionAdviceItem {
+  street: Street;
+  action: AdviceAction;
+  /** 具体尺度，如 "1/2池(12BB)"。后端禁止没有数字的表述 */
+  sizing: string;
+  /** 依据哪条原则 */
+  reason: string;
+  /** 针对哪个形象、利用哪个倾向 */
+  targetProfile: string;
+}
+
 /** 结构化分析结果 */
 export interface AnalysisResult {
   handSummary: string;
+  /**
+   * 对手形象与范围推断。
+   *
+   * v2.0 起才有；promptVersion < v2.0 的历史分析没有这个字段，
+   * 所以声明为可选，UI 必须容忍缺失
+   */
+  opponentRead?: OpponentRead;
+  /** 逐街的行动建议。同样是 v2.0 起才有 */
+  actionAdvice?: ActionAdviceItem[];
   streetAnalysis: StreetAnalysisItem[];
   keyMistake?: KeyMistakeItem;
   alternatives: AlternativeItem[];

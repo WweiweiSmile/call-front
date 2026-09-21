@@ -298,6 +298,183 @@
     }
   }
 
+  // 对手形象与范围推断
+  .profile-tag {
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: @radius-sm;
+
+    // 配色意图：松弱给成功色是因为它是对我方最有利可图的一类
+    // （书里原话"我爱这些跟注站"）；两个凶的形象给警示色；
+    // 未知给弱化色，因为它的含义是"信息不足"而不是"弱"
+    &.loosePassive {
+      background: fade(@success, 12%);
+      color: @success;
+    }
+
+    &.tightPassive {
+      background: fade(@primary, 12%);
+      color: @primary-dark;
+    }
+
+    &.looseAggressive {
+      background: fade(@danger, 12%);
+      color: @danger;
+    }
+
+    &.tightAggressive {
+      background: fade(@warning, 14%);
+      color: @warning;
+    }
+
+    &.unknown {
+      background: @bg-tertiary;
+      color: @text-tertiary;
+    }
+  }
+
+  .profile-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
+  .profile-reason {
+    display: block;
+    margin-top: @spacing-sm;
+    font-size: 13px;
+    line-height: 1.7;
+    color: @text-primary;
+  }
+
+  .range-item {
+    margin-top: @spacing-sm;
+    padding: 8px 10px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+  }
+
+  .range-head {
+    .flex-between();
+  }
+
+  .range-action {
+    flex: 1;
+    margin-left: @spacing-sm;
+    font-size: 12px;
+    color: @text-secondary;
+    text-align: right;
+  }
+
+  .range-row {
+    display: flex;
+    margin-top: 4px;
+  }
+
+  // 保留/剔除用文字标签而不是"+"-"，避免用户误读成增减手牌数量
+  .range-label {
+    flex-shrink: 0;
+    width: 40px;
+    font-size: 12px;
+    font-weight: 600;
+    color: @text-tertiary;
+
+    &.kept {
+      color: @success;
+    }
+
+    &.dropped {
+      color: @danger;
+    }
+  }
+
+  .range-text {
+    flex: 1;
+    font-size: 12px;
+    line-height: 1.6;
+    color: @text-primary;
+  }
+
+  .range-conclusion {
+    display: flex;
+    margin-top: @spacing-sm;
+    padding-top: @spacing-sm;
+    border-top: 1px dashed @border-color;
+
+    .range-label {
+      width: 56px;
+    }
+  }
+
+  // 行动建议
+  .advice-item {
+    margin-top: @spacing-sm;
+    padding: 10px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+  }
+
+  .advice-head {
+    display: flex;
+    align-items: center;
+  }
+
+  .advice-action {
+    margin-left: @spacing-sm;
+    padding: 1px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: @radius-sm;
+
+    // 配色意图：下注与加注给强色，过牌与弃牌给弱化色。
+    // 这是刻意呼应方法论的立场 —— 下注加注是默认方，
+    // 过牌与弃牌需要举证，视觉上也要能一眼看出哪个是主动的
+    &.bet {
+      background: fade(@success, 12%);
+      color: @success;
+    }
+
+    &.raise {
+      background: fade(@primary, 14%);
+      color: @primary-dark;
+    }
+
+    &.check {
+      background: fade(@text-secondary, 12%);
+      color: @text-secondary;
+    }
+
+    &.fold {
+      background: fade(@text-tertiary, 16%);
+      color: @text-tertiary;
+    }
+  }
+
+  // 尺度必须显眼：提示词禁止没有数字的建议，UI 也要让人一眼看到数字
+  .advice-sizing {
+    margin-left: @spacing-sm;
+    font-size: 13px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .advice-reason {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: @text-secondary;
+  }
+
+  .advice-target {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: @text-tertiary;
+  }
+
   .suggest-hint {
     display: block;
     margin-top: @spacing-md;

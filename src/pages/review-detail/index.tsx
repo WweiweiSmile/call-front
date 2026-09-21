@@ -28,6 +28,7 @@ import {
   actorLabel,
   blindPositionsOf,
   blindsLabel,
+  computePots,
   formatBB,
   positionLabel,
   tableSizeLabel,
@@ -112,6 +113,28 @@ const ReviewDetailPage: React.FC = () => {
   const blindText = useMemo(() => {
     if (!hand) return '';
     return blindsLabel({
+      smallBlindBb: hand.smallBlindBb,
+      bigBlindBb: hand.bigBlindBb,
+      anteBb: hand.anteBb,
+      tableSize: hand.tableSize,
+      heroPosition: hand.heroPosition,
+      ...blindPositionsOf(hand.villains || []),
+    });
+  }, [hand]);
+
+  /**
+   * 逐街底池（估算），供行动回放显示。
+   *
+   * 与录入页、以及后端喂给 AI 的手牌块**共用同一套算法**（computePots /
+   * backend utils.ComputeStreetPots）。三处口径必须一致 —— 否则会出现
+   * "录入页显示 12bb、详情页显示 14bb、AI 按 12bb 推理"这种互相打架的情况。
+   *
+   * 盲注没记（含加这个功能之前的老手牌）时，computePots 退化成不含死钱的
+   * 老口径，与加盲注之前的显示一致，老手牌不会突然变样
+   */
+  const streetPots = useMemo(() => {
+    if (!hand) return null;
+    return computePots(hand.streets, {
       smallBlindBb: hand.smallBlindBb,
       bigBlindBb: hand.bigBlindBb,
       anteBb: hand.anteBb,
@@ -235,11 +258,26 @@ const ReviewDetailPage: React.FC = () => {
               else if (street === 'turn') streetCards = hand.board.slice(6, 8);
               else if (street === 'river') streetCards = hand.board.slice(8, 10);
 
+              // 本街底池。口径与录入页一致：显示进街时的底池，本街打完变大时
+              // 再补一个「→ 结束值」，这样"这条街投进去多少钱"一眼可见
+              const step = streetPots?.byStreet[street];
+              // 0 表示还算不出（翻前且没记盲注）。显示"底池 0bb"不如不显示
+              const hasPot = !!step && step.potStartBb > 0;
+
               return (
                 <View key={street} className='street-block'>
                   <View className='street-head'>
                     <Text className='street-name'>{STREET_LABEL[street]}</Text>
                     {streetCards && <CardList cards={streetCards} size='sm' />}
+                    {hasPot && (
+                      <Text className='street-pot'>
+                        底池 {formatBB(step.potStartBb)}
+                        {step.potEndBb !== step.potStartBb
+                          ? ` → ${formatBB(step.potEndBb)}`
+                          : ''}{' '}
+                        bb
+                      </Text>
+                    )}
                   </View>
 
                   {record.actions.map((action, index) => (

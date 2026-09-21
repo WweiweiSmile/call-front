@@ -3,10 +3,12 @@ import { Text, View } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import { STREET_LABEL } from '../../utils/poker';
 import type {
+  AdviceAction,
   AlternativeItem,
   FrontendAIStatus,
   FrontendAnalysis,
   LeakItem,
+  OpponentProfile,
   StrengthItem,
   StreetVerdict,
 } from '../../models/types/review';
@@ -42,6 +44,31 @@ const SEVERITY_TEXT: Record<number, string> = {
   1: '轻微',
   2: '明显',
   3: '严重',
+};
+
+/** 五格形象文案。与后端 models.Profile* 常量一一对应 */
+const PROFILE_LABEL: Record<OpponentProfile, string> = {
+  loosePassive: '松弱 · 跟注站',
+  tightPassive: '紧弱 · 岩石',
+  looseAggressive: '松凶 · LAG',
+  tightAggressive: '紧凶 · TAG',
+  unknown: '未知',
+};
+
+/**
+ * 「未知」需要额外解释一句，否则用户会读成"教练没看出来"，
+ * 而它的实际含义是"样本不足，这手牌按标准线评判、不做针对性剥削"
+ */
+const PROFILE_HINT: Partial<Record<OpponentProfile, string>> = {
+  unknown: '对手样本不足 3 次，这手牌按标准线评判，未做针对性剥削',
+};
+
+/** 行动建议的动作文案 */
+const ADVICE_ACTION_LABEL: Record<AdviceAction, string> = {
+  bet: '下注',
+  raise: '加注',
+  check: '过牌',
+  fold: '弃牌',
 };
 
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
@@ -178,6 +205,94 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
           {result.handSummary && (
             <View className='summary-block'>
               <Text className='summary-text'>{result.handSummary}</Text>
+            </View>
+          )}
+
+          {/* 对手形象与范围推断。排在逐街评价之前 —— 它是后面所有结论的前提，
+              v2.0 之前的分析没有这个字段，所以整块按可选渲染 */}
+          {result.opponentRead && (
+            <View className='section-block'>
+              <View className='street-head'>
+                <Text className='block-title'>对手形象与范围</Text>
+                <Text className={`profile-tag ${result.opponentRead.profile}`}>
+                  {PROFILE_LABEL[result.opponentRead.profile] ||
+                    result.opponentRead.profile}
+                </Text>
+              </View>
+              {PROFILE_HINT[result.opponentRead.profile] ? (
+                <Text className='profile-hint'>
+                  {PROFILE_HINT[result.opponentRead.profile]}
+                </Text>
+              ) : null}
+              {result.opponentRead.profileReason ? (
+                <Text className='profile-reason'>
+                  {result.opponentRead.profileReason}
+                </Text>
+              ) : null}
+
+              {result.opponentRead.streets &&
+                result.opponentRead.streets.map((item, i) => (
+                  <View key={`${item.street}-${i}`} className='range-item'>
+                    <View className='range-head'>
+                      <Text className='street-label'>
+                        {STREET_LABEL[item.street] || item.street}
+                      </Text>
+                      {item.action ? (
+                        <Text className='range-action'>{item.action}</Text>
+                      ) : null}
+                    </View>
+                    {item.rangeKept ? (
+                      <View className='range-row'>
+                        <Text className='range-label kept'>保留</Text>
+                        <Text className='range-text'>{item.rangeKept}</Text>
+                      </View>
+                    ) : null}
+                    {item.rangeDropped ? (
+                      <View className='range-row'>
+                        <Text className='range-label dropped'>剔除</Text>
+                        <Text className='range-text'>{item.rangeDropped}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                ))}
+
+              {result.opponentRead.conclusion ? (
+                <View className='range-conclusion'>
+                  <Text className='range-label'>范围结论</Text>
+                  <Text className='range-text'>
+                    {result.opponentRead.conclusion}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+
+          {/* 逐街行动建议。与「替代线路」的区别：这里是当时就该这么打的正面答案，
+              带具体尺度数字；替代线路是事后看还有哪些走法 */}
+          {result.actionAdvice && result.actionAdvice.length > 0 && (
+            <View className='section-block'>
+              <Text className='block-title'>行动建议</Text>
+              {result.actionAdvice.map((adv, i) => (
+                <View key={`${adv.street}-${i}`} className='advice-item'>
+                  <View className='advice-head'>
+                    <Text className='street-label'>
+                      {STREET_LABEL[adv.street] || adv.street}
+                    </Text>
+                    <Text className={`advice-action ${adv.action}`}>
+                      {ADVICE_ACTION_LABEL[adv.action] || adv.action}
+                    </Text>
+                    {adv.sizing ? (
+                      <Text className='advice-sizing'>{adv.sizing}</Text>
+                    ) : null}
+                  </View>
+                  {adv.reason ? (
+                    <Text className='advice-reason'>{adv.reason}</Text>
+                  ) : null}
+                  {adv.targetProfile ? (
+                    <Text className='advice-target'>针对：{adv.targetProfile}</Text>
+                  ) : null}
+                </View>
+              ))}
             </View>
           )}
 
