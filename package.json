@@ -31,7 +31,8 @@
     "test:h5": "cross-env NODE_ENV=test npm run build:h5 -- --watch",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "sim:opensize": "tsc -p tools/open-size-ev/tsconfig.json && node tools/open-size-ev/dist/index.js"
   },
   "browserslist": [
     "last 3 versions",
