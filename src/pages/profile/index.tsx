@@ -175,6 +175,13 @@ const ProfilePage: React.FC = () => {
             data-testid="btn-history"
           />
           <Cell
+            title='🎯 赔率快速训练'
+            onClick={() => {
+              Taro.navigateTo({ url: '/pages/odds-drill/index' });
+            }}
+            data-testid="btn-odds-drill"
+          />
+          <Cell
             title='⚙️ 设置'
             onClick={() => {
               Taro.navigateTo({ url: '/pages/settings/index' });

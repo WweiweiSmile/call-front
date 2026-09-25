@@ -25,6 +25,7 @@ export default defineAppConfig({
     'pages/settings/index',
     'pages/settings-blind/index',
     'pages/settings-model/index',
+    'pages/odds-drill/index',
   ],
   entryPagePath: 'pages/login/index',
   window: {

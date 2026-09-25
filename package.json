@@ -32,7 +32,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "sim:opensize": "tsc -p tools/open-size-ev/tsconfig.json && node tools/open-size-ev/dist/index.js"
+    "sim:opensize": "tsc -p tools/open-size-ev/tsconfig.json && node tools/open-size-ev/dist/index.js",
+    "check:odds": "tsc -p tools/odds-check/tsconfig.json && node tools/odds-check/dist/tools/odds-check/index.js"
   },
   "browserslist": [
     "last 3 versions",

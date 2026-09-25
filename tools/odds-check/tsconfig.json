@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["es2020"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "outDir": "dist",
+    // rootDir 必须是仓库根：这个脚本要直接引用 src/utils 里的**真**引擎，
+    // 引用一份抄来的副本就失去意义了。输出因此是 dist/tools/odds-check/index.js
+    "rootDir": "../..",
+    "skipLibCheck": true,
+    "sourceMap": false,
+    "declaration": false
+  },
+  "include": ["*.ts"]
+}

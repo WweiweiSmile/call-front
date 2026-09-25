@@ -1,0 +1,444 @@
+// ============================================
+// 赔率快速训练页
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+.odds-drill-page {
+  .odds-drill-content {
+    padding: @spacing-md;
+  }
+
+  // -------------------------------------------
+  // 难度与进度
+  // -------------------------------------------
+
+  .difficulty-row {
+    margin-bottom: @spacing-md;
+  }
+
+  .progress-card {
+    padding: @spacing-sm @spacing-md @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+    box-shadow: @shadow-sm;
+    margin-bottom: @spacing-md;
+  }
+
+  .progress-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: @spacing-sm;
+
+    .progress-index {
+      font-size: @font-size-sm;
+      font-weight: 600;
+      color: @text-primary;
+    }
+
+    .progress-streak,
+    .progress-accuracy {
+      font-size: @font-size-xs;
+      color: @text-secondary;
+    }
+  }
+
+  .progress-track {
+    height: 4px;
+    border-radius: 2px;
+    background: @bg-tertiary;
+    overflow: hidden;
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: @gradient-primary;
+      transition: width @duration-normal ease;
+    }
+  }
+
+  // -------------------------------------------
+  // 题干
+  // -------------------------------------------
+
+  .question-card {
+    padding: @spacing-lg @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-lg;
+    box-shadow: @shadow-md;
+    margin-bottom: @spacing-md;
+
+    .question-kind {
+      display: block;
+      font-size: @font-size-xs;
+      color: @primary;
+      margin-bottom: @spacing-sm;
+    }
+
+    .question-prompt {
+      display: block;
+      font-size: @font-size-lg;
+      line-height: 1.6;
+      color: @text-primary;
+    }
+  }
+
+  // -------------------------------------------
+  // 选项：答完才染色，选错时同时标出正确项
+  // -------------------------------------------
+
+  .choice-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: @spacing-sm;
+    margin-bottom: @spacing-md;
+  }
+
+  .choice-item {
+    // 两列：减去中间那一道 gap 再对半
+    width: calc((100% - @spacing-sm) / 2);
+    padding: @spacing-md 0;
+    border-radius: @radius-md;
+    background: @bg-secondary;
+    border: 1px solid @border-color;
+    box-shadow: @shadow-sm;
+    .flex-center();
+
+    .choice-text {
+      font-size: @font-size-xl;
+      font-weight: 600;
+      color: @text-primary;
+    }
+
+    &:active {
+      transform: scale(0.98);
+    }
+
+    &.correct {
+      background: fade(@success, 12%);
+      border-color: @success;
+
+      .choice-text {
+        color: @success;
+      }
+    }
+
+    &.wrong {
+      background: fade(@danger, 12%);
+      border-color: @danger;
+
+      .choice-text {
+        color: @danger;
+      }
+    }
+
+    // 没选中的其余选项：答完就压暗，把注意力留给对错两项
+    &.dim {
+      opacity: 0.45;
+    }
+  }
+
+  // 判断题的两个按钮：与选项同一套外观，所以宽度规则也照搬
+  .verdict-choices {
+    display: flex;
+    gap: @spacing-sm;
+    margin-bottom: @spacing-md;
+  }
+
+  // -------------------------------------------
+  // 填空题
+  // -------------------------------------------
+
+  .fill-card {
+    margin-bottom: @spacing-md;
+  }
+
+  .input-box {
+    .flex-between();
+    padding: 12px 14px;
+    background: @bg-secondary;
+    border: 1px solid @border-color;
+    border-radius: @radius-md;
+    box-shadow: @shadow-sm;
+    gap: 6px;
+
+    .input {
+      flex: 1;
+      font-size: @font-size-lg;
+      color: @text-primary;
+    }
+
+    .unit {
+      font-size: @font-size-md;
+      color: @text-tertiary;
+      flex-shrink: 0;
+    }
+
+    &.invalid {
+      border-color: @danger;
+    }
+  }
+
+  .fill-hint {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-tertiary;
+    margin-top: @spacing-xs;
+  }
+
+  // -------------------------------------------
+  // 解释卡
+  // -------------------------------------------
+
+  .explain-card {
+    padding: @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+    box-shadow: @shadow-sm;
+    margin-bottom: @spacing-md;
+
+    .verdict {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding-bottom: @spacing-sm;
+      margin-bottom: @spacing-sm;
+      border-bottom: 1px solid @divider-color;
+
+      .verdict-text {
+        font-size: @font-size-md;
+        font-weight: 600;
+      }
+
+      .verdict-answer {
+        font-size: @font-size-sm;
+        color: @text-secondary;
+      }
+
+      &.correct .verdict-text {
+        color: @success;
+      }
+
+      &.wrong .verdict-text {
+        color: @danger;
+      }
+    }
+
+    .verdict-note {
+      display: block;
+      font-size: @font-size-xs;
+      line-height: 1.6;
+      color: @text-secondary;
+      margin-bottom: @spacing-sm;
+    }
+
+    .steps {
+      .step-line {
+        display: block;
+        font-size: 13px;
+        line-height: 1.9;
+        color: @text-secondary;
+      }
+    }
+  }
+
+  // -------------------------------------------
+  // 小结
+  // -------------------------------------------
+
+  .summary-card {
+    padding: @spacing-lg @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-lg;
+    box-shadow: @shadow-md;
+    margin-bottom: @spacing-md;
+    .flex-column-center();
+
+    .summary-title {
+      font-size: @font-size-xl;
+      font-weight: 600;
+      color: @text-primary;
+    }
+
+    .summary-sub {
+      font-size: @font-size-xs;
+      color: @text-tertiary;
+      margin-top: @spacing-xs;
+    }
+  }
+
+  // 数字栅格：小结卡与累计卡共用，所以放在页面层级而不是某张卡里面
+  .summary-grid {
+    display: flex;
+    width: 100%;
+    margin-top: @spacing-lg;
+  }
+
+  .summary-item {
+    flex: 1;
+    .flex-column-center();
+
+    .summary-value {
+      font-size: @font-size-xl;
+      font-weight: 600;
+      color: @primary;
+    }
+
+    .summary-label {
+      font-size: @font-size-xs;
+      color: @text-secondary;
+      margin-top: @spacing-xs;
+    }
+  }
+
+  // -------------------------------------------
+  // 列表卡：错题清单与累计
+  // -------------------------------------------
+
+  .list-card {
+    padding: @spacing-md;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+    box-shadow: @shadow-sm;
+    margin-bottom: @spacing-md;
+
+    .card-title {
+      display: block;
+      font-size: @font-size-md;
+      font-weight: 600;
+      color: @text-primary;
+    }
+
+    .card-hint {
+      display: block;
+      font-size: @font-size-xs;
+      line-height: 1.7;
+      color: @text-tertiary;
+      margin-top: @spacing-sm;
+    }
+
+    // 累计卡里的数字栅格跟在标题后面，间距小一点
+    .summary-grid {
+      margin-top: @spacing-md;
+    }
+  }
+
+  .list-row {
+    padding: @spacing-sm 0;
+    border-bottom: 1px solid @divider-color;
+
+    &:last-of-type {
+      border-bottom: none;
+    }
+
+    .list-row-title {
+      display: block;
+      font-size: @font-size-sm;
+      line-height: 1.6;
+      color: @text-primary;
+    }
+
+    .list-row-sub {
+      display: block;
+      font-size: @font-size-xs;
+      color: @text-secondary;
+      margin-top: @spacing-xs;
+    }
+  }
+
+  .kind-rows {
+    margin-top: @spacing-md;
+
+    .kind-row {
+      .flex-between();
+      padding: 6px 0;
+
+      .kind-name {
+        font-size: 13px;
+        color: @text-secondary;
+      }
+
+      .kind-value {
+        font-size: 13px;
+        color: @text-primary;
+        font-weight: 600;
+      }
+    }
+  }
+
+  // -------------------------------------------
+  // 重练错题的横幅（替掉难度切换）
+  // -------------------------------------------
+
+  .retry-banner {
+    .flex-between();
+    padding: @spacing-sm @spacing-md;
+    margin-bottom: @spacing-md;
+    background: fade(@warning, 12%);
+    border-radius: @radius-md;
+
+    .retry-text {
+      font-size: @font-size-sm;
+      color: @text-primary;
+      font-weight: 600;
+    }
+
+    .retry-tap {
+      font-size: @font-size-xs;
+      color: @text-secondary;
+    }
+  }
+
+  // -------------------------------------------
+  // 口径说明
+  // -------------------------------------------
+
+  .tip-card {
+    padding: @spacing-md;
+    background: @bg-tertiary;
+    border-radius: @radius-md;
+    margin-bottom: @spacing-md;
+
+    .tip-title {
+      display: block;
+      font-size: @font-size-sm;
+      font-weight: 600;
+      color: @text-primary;
+      margin-bottom: @spacing-xs;
+    }
+
+    .tip-text {
+      display: block;
+      font-size: @font-size-xs;
+      line-height: 1.7;
+      color: @text-secondary;
+    }
+  }
+
+  // -------------------------------------------
+  // 底部
+  // -------------------------------------------
+  //
+  // settings-form.less 里有一份同样外观的 .page-footer，但它挂在 .settings-form 下，
+  // 引过来会连带把设置表单的样式带进这个页面。这十行不值得为它做一次共享样式重构，
+  // 所以先各留一份
+
+  .bottom-space {
+    height: 24px;
+  }
+
+  .page-footer {
+    padding: @spacing-md;
+    background: @bg-secondary;
+    border-top: 1px solid @divider-color;
+  }
+
+  // 小结页底部有两个按钮（重练错题 + 再来一组）
+  .footer-stack {
+    display: flex;
+    flex-direction: column;
+    gap: @spacing-sm;
+  }
+}
