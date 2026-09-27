@@ -12,6 +12,8 @@ import type {
   LeakTagCategory,
   MessageRole,
   Opponent,
+  OpponentProfileRecord,
+  OpponentStats,
   PotType,
   Position,
   ProfileLeakStat,
@@ -88,6 +90,24 @@ export interface SearchOpponentsParams {
 /** 对手名单响应 */
 export interface OpponentListResponse {
   list: Opponent[];
+}
+
+/** 对手详情：统计 + 对抗手牌 + 画像 */
+export interface OpponentDetailResponse {
+  opponent: Opponent;
+  stats: OpponentStats;
+  /** 缺省表示还没生成过画像 —— 与"生成过但正文为空"是两回事，页面要分开处理 */
+  profile?: OpponentProfileRecord;
+  /** 对抗手牌总手数。统计覆盖全部，与 list 的分页无关 */
+  total: number;
+  list: ReviewHandResponse[];
+}
+
+/** 画像接口的响应（触发生成与轮询共用） */
+export interface OpponentProfileResponse {
+  profile?: OpponentProfileRecord;
+  /** 当前可归属的交手手数，用来判断画像是不是比记录旧了 */
+  currentHands: number;
 }
 
 /** 手牌列表查询参数 */

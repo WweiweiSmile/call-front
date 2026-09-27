@@ -25,6 +25,13 @@ const SettingsPage: React.FC = () => {
     >
       <View className='menu-section'>
         <Cell
+          title='🃏 对手管理'
+          description='看与每个对手的对抗手牌，生成他的打法画像'
+          clickable
+          onClick={() => Taro.navigateTo({ url: '/pages/opponents/index' })}
+          data-testid='btn-settings-opponents'
+        />
+        <Cell
           title='🎯 盲注设置'
           description='复盘录入时的默认小盲 / 大盲 / 前注'
           clickable

@@ -34,6 +34,9 @@
   .dialog-body {
     flex: 1;
     max-height: 60vh;
+    // ScrollView 自带 width: 100%，而 app.less 的全局 * { box-sizing } 在 H5 产物里不生效，
+    // 不显式声明的话左右 padding 会加在这 100% 之外，整个内容区比屏幕宽 32px、右侧被裁掉
+    box-sizing: border-box;
     padding: 0 @spacing-md;
   }
 
@@ -75,10 +78,10 @@
     }
   }
 
+  // 列表不设自己的高度上限：外层 .dialog-body 已经是滚动容器，
+  // 这里再裁一刀会把后面的搜索结果藏进够不到的地方（接口一次最多 20 条）
   .opponent-list {
     margin-top: @spacing-sm;
-    max-height: 200px;
-    overflow: hidden;
   }
 
   .opponent-option {

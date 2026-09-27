@@ -58,6 +58,13 @@ export interface VillainFormItem {
   /** 筹码，输入过程中允许为空 */
   stackBb: string;
   isKey?: boolean;
+  /**
+   * 对手底牌（规范格式如 AsKh）。选填，空串表示没看到。
+   *
+   * 只在摊牌或他亮牌时才知道，所以大多数手牌都是空串 —— 不要为了填满而猜。
+   * 它不进 AI 的复盘提示词，只用于对手画像
+   */
+  cards: string;
 }
 
 /** 表单内部状态。数字字段用 string 存，输入过程中允许为空 */
@@ -120,12 +127,14 @@ function toFormVillain(villain: {
   stackBb?: number;
   isKey?: boolean;
   name?: string;
+  cards?: string;
 }): VillainFormItem {
   return {
     name: villain.name || '',
     position: (villain.position || '') as Position | '',
     stackBb: villain.stackBb !== undefined ? String(villain.stackBb) : '',
     isKey: !!villain.isKey,
+    cards: villain.cards || '',
   };
 }
 
@@ -552,6 +561,31 @@ export function useReviewForm(handId?: string) {
     [form.heroPosition, form.heroCards, potType]
   );
 
+  // ---------- 牌面占用 ----------
+  // 一副牌里同一张不可能出现两次，所以谁选过的牌别人就不能再选。后端
+  // ValidateReviewHand 同样会拒重复牌，这里先拦一道是为了不让用户填完一遍
+  // 才吃一个"重复的牌：As"—— 那句话不会告诉他是哪两处撞了。
+
+  /** 本手牌所有对手的底牌（没看到的对手是空串，会被 filter 丢掉） */
+  const villainCards = useMemo(
+    () => form.villains.map((villain) => villain.cards).filter(Boolean).join(''),
+    [form.villains]
+  );
+
+  /**
+   * 某个对手的可选范围。**要把"他自己已经选的牌"让出来** —— 否则他在面板里
+   * 连自己的牌都点不动（CardPicker 对 disabled 的格子直接不挂 onClick）。
+   * index 为 null 表示新增，没有谁需要让。
+   */
+  const unavailableCardsForVillain = useCallback(
+    (index: number | null) =>
+      [form.heroCards, form.board]
+        .concat(form.villains.map((villain, i) => (i === index ? '' : villain.cards)))
+        .filter(Boolean)
+        .join(''),
+    [form.heroCards, form.board, form.villains]
+  );
+
   /** 提交前的完整校验，返回第一条错误信息 */
   const validate = useCallback((): string | null => {
     if (!form.heroPosition) return '请选择你的位置';
@@ -684,6 +718,9 @@ export function useReviewForm(handId?: string) {
       stackBb: villain.stackBb ? Number(villain.stackBb) : undefined,
       isKey: villain.isKey || undefined,
       name: villain.name || undefined,
+      // 空串与 undefined 都表示"没看到他的牌"。报 undefined，让 JSON.stringify
+      // 直接丢掉这个键，与后端 omitempty 的口径一致
+      cards: villain.cards || undefined,
     }));
 
     // 载入的老手牌（对手全都没名字）在编辑时保持原来手填的"对手数量"：那个数字与
@@ -784,10 +821,15 @@ export function useReviewForm(handId?: string) {
     myGames,
     expandedStreets,
     tagInput,
-    /** 公共牌已占用的牌，底牌不能再选 */
-    heroUnavailableCards: form.board,
-    /** 底牌已占用的牌，公共牌不能再选 */
-    boardUnavailableCards: form.heroCards,
+    // 注意这三个都**不包含字段自己当前的值**：CardPicker 对 disabled 的格子
+    // 不挂 onClick，把自己的牌也列进去会让用户点不动自己刚选的牌
+
+    /** 公共牌与对手底牌已占用的牌，我的底牌不能再选 */
+    heroUnavailableCards: form.board + villainCards,
+    /** 我的底牌与对手底牌已占用的牌，公共牌不能再选 */
+    boardUnavailableCards: form.heroCards + villainCards,
+    /** 某个对手的可选范围，见上面的说明 */
+    unavailableCardsForVillain,
     /** 行动可选的行动者：我 + 本手牌的对手，**按牌桌行动顺序** */
     actorOptions,
     /** 已不能再行动的人（弃牌 + 全下，跨街累积）。录入页不再列出、也不再自动选他们 */

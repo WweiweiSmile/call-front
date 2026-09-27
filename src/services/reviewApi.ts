@@ -16,6 +16,8 @@ import type {
   ReviewLeakTagListResponse,
   ReviewMessageListResponse,
   ReviewProfileResponse,
+  OpponentDetailResponse,
+  OpponentProfileResponse,
 } from '../models/service';
 
 // 复盘相关 API
@@ -71,6 +73,30 @@ export const reviewApi = {
     return request<OpponentListResponse>(
       `/reviews/opponents${queryString ? `?${queryString}` : ''}`
     );
+  },
+
+  // 对手详情：量化统计 + 与他的对抗手牌（分页）+ 已有画像。
+  // 统计覆盖全部交手手牌，与这里传的 page 无关 —— 翻页不会让数字变
+  getOpponentDetail: (opponentId: number, params?: { page?: number; pageSize?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    const queryString = query.toString();
+    return request<OpponentDetailResponse>(
+      `/reviews/opponents/${opponentId}${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  // 触发生成对手画像（异步）。返回当前画像，前端据 status 决定是否轮询
+  generateOpponentProfile: (opponentId: number) => {
+    return request<OpponentProfileResponse>(`/reviews/opponents/${opponentId}/profile`, {
+      method: 'POST',
+    });
+  },
+
+  // 轮询画像状态。与详情分开：详情那次要现算全量统计，轮询打它是纯浪费
+  getOpponentProfile: (opponentId: number) => {
+    return request<OpponentProfileResponse>(`/reviews/opponents/${opponentId}/profile`);
   },
 
   // 漏洞标签字典

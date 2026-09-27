@@ -78,6 +78,15 @@ export interface VillainInfo {
   opponentId?: number;
   /** 对手的称呼，进提示词。为空 = 老数据 */
   name?: string;
+  /**
+   * 对手的底牌，规范格式如 AsKh。选填 —— 只有摊牌或他主动亮牌时才知道，
+   * 没看到就留空。
+   *
+   * **它不会进手牌分析的提示词**（后端 buildHandBlock 刻意不渲染它），
+   * 所以填了也不影响 AI 对这手牌的点评 —— 教练看不到对手底牌，你才得自己读牌。
+   * 它的用途是**对手画像**：攒够样本后回答"他下注时到底是不是真有牌"。
+   */
+  cards?: string;
 }
 
 /** 对手名单项（"对手表"，按用户隔离） */
@@ -87,6 +96,147 @@ export interface Opponent {
   /** 与该对手有关的已复盘手牌数，用于区分重名。只统计 M7.1 之后录入手牌 */
   handCount: number;
 }
+
+// ============================================
+// 对手画像（用户主动触发的深度分析）
+//
+// 与上面的 OpponentRead 是两回事：那个是"某手牌里对他的一次即兴读牌"，
+// 这里是"攒了 N 手之后对他这个人的画像"。两者共用同一套五格分类
+// ============================================
+
+/** 画像置信度。样本不足时后端强制为 low */
+export type OpponentProfileConfidence = 'low' | 'medium' | 'high';
+
+/**
+ * 画像生成任务的状态。
+ *
+ * 刻意不复用 AnalyzeStatus：那个类型里没有 running（手牌分析只有 pending 就直接 done），
+ * 复用会让 `status === 'running'` 变成类型错误，进而诱导出"干脆不判 running"的写法 ——
+ * 而 running 恰恰是最需要轮询的那一档
+ */
+export type OpponentProfileStatus = 'pending' | 'running' | 'done' | 'failed';
+
+/** 一条倾向观察 */
+export interface OpponentTendency {
+  aspect: string;
+  observation: string;
+  /**
+   * 样本量，形如 "8/12"。
+   *
+   * 必须展示：没有它，"他 60% 会加注"这句话无法判断是 3 手里的 2 手
+   * 还是 30 手里的 18 手，而这两种情况该给出的建议完全相反
+   */
+  sampleSize: string;
+  evidence: string;
+}
+
+/** 一条剥削方案。四个字段缺一不可 */
+export interface OpponentExploit {
+  /** 针对哪条倾向 */
+  against: string;
+  adjustment: string;
+  /** 带数字的尺度。后端禁止没有数字的表述 */
+  sizing: string;
+  /** 他反制时我承担的代价 */
+  risk: string;
+}
+
+/** 按位置分层的翻前统计。不要跨位置平均，见后端说明 */
+export interface OpponentPositionStat {
+  position: Position;
+  hands: number;
+  vpip: number;
+  pfr: number;
+  threeBet: number;
+  facedRaise: number;
+  foldToRaise: number;
+}
+
+/** 面对我下注时的反应分布 */
+export interface OpponentFacingStat {
+  fold: number;
+  call: number;
+  raise: number;
+}
+
+/** 下注尺度分档（相对该街起始底池，只含主动下注） */
+export interface OpponentSizingBucket {
+  label: string;
+  count: number;
+}
+
+/** 一手"看到了他底牌"的手牌。**有摊牌偏差**，见后端说明 */
+export interface OpponentShowdownItem {
+  handId: number;
+  cards: string;
+  position: Position;
+  board: string;
+  /** 成牌等级，由后端算好。空串 = 公牌不足 3 张，评不出来 */
+  made: string;
+  tier: string;
+  /** 他在这手牌翻后主动下过注或加过注 */
+  aggressive: boolean;
+  result: HandResult;
+}
+
+/** 翻后统计 */
+export interface OpponentPostflopStat {
+  flopHands: number;
+  cbetOpportunity: number;
+  cbetMade: number;
+  turnBarrelOpportunity: number;
+  turnBarrelMade: number;
+  facingHeroBet: OpponentFacingStat;
+  checkedToOpportunity: number;
+  betWhenCheckedTo: number;
+}
+
+/**
+ * 对手的量化统计。
+ *
+ * 每一项都是**后端数出来的事实**，不是模型的推断 —— 前端原样展示即可。
+ * 让模型自己数"12 手牌里他加注几次"是不可靠的，数错一个用户也看不出来
+ */
+export interface OpponentStats {
+  name: string;
+  hands: number;
+  knownCardsHands: number;
+  positions: OpponentPositionStat[];
+  postflop: OpponentPostflopStat;
+  sizing: OpponentSizingBucket[];
+  showdown: OpponentShowdownItem[];
+  /** 总手数不足，后端会把形象强制打成 unknown */
+  thinSample: boolean;
+  firstHandAt: string;
+  lastHandAt: string;
+}
+
+/** 对手画像正文 */
+export interface OpponentProfileRecord {
+  opponentId: number;
+  userId: number;
+  profile: OpponentProfile;
+  confidence: OpponentProfileConfidence;
+  profileReason: string;
+  tendencies: OpponentTendency[];
+  exploits: OpponentExploit[];
+  /** 样本不足、现在还看不出来的维度 */
+  unknowns: string[];
+  /** 下次交手要重点记录什么 */
+  watchNext: string[];
+  summary: string;
+  /** 生成时覆盖的手数。比 stats.hands 小就说明画像比记录旧了 */
+  handsAtGeneration: number;
+  /** 任务状态 */
+  status: OpponentProfileStatus;
+  error?: string;
+  startedAt?: string;
+  lastGeneratedAt?: string;
+}
+
+// 两个响应包装类型（OpponentDetailResponse / OpponentProfileResponse）
+// 放在 models/service/review.ts —— 它们要引用手牌的 API 响应类型，
+// 而那个类型住在 service 层，与 OpponentListResponse 同一个归属
 
 /** 复盘手牌（后端原始模型） */
 export interface ReviewHand {

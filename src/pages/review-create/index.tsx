@@ -24,6 +24,7 @@ import {
   positionsForTableSize,
   preflopPotBb,
 } from '../../utils/poker';
+import { formatCardsText } from '../../utils/cards';
 import { useReviewForm } from './useReviewForm';
 import type { OpponentDraft } from '../../components/AddOpponentDialog';
 import type { HandResult, Position, TableSize } from '../../models/types/review';
@@ -51,6 +52,7 @@ const ReviewCreatePage: React.FC = () => {
     tagInput,
     heroUnavailableCards,
     boardUnavailableCards,
+    unavailableCardsForVillain,
     actorOptions,
     outActors,
     firstActorByStreet,
@@ -97,6 +99,7 @@ const ReviewCreatePage: React.FC = () => {
       position: draft.position,
       stackBb: draft.stackBb !== undefined ? String(draft.stackBb) : '',
       isKey: draft.isKey,
+      cards: draft.cards || '',
     };
     if (editingIndex === null) {
       addVillain(item);
@@ -132,6 +135,7 @@ const ReviewCreatePage: React.FC = () => {
       position: editingVillain.position as Position,
       stackBb: editingVillain.stackBb ? Number(editingVillain.stackBb) : undefined,
       isKey: editingVillain.isKey,
+      cards: editingVillain.cards || undefined,
     };
   }, [editingVillain]);
 
@@ -139,6 +143,12 @@ const ReviewCreatePage: React.FC = () => {
   const dialogTakenPositions = useMemo(
     () => takenPositions.filter((pos) => pos !== editingVillain?.position),
     [takenPositions, editingVillain]
+  );
+
+  // 同理要放开他自己选的牌：新增时 editingIndex 是 null，没有谁需要让
+  const dialogDisabledCards = useMemo(
+    () => unavailableCardsForVillain(editingIndex),
+    [unavailableCardsForVillain, editingIndex]
   );
 
   const handleSubmit = useCallback(async () => {
@@ -412,6 +422,9 @@ const ReviewCreatePage: React.FC = () => {
                   <Text className='opponent-meta'>
                     {villain.stackBb ? `${villain.stackBb} bb` : '筹码未填'}
                     {relatedActions > 0 ? ` · ${relatedActions} 条行动` : ''}
+                    {/* 绝大多数手牌都没记过对手底牌，所以没记时什么都不显示，
+                        而不是挂一个"底牌未记"占位 —— 那会让正常的行看起来像没填完 */}
+                    {villain.cards ? ` · 底牌 ${formatCardsText(villain.cards)}` : ''}
                   </Text>
                 </View>
                 <View className='remove-opponent' onClick={() => setRemoveTarget(index)}>
@@ -605,6 +618,7 @@ const ReviewCreatePage: React.FC = () => {
         takenPositions={dialogTakenPositions}
         hasKeyVillain={hasKeyVillain}
         tableSize={form.tableSize}
+        disabledCards={dialogDisabledCards}
         initial={editingInitial}
         onConfirm={handleOpponentConfirm}
         onClose={() => setOpponentDialogVisible(false)}

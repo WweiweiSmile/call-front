@@ -60,6 +60,16 @@ export function joinCards(cards: string[]): string {
 }
 
 /**
+ * 把 "AsKh" 渲染成 "A♠ K♥"，给不适合放牌面组件的地方用（列表行、详情页的一行文字）。
+ * 空串返回空串 —— 调用方据此决定显示"未记录"还是整块不显示
+ */
+export function formatCardsText(cards: string): string {
+  return parseCards(cards)
+    .map((card) => `${formatRank(card[0])}${SUIT_SYMBOL[card[1]] || card[1]}`)
+    .join(' ');
+}
+
+/**
  * 校验牌串是否合法（长度、点数、花色、是否重复）。
  * 返回第一条错误信息，合法时返回 null。
  *

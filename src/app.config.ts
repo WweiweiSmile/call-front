@@ -22,6 +22,8 @@ export default defineAppConfig({
     'pages/review-create/index',
     'pages/review-detail/index',
     'pages/review-profile/index',
+    'pages/opponents/index',
+    'pages/opponent-detail/index',
     'pages/settings/index',
     'pages/settings-blind/index',
     'pages/settings-model/index',

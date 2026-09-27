@@ -18,6 +18,7 @@ import { useAnalysis } from './useAnalysis';
 import { usePageData, useRefreshOnShow } from '../../hooks';
 import { reviewApi } from '../../services/api';
 import { transformReviewHandFromApi } from '../../models';
+import { formatCardsText } from '../../utils/cards';
 import {
   ACTION_LABEL,
   ACTION_NEEDS_AMOUNT,
@@ -207,7 +208,9 @@ const ReviewDetailPage: React.FC = () => {
                       const position = villain.name && villain.position ? `(${villain.position})` : '';
                       const stack = villain.stackBb !== undefined ? ` ${formatBB(villain.stackBb)}bb` : '';
                       const key = villain.isKey ? ' · 关键' : '';
-                      return `${label}${position}${stack}${key}`;
+                      // 底牌只在摊牌/亮牌时才有，没记就不显示这一段
+                      const cards = villain.cards ? ` · 底牌 ${formatCardsText(villain.cards)}` : '';
+                      return `${label}${position}${stack}${key}${cards}`;
                     })
                     .join('，')}
                 </Text>

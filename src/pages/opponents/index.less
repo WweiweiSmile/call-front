@@ -1,0 +1,100 @@
+// ============================================
+// 对手管理（名单）
+// ============================================
+//
+// 字号与间距走 theme.less 的 token。这个项目 designWidth 是 375，即源码里写的就是
+// 真实 CSS px —— 按 750 的口径写会整体大一倍（本文件第一版就是这么错的）
+
+@import '../../styles/theme.less';
+
+.opponents-page {
+  .opponents-content {
+    padding: @spacing-md;
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    height: 36px;
+    padding: 0 12px;
+    margin-bottom: @spacing-sm;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+  }
+
+  .search-input {
+    flex: 1;
+    font-size: @font-size-sm;
+    color: @text-primary;
+  }
+
+  .page-hint {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    line-height: 1.6;
+    margin-bottom: @spacing-md;
+  }
+
+  // 外层 PageLayout 的内容区本来就会滚，这里不再套一层滚动容器，
+  // 免得出现两层滚动互相抢手势
+  .opponent-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-bottom: @spacing-sm;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+
+  .row-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .row-meta {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    margin-top: 2px;
+  }
+
+  .row-arrow {
+    font-size: @font-size-lg;
+    color: @text-tertiary;
+  }
+
+  .retry-block {
+    padding: 60px 0;
+    text-align: center;
+  }
+
+  .retry-text {
+    display: block;
+    font-size: @font-size-sm;
+    color: @text-secondary;
+    margin-bottom: @spacing-md;
+  }
+
+  .retry-btn {
+    display: inline-block;
+    padding: 8px 24px;
+    background: @primary;
+    border-radius: 18px;
+  }
+
+  .retry-btn-text {
+    font-size: @font-size-sm;
+    color: #fff;
+  }
+
+  .bottom-space {
+    height: @spacing-md;
+  }
+}

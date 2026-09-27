@@ -1,0 +1,377 @@
+// ============================================
+// 对手详情：画像 + 数据速览 + 对抗手牌
+// ============================================
+//
+// 字号与间距走 theme.less 的 token。这个项目 designWidth 是 375，即源码里写的就是
+// 真实 CSS px —— 按 750 的口径写会整体大一倍（本文件第一版就是这么错的）
+
+@import '../../styles/theme.less';
+
+.opponent-detail-page {
+  .opponent-detail-content {
+    padding: @spacing-md;
+  }
+
+  .section {
+    padding: @spacing-md;
+    margin-bottom: @spacing-sm;
+    background: @bg-secondary;
+    border-radius: @radius-md;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .section-hint {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+
+  .refresh-link {
+    font-size: @font-size-xs;
+    color: @primary;
+  }
+
+  // ---------- 画像 ----------
+
+  .profile-empty {
+    margin-top: @spacing-sm;
+  }
+
+  .profile-empty-text {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+
+  .profile-running {
+    padding: 12px;
+    margin-top: @spacing-sm;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+  }
+
+  .running-text {
+    display: block;
+    font-size: @font-size-sm;
+    font-weight: 600;
+    color: @primary;
+  }
+
+  .running-hint {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+
+  .profile-failed {
+    padding: 10px 12px;
+    margin-top: @spacing-sm;
+    background: #fef2f2;
+    border-radius: @radius-sm;
+  }
+
+  .failed-text {
+    font-size: @font-size-xs;
+    color: @danger;
+  }
+
+  .failed-hint {
+    display: block;
+    font-size: @font-size-xs;
+    color: @primary;
+    margin-top: 6px;
+  }
+
+  .profile-body {
+    margin-top: @spacing-sm;
+  }
+
+  .profile-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: @spacing-sm;
+  }
+
+  .profile-badge {
+    padding: 3px 10px;
+    font-size: @font-size-xs;
+    font-weight: 600;
+    color: #fff;
+    background: @primary;
+    border-radius: 12px;
+
+    // 未知是一种结论，不是"没结论"。用灰色而不是主色，
+    // 提醒用户这一格的建议不做剥削性偏离
+    &.unknown {
+      background: @text-tertiary;
+    }
+  }
+
+  .confidence-badge {
+    padding: 3px 8px;
+    font-size: 11px;
+    color: @text-secondary;
+    background: @bg-tertiary;
+    border-radius: 12px;
+  }
+
+  .outdated-badge {
+    padding: 3px 8px;
+    font-size: 11px;
+    color: @warning;
+    background: #fffbeb;
+    border-radius: 12px;
+  }
+
+  .profile-reason {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    line-height: 1.6;
+    margin-bottom: @spacing-sm;
+  }
+
+  .profile-summary {
+    display: block;
+    font-size: 13px;
+    color: @text-primary;
+    line-height: 1.8;
+    white-space: pre-wrap;
+  }
+
+  .block {
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid @divider-color;
+  }
+
+  .block-title {
+    display: block;
+    font-size: @font-size-sm;
+    font-weight: 600;
+    color: @text-primary;
+    margin-bottom: 6px;
+  }
+
+  .tendency-item,
+  .exploit-item {
+    padding: 8px 0;
+    border-bottom: 1px solid @divider-color;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .tendency-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .tendency-aspect {
+    font-size: 13px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  // 样本量要有存在感：它是判断这条观察可不可信的唯一依据
+  .tendency-sample {
+    padding: 2px 7px;
+    font-size: 11px;
+    color: @primary;
+    background: @bg-tertiary;
+    border-radius: 10px;
+  }
+
+  .tendency-text {
+    display: block;
+    font-size: 13px;
+    color: @text-primary;
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+
+  .tendency-evidence {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-tertiary;
+    line-height: 1.6;
+    margin-top: 3px;
+  }
+
+  .exploit-against {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: @primary;
+  }
+
+  .exploit-text {
+    display: block;
+    font-size: 13px;
+    color: @text-primary;
+    line-height: 1.6;
+    margin-top: 4px;
+  }
+
+  .exploit-sizing {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-primary;
+    margin-top: 3px;
+  }
+
+  .exploit-risk {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    margin-top: 3px;
+  }
+
+  .list-item {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    line-height: 1.7;
+  }
+
+  // ---------- 统计 ----------
+
+  .stat-block {
+    margin-top: 12px;
+  }
+
+  .stat-title {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: @text-primary;
+    margin-bottom: 5px;
+  }
+
+  .stat-note {
+    display: block;
+    font-size: 11px;
+    color: @warning;
+    line-height: 1.6;
+    margin-bottom: 5px;
+  }
+
+  .stat-line {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    line-height: 1.8;
+
+    &.dim {
+      color: @text-tertiary;
+      line-height: 1.6;
+    }
+  }
+
+  // 每个位置一段，不排表格：手机宽度下五列会把表头挤到换行
+  .position-stat {
+    padding: 6px 0;
+    border-bottom: 1px solid @divider-color;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .position-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: @text-primary;
+    margin-bottom: 2px;
+  }
+
+  .showdown-item {
+    padding: 6px 0;
+    border-bottom: 1px solid @divider-color;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .showdown-cards {
+    font-size: 13px;
+    font-weight: 600;
+    color: @text-primary;
+  }
+
+  .showdown-meta {
+    display: block;
+    font-size: @font-size-xs;
+    color: @text-secondary;
+    margin-top: 3px;
+  }
+
+  .warn-text {
+    display: block;
+    font-size: @font-size-xs;
+    color: @warning;
+    line-height: 1.6;
+    margin-top: 6px;
+  }
+
+  .load-more {
+    padding: 12px 0;
+    text-align: center;
+  }
+
+  .load-more-text {
+    font-size: 13px;
+    color: @primary;
+  }
+
+  .retry-block {
+    padding: 80px 0;
+    text-align: center;
+  }
+
+  .retry-text {
+    display: block;
+    font-size: @font-size-sm;
+    color: @text-secondary;
+    margin-bottom: @spacing-md;
+  }
+
+  .retry-btn {
+    display: inline-block;
+    padding: 8px 24px;
+    background: @primary;
+    border-radius: 18px;
+  }
+
+  .retry-btn-text {
+    font-size: @font-size-sm;
+    color: #fff;
+  }
+
+  .bottom-space {
+    height: @spacing-md;
+  }
+}

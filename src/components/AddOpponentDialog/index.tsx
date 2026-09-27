@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Input, ScrollView, Text, View } from '@tarojs/components';
 import { Button, Popup, Switch } from '@nutui/nutui-react-taro';
 import { useRequest } from 'ahooks';
+import CardPicker from '../CardPicker';
 import { reviewApi } from '../../services/api';
 import { positionLabel } from '../../utils/poker';
 import type { Position } from '../../models/types/review';
@@ -13,6 +14,8 @@ export interface OpponentDraft {
   position: Position;
   stackBb?: number;
   isKey?: boolean;
+  /** 对手底牌，规范格式如 AsKh。没看到就留空 */
+  cards?: string;
 }
 
 interface AddOpponentDialogProps {
@@ -27,6 +30,12 @@ interface AddOpponentDialogProps {
   /** 本手牌是否已经有关键对手。已有的话这里不能再标 */
   hasKeyVillain: boolean;
   tableSize: number;
+  /**
+   * 已经用掉的牌（我的底牌 + 公共牌 + 其他对手的底牌），选牌器里置灰。
+   * **必须不含正在编辑的这个对手自己的牌** —— 置灰的格子点不动，
+   * 把他自己的牌列进去他就改不了自己的牌了
+   */
+  disabledCards?: string;
   /** 编辑已有对手时传入。不传就是新增 */
   initial?: OpponentDraft | null;
   onConfirm: (draft: OpponentDraft) => void;
@@ -48,6 +57,7 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
   takenPositions,
   hasKeyVillain,
   tableSize,
+  disabledCards = '',
   initial,
   onConfirm,
   onClose,
@@ -58,6 +68,8 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
   const [position, setPosition] = useState<Position | ''>('');
   const [stackBb, setStackBb] = useState('');
   const [isKey, setIsKey] = useState(false);
+  /** 对手底牌。空串 = 没看到，绝大多数手牌都该是空串 */
+  const [cards, setCards] = useState('');
 
   // 每次打开都按当前手牌重置：弹窗是复用的，不重置会把上一次的输入带进来
   useEffect(() => {
@@ -66,6 +78,7 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
     setPosition(initial?.position || '');
     setStackBb(initial?.stackBb !== undefined ? String(initial.stackBb) : '');
     setIsKey(!!initial?.isKey);
+    setCards(initial?.cards || '');
   }, [visible, initial]);
 
   // 搜索我的对手名单。debounceWait 让连续输入只打一次接口；
@@ -99,8 +112,9 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
       position: position as Position,
       stackBb: stackBb ? Number(stackBb) : undefined,
       isKey,
+      cards: cards || undefined,
     });
-  }, [canSubmit, name, position, stackBb, isKey, onConfirm]);
+  }, [canSubmit, name, position, stackBb, isKey, cards, onConfirm]);
 
   return (
     <Popup
@@ -193,7 +207,23 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
             </View>
           </View>
 
-          {/* ---------- 3. 筹码 ---------- */}
+          {/* ---------- 3. 对手底牌 ---------- */}
+          <View className='dialog-field'>
+            <Text className='field-label'>他的底牌（选填）</Text>
+            <Text className='field-note'>
+              只有摊牌或他亮牌时才知道，没看到就留空。它不会进 AI 的复盘点评，
+              只用来攒对手画像 —— 别为了填满而猜
+            </Text>
+            <CardPicker
+              value={cards}
+              onChange={setCards}
+              max={2}
+              disabledCards={disabledCards}
+              placeholder='没看到就留空'
+            />
+          </View>
+
+          {/* ---------- 4. 筹码 ---------- */}
           <View className='dialog-field'>
             <Text className='field-label'>筹码（选填）</Text>
             <View className='input-box'>
@@ -208,7 +238,7 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
             </View>
           </View>
 
-          {/* ---------- 4. 关键对手 ---------- */}
+          {/* ---------- 5. 关键对手 ---------- */}
           <View className='dialog-field key-field'>
             <View className='key-text'>
               <Text className='field-label'>标为关键对手</Text>
