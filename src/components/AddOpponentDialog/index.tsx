@@ -8,6 +8,12 @@ import { positionLabel } from '../../utils/poker';
 import type { Position } from '../../models/types/review';
 import './index.less';
 
+/**
+ * 搜索时最多列出几条候选。录一手牌要认的是"刚跟我交手的那个人"，
+ * 一屏怼 20 条只会让人从头读到尾
+ */
+const MAX_SUGGESTED = 3;
+
 /** 弹窗填好的一个对手 */
 export interface OpponentDraft {
   name: string;
@@ -81,24 +87,35 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
     setCards(initial?.cards || '');
   }, [visible, initial]);
 
+  const keyword = name.trim();
+
   // 搜索我的对手名单。debounceWait 让连续输入只打一次接口；
-  // ready 保证弹窗没打开时不请求
+  // ready 保证弹窗没打开、或搜索框为空时不请求 —— 空关键词返回的是
+  // "交手最多的前 20 个"，那是名录不是搜索结果，不该在用户没搜时就铺开
   const { data: opponentResp, loading, error } = useRequest(
-    () => reviewApi.searchOpponents({ keyword: name.trim(), limit: 20 }),
+    () => reviewApi.searchOpponents({ keyword, limit: 20 }),
     {
-      ready: visible,
-      refreshDeps: [name, visible],
+      ready: visible && keyword.length > 0,
+      refreshDeps: [keyword, visible],
       debounceWait: 300,
       onError: () => {},
     }
   );
-  const opponents = useMemo(() => opponentResp?.list || [], [opponentResp]);
+
+  // 接口按交手数排序（不是按匹配度），精确同名的那个人可能排在十几条之后，
+  // 所以截断只用在展示上；判断"库里是不是已经有这个名字"必须看全量结果，
+  // 否则会对着一个已存在的对手提示"新建"
+  const allMatches = useMemo(() => opponentResp?.list || [], [opponentResp]);
+  const opponents = useMemo(
+    () => (keyword ? allMatches.slice(0, MAX_SUGGESTED) : []),
+    [allMatches, keyword]
+  );
 
   // 名字与库里已有的完全一样时不必再提示"新建"
-  const exactMatch = opponents.some(
-    (o) => o.name.trim().toLowerCase() === name.trim().toLowerCase()
+  const exactMatch = allMatches.some(
+    (o) => o.name.trim().toLowerCase() === keyword.toLowerCase()
   );
-  const canCreate = name.trim().length > 0 && !exactMatch;
+  const canCreate = keyword.length > 0 && !exactMatch;
 
   const taken = useMemo(() => new Set(takenPositions), [takenPositions]);
   // 名字是选填的：留空就只记位置，界面上显示成位置（"CO"），
@@ -152,8 +169,8 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
 
             {/* 库里没有这个名字时，给一条"新建"的明路，否则用户不知道自己能不能直接填 */}
             {canCreate && (
-              <View className='opponent-option create' onClick={() => setName(name.trim())}>
-                <Text className='option-name'>新建对手「{name.trim()}」</Text>
+              <View className='opponent-option create' onClick={() => setName(keyword)}>
+                <Text className='option-name'>新建对手「{keyword}」</Text>
                 <Text className='option-hint'>提交复盘时自动存进对手表</Text>
               </View>
             )}
@@ -178,9 +195,9 @@ const AddOpponentDialog: React.FC<AddOpponentDialogProps> = ({
                 })}
               </View>
             )}
-            {loading && <Text className='list-hint'>搜索中…</Text>}
+            {loading && keyword.length > 0 && <Text className='list-hint'>搜索中…</Text>}
             {/* 名单拉不到不该挡住录入：名字照样能填，提交时后端会建 */}
-            {!!error && (
+            {!!error && keyword.length > 0 && (
               <Text className='list-hint'>对手名单没加载出来，直接填名字也能用</Text>
             )}
           </View>

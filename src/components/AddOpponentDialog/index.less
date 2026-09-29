@@ -5,11 +5,22 @@
 @import '../../styles/theme.less';
 @import '../../styles/mixins.less';
 
+// 弹窗铺满整屏。nutui 的 .nut-popup--bottom 自带 max-height: 83%，
+// 再叠加下面那层高度限制，表单只能挤在半屏的小窗口里滚。
+// 这里把整条链打通：popup 占满视口 → 内容列 flex → 只有 .dialog-body 滚，
+// 头尾（标题、按钮）钉住不动
+.add-opponent-popup {
+  height: 100%;
+  max-height: 100%;
+  // 滚动交给内部的 ScrollView，否则两层滚动条打架
+  overflow: hidden;
+}
+
 .add-opponent-dialog {
   display: flex;
   flex-direction: column;
-  // 给小程序端的键盘留出空间：内容可滚，按钮始终在底部
-  max-height: 80vh;
+  height: 100%;
+  max-height: 100%;
   background: @bg-secondary;
 
   .dialog-header {
@@ -33,7 +44,9 @@
 
   .dialog-body {
     flex: 1;
-    max-height: 60vh;
+    // flex 子项默认 min-height: auto，会被内容顶大、把按钮挤出屏幕。
+    // 归零后它才真的"占剩下的高度"，溢出部分才有地方滚
+    min-height: 0;
     // ScrollView 自带 width: 100%，而 app.less 的全局 * { box-sizing } 在 H5 产物里不生效，
     // 不显式声明的话左右 padding 会加在这 100% 之外，整个内容区比屏幕宽 32px、右侧被裁掉
     box-sizing: border-box;
@@ -79,7 +92,7 @@
   }
 
   // 列表不设自己的高度上限：外层 .dialog-body 已经是滚动容器，
-  // 这里再裁一刀会把后面的搜索结果藏进够不到的地方（接口一次最多 20 条）
+  // 条数在 TS 里就截断了（最多 3 条），这里再裁一刀只会把结果藏进够不到的地方
   .opponent-list {
     margin-top: @spacing-sm;
   }
