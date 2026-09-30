@@ -1,0 +1,90 @@
+// ============================================
+// OcrTablePreview - 识别结果预览（塞在确认框里）
+// ============================================
+
+@import '../../styles/theme.less';
+@import '../../styles/mixins.less';
+
+.ocr-preview {
+  // 座位多时（9 人桌 8 个）预览会很长，限高滚动，
+  // 别让确认框把按钮挤出屏幕
+  max-height: 46vh;
+  overflow-y: auto;
+
+  .ocr-summary {
+    display: block;
+    font-size: 13px;
+    color: @text-primary;
+    line-height: 1.6;
+  }
+
+  .ocr-seat-list {
+    margin-top: @spacing-sm;
+    padding: @spacing-sm;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+  }
+
+  .ocr-seat {
+    .flex-between();
+    padding: 3px 0;
+    font-size: 13px;
+
+    .ocr-seat-position {
+      flex-shrink: 0;
+      width: 52px;
+      color: @text-secondary;
+    }
+
+    .ocr-seat-name {
+      flex: 1;
+      .text-ellipsis();
+      color: @text-primary;
+    }
+
+    .ocr-seat-stack {
+      flex-shrink: 0;
+      margin-left: @spacing-sm;
+      color: @text-secondary;
+    }
+
+    // 待补的项用暖色点出来：这一屏里最需要用户注意的就是它们
+    .missing {
+      color: @warning;
+    }
+  }
+
+  .ocr-cost {
+    display: block;
+    margin-top: @spacing-sm;
+    font-size: 12px;
+    color: @text-tertiary;
+    line-height: 1.6;
+
+    // 真会丢东西时才用告警色
+    &.destructive {
+      color: @danger;
+    }
+  }
+
+  .ocr-note-group {
+    margin-top: @spacing-sm;
+
+    .ocr-note-title {
+      display: block;
+      font-size: 12px;
+      color: @text-secondary;
+    }
+
+    .ocr-note {
+      display: block;
+      font-size: 12px;
+      color: @text-tertiary;
+      line-height: 1.6;
+
+      &.warn {
+        color: @warning;
+      }
+    }
+  }
+}

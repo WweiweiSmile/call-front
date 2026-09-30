@@ -27,6 +27,11 @@ declare namespace NodeJS {
     TARO_APP_BASE_URL: string
     /** 健康检查地址，见 .env.development / .env.test */
     VITE_API_BASE_URL: string
+    /**
+     * 牌桌识别（OCR）服务地址。dev/test 是 `/ocr`，由 dev server 代理到本机的
+     * poker-ocr-poc 服务；生产形态见 .env.production
+     */
+    TARO_APP_OCR_URL: string
   }
 }
 

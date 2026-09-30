@@ -6,3 +6,4 @@ export type {
 export { useRefreshOnShow } from './useRefreshOnShow';
 export { usePageData } from './usePageData';
 export type { UsePageDataOptions } from './usePageData';
+export { default as useOcrImport } from './useOcrImport';

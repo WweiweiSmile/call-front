@@ -25,6 +25,7 @@ export { default as StreetActionEditor } from './StreetActionEditor';
 export type { ActorOption } from './StreetActionEditor';
 export { default as AddOpponentDialog } from './AddOpponentDialog';
 export type { OpponentDraft } from './AddOpponentDialog';
+export { default as OcrTablePreview } from './OcrTablePreview';
 export { default as ReviewHandCard } from './ReviewHandCard';
 export { default as AnalysisPanel } from './AnalysisPanel';
 export { default as ReviewChatPanel } from './ReviewChatPanel';

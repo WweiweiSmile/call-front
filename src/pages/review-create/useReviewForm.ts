@@ -21,8 +21,11 @@ import {
   remainingStacksAtStreet,
   validateCardString,
 } from '../../utils/poker';
+import { OPPONENT_NAME_MAX_LENGTH } from '../../models/types/review';
+import { validActorsAfter } from '../../utils/ocrTable';
 import type { ActorOption } from '../../components/StreetActionEditor';
 import type { BlindConfig } from '../../utils/poker';
+import type { OcrTableDraft } from '../../models/service/ocr';
 import type {
   ActorType,
   HandResult,
@@ -36,8 +39,11 @@ import type {
 /** 草稿在本地存储里的 key。小程序切后台被杀进程是常事，表单必须能恢复 */
 export const DRAFT_STORAGE_KEY = 'review_hand_draft';
 
-/** 对手名长度上限，与后端 models.OpponentNameMaxRunes 一致 */
-export const OPPONENT_NAME_MAX_LENGTH = 20;
+/**
+ * 对手名长度上限。定义在 models/types/review.ts —— OCR 导入也要按同一口径截断，
+ * 而 utils/ 不该反向依赖本文件。这里再导出一次，保持原有的 import 路径可用
+ */
+export { OPPONENT_NAME_MAX_LENGTH };
 
 /**
  * 我自己这个行动者。
@@ -439,6 +445,38 @@ export function useReviewForm(handId?: string) {
           : prev.streets,
       };
     });
+  }, []);
+
+  /**
+   * 用牌桌截图的识别结果整体覆盖：人数、我的位置与筹码、整个对手列表。
+   *
+   * 必须**一次 setForm 算完**：先 setTableSize 再连着 addVillain 的话，
+   * 那几个 setter 的闭包捕获的都是同一份旧 form，会互相覆盖
+   */
+  const applyOcrTable = useCallback((draft: OcrTableDraft) => {
+    // 与映射阶段算"会删掉几条"用的是同一个函数：两处口径必须一致，
+    // 否则确认框说的删除条数会和实际删掉的对不上
+    const valid = validActorsAfter(draft);
+    setForm((prev) => ({
+      ...prev,
+      tableSize: draft.tableSize,
+      heroPosition: draft.heroPosition,
+      heroStackBb: draft.heroStackBb,
+      villains: draft.villains.map((villain) => ({
+        name: villain.name,
+        position: villain.position,
+        stackBb: villain.stackBb,
+        // 截图读不出"谁是你最关心的对手"，也读不出对手底牌。不猜
+        isKey: false,
+        cards: '',
+      })),
+      // 指向已不在新名单里的位置的行动必须一起删：留着会被后端以
+      // "无效的行动者"拒收，而报错看不出是导入导致的
+      streets: prev.streets.map((record) => ({
+        ...record,
+        actions: record.actions.filter((action) => valid.has(action.actor)),
+      })),
+    }));
   }, []);
 
   /**
@@ -900,6 +938,8 @@ export function useReviewForm(handId?: string) {
     addVillain,
     updateVillain,
     removeVillain,
+    /** 用 OCR 识别结果整体覆盖表单（人数、我的位置与筹码、对手列表） */
+    applyOcrTable,
     setTagInput,
     addTag,
     removeTag,

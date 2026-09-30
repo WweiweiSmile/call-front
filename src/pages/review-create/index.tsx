@@ -7,11 +7,13 @@ import {
   CardPicker,
   ConfirmDialog,
   Loading,
+  OcrTablePreview,
   PageHeader,
   PageLayout,
   StreetActionEditor,
   useRequireAuth,
 } from '../../components';
+import { useOcrImport } from '../../hooks';
 import {
   BOMB_POT_BB,
   POT_TYPE_LABEL,
@@ -69,6 +71,7 @@ const ReviewCreatePage: React.FC = () => {
     addVillain,
     updateVillain,
     removeVillain,
+    applyOcrTable,
     setTagInput,
     addTag,
     removeTag,
@@ -78,6 +81,28 @@ const ReviewCreatePage: React.FC = () => {
 
   // 「没写想法」的二次确认
   const [thoughtWarnVisible, setThoughtWarnVisible] = useState(false);
+
+  // ---------- 牌桌截图识别 ----------
+  // 只在新建模式用：编辑已有手牌时覆盖会改内容指纹，已有的 AI 分析会被判过期、
+  // 要花当日额度重算
+  const {
+    importing: ocrImporting,
+    pending: ocrPending,
+    applied: ocrApplied,
+    run: runOcr,
+    confirm: confirmOcr,
+    cancel: cancelOcr,
+    dismissApplied: dismissOcrApplied,
+  } = useOcrImport(applyOcrTable);
+
+  // 表单切片在点击那一刻取，别在识别过程中被后续输入带偏
+  const handleOcrImport = useCallback(() => {
+    runOcr({
+      heroStackBb: form.heroStackBb,
+      villainCount: form.villains.length,
+      streets: form.streets,
+    });
+  }, [runOcr, form.heroStackBb, form.villains.length, form.streets]);
 
   // 打开爆炸底池会清空翻前行动，已经录了翻前时先问一次
   const [bombPotWarnVisible, setBombPotWarnVisible] = useState(false);
@@ -264,6 +289,46 @@ const ReviewCreatePage: React.FC = () => {
         {/* ---------- 我的手牌 ---------- */}
         <View className='section'>
           <Text className='section-title'>我的手牌</Text>
+
+          {/*
+            截图识别只在新建模式给入口：它会整体覆盖人数/位置/对手，
+            而编辑已有手牌时这会改内容指纹，已有的 AI 分析被判过期要重花钱
+          */}
+          {!isEditMode && (
+            <>
+              <View
+                className={`ocr-import-btn ${ocrImporting ? 'busy' : ''}`}
+                onClick={handleOcrImport}
+              >
+                <Text className='ocr-import-text'>
+                  {ocrImporting ? '识别中…' : '上传牌桌截图识别'}
+                </Text>
+              </View>
+              <Text className='field-note'>
+                自动填人数、位置与筹码，底牌和行动过程还要你自己记
+              </Text>
+            </>
+          )}
+
+          {/* 填入后常驻一条：识别没读到的那些要靠用户补，toast 一闪而过看不见 */}
+          {ocrApplied && (
+            <View className='ocr-applied-note'>
+              <Text className='ocr-applied-title'>
+                已按截图填入
+                {ocrApplied.issues.length > 0
+                  ? `，有 ${ocrApplied.issues.length} 处要你补`
+                  : ''}
+              </Text>
+              {ocrApplied.issues.map((issue) => (
+                <Text key={issue} className='ocr-applied-item'>
+                  · {issue}
+                </Text>
+              ))}
+              <Text className='ocr-applied-close' onClick={dismissOcrApplied}>
+                知道了
+              </Text>
+            </View>
+          )}
 
           <View className='field'>
             <Text className='field-label'>几人桌</Text>
@@ -665,6 +730,19 @@ const ReviewCreatePage: React.FC = () => {
         onConfirm={confirmBombPot}
         onCancel={() => setBombPotWarnVisible(false)}
         onClose={() => setBombPotWarnVisible(false)}
+      />
+
+      {/* 覆盖是有损的（现有对手与行动会被换掉），所以要把代价写在按钮上，不写"确定" */}
+      <ConfirmDialog
+        visible={!!ocrPending}
+        title='按截图填写'
+        content={<OcrTablePreview draft={ocrPending} />}
+        confirmText='覆盖并填入'
+        cancelText='算了'
+        confirmType='warning'
+        onConfirm={confirmOcr}
+        onCancel={cancelOcr}
+        onClose={cancelOcr}
       />
 
       <ConfirmDialog

@@ -37,6 +37,14 @@ export const TABLE_SIZE_OPTIONS: TableSize[] = [2, 3, 4, 5, 6, 7, 8, 9];
 /** 默认人数：满员桌。与后端 models.DefaultTableSize 对应 */
 export const DEFAULT_TABLE_SIZE: TableSize = 9;
 
+/**
+ * 对手名字长度上限，与后端 models.OpponentNameMaxRunes 一致。
+ *
+ * 定义放在这里而不是录入页里：OCR 导入的名字也要按同一口径截断，
+ * 而 utils/ 不该反向依赖页面
+ */
+export const OPPONENT_NAME_MAX_LENGTH = 20;
+
 /** 底池类型 */
 export type PotType = 'hu' | 'multi';
 
