@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { Input, ScrollView, Text, Textarea, View } from '@tarojs/components';
-import { Button } from '@nutui/nutui-react-taro';
+import { Button, Switch } from '@nutui/nutui-react-taro';
 import Taro, { useRouter } from '@tarojs/taro';
 import {
   AddOpponentDialog,
@@ -13,6 +13,7 @@ import {
   useRequireAuth,
 } from '../../components';
 import {
+  BOMB_POT_BB,
   POT_TYPE_LABEL,
   RESULT_LABEL,
   STREET_ORDER,
@@ -63,6 +64,7 @@ const ReviewCreatePage: React.FC = () => {
     setTableSize,
     setStreetActions,
     toggleStreet,
+    setBombPot,
     handleBoardChange,
     addVillain,
     updateVillain,
@@ -76,6 +78,31 @@ const ReviewCreatePage: React.FC = () => {
 
   // 「没写想法」的二次确认
   const [thoughtWarnVisible, setThoughtWarnVisible] = useState(false);
+
+  // 打开爆炸底池会清空翻前行动，已经录了翻前时先问一次
+  const [bombPotWarnVisible, setBombPotWarnVisible] = useState(false);
+  /** 已经录了多少条翻前行动。清空是有损的，得说清会丢多少 */
+  const preflopActionCount = useMemo(
+    () => form.streets.find((s) => s.street === 'preflop')?.actions.length || 0,
+    [form.streets]
+  );
+
+  const handleBombPotChange = useCallback(
+    (value: boolean) => {
+      // 打开时才可能丢数据；关闭不动任何街道
+      if (value && preflopActionCount > 0) {
+        setBombPotWarnVisible(true);
+        return;
+      }
+      setBombPot(value, true);
+    },
+    [preflopActionCount, setBombPot]
+  );
+
+  const confirmBombPot = useCallback(() => {
+    setBombPot(true, true);
+    setBombPotWarnVisible(false);
+  }, [setBombPot]);
 
   // 添加 / 编辑对手弹窗。editingIndex 为 null 表示新增
   const [opponentDialogVisible, setOpponentDialogVisible] = useState(false);
@@ -313,64 +340,86 @@ const ReviewCreatePage: React.FC = () => {
           </View>
         </View>
 
-        {/* ---------- 盲注与前注 ---------- */}
+        {/* ---------- 盲注与前注（含玩法切换） ---------- */}
         <View className='section'>
           <Text className='section-title'>盲注与前注</Text>
           <Text className='section-hint'>
-            默认值来自设置页，这里可以针对这手牌改。翻前底池会自动带上它们，
-            行动记录里不用再记一遍盲注
+            {form.bombPot
+              ? `爆炸底池没有翻前行动，每人先投 ${formatBB(BOMB_POT_BB)}bb 直接看翻牌，所以这手牌不发盲注与前注`
+              : '默认值来自设置页，这里可以针对这手牌改。翻前底池会自动带上它们，行动记录里不用再记一遍盲注'}
           </Text>
 
-          <View className='field-row'>
-            <View className='field half'>
-              <Text className='field-label'>小盲</Text>
-              <View className='input-box'>
-                <Input
-                  className='input'
-                  type='digit'
-                  value={form.smallBlindBb}
-                  placeholder='0.5'
-                  onInput={(e) => setField('smallBlindBb', e.detail.value)}
-                />
-                <Text className='unit'>bb</Text>
-              </View>
+          <View className='bomb-pot-row'>
+            <View className='bomb-pot-text'>
+              <Text className='field-label'>爆炸底池</Text>
+              <Text className='field-note'>
+                没有翻前行动，每人先投 {formatBB(BOMB_POT_BB)}bb 直接看翻牌
+              </Text>
             </View>
-            <View className='field half'>
-              <Text className='field-label'>大盲</Text>
-              <View className='input-box'>
-                <Input
-                  className='input'
-                  type='digit'
-                  value={form.bigBlindBb}
-                  placeholder='1'
-                  onInput={(e) => setField('bigBlindBb', e.detail.value)}
-                />
-                <Text className='unit'>bb</Text>
-              </View>
-            </View>
+            <Switch checked={form.bombPot} onChange={handleBombPotChange} />
           </View>
 
-          <View className='field'>
-            <Text className='field-label'>前注</Text>
-            <View className='input-box'>
-              <Input
-                className='input'
-                type='digit'
-                value={form.anteBb}
-                placeholder='不打前注就留空'
-                onInput={(e) => setField('anteBb', e.detail.value)}
-              />
-              <Text className='unit'>bb</Text>
-            </View>
-            {blinds.anteBb > 0 && (
-              <Text className='field-note'>
-                前注每人一份，{form.tableSize} 人桌共 {formatBB(blinds.anteBb * form.tableSize)} bb
-              </Text>
-            )}
-          </View>
+          {/*
+            爆炸底池下三个盲注输入整段不渲染：这手牌不发盲注，摆着只会让人去填，
+            而后端会把"爆炸底池 + 有盲注"当成自相矛盾的数据拒收。
+            form 里的值不动 —— 切回常规玩法时它们还在
+          */}
+          {!form.bombPot && (
+            <>
+              <View className='field-row'>
+                <View className='field half'>
+                  <Text className='field-label'>小盲</Text>
+                  <View className='input-box'>
+                    <Input
+                      className='input'
+                      type='digit'
+                      value={form.smallBlindBb}
+                      placeholder='0.5'
+                      onInput={(e) => setField('smallBlindBb', e.detail.value)}
+                    />
+                    <Text className='unit'>bb</Text>
+                  </View>
+                </View>
+                <View className='field half'>
+                  <Text className='field-label'>大盲</Text>
+                  <View className='input-box'>
+                    <Input
+                      className='input'
+                      type='digit'
+                      value={form.bigBlindBb}
+                      placeholder='1'
+                      onInput={(e) => setField('bigBlindBb', e.detail.value)}
+                    />
+                    <Text className='unit'>bb</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View className='field'>
+                <Text className='field-label'>前注</Text>
+                <View className='input-box'>
+                  <Input
+                    className='input'
+                    type='digit'
+                    value={form.anteBb}
+                    placeholder='不打前注就留空'
+                    onInput={(e) => setField('anteBb', e.detail.value)}
+                  />
+                  <Text className='unit'>bb</Text>
+                </View>
+                {blinds.anteBb > 0 && (
+                  <Text className='field-note'>
+                    前注每人一份，{form.tableSize} 人桌共 {formatBB(blinds.anteBb * form.tableSize)} bb
+                  </Text>
+                )}
+              </View>
+            </>
+          )}
 
           <Text className='pot-summary'>
-            翻前起始底池：{formatBB(preflopPotBb(blinds))} bb
+            {form.bombPot
+              ? `翻前起始底池：每人 ${formatBB(BOMB_POT_BB)}bb × ${form.tableSize} 人 = ${formatBB(preflopPotBb(blinds))} bb`
+              : `翻前起始底池：${formatBB(preflopPotBb(blinds))} bb`}
           </Text>
         </View>
 
@@ -440,7 +489,9 @@ const ReviewCreatePage: React.FC = () => {
 
           <Text className='field-note'>
             底池类型：{POT_TYPE_LABEL[potType]}
-            （按翻牌时还有几个对手在池中自动判断）
+            {form.bombPot
+              ? '（爆炸底池所有人都看翻牌，按在场人数判断）'
+              : '（按翻牌时还有几个对手在池中自动判断）'}
           </Text>
         </View>
 
@@ -451,7 +502,11 @@ const ReviewCreatePage: React.FC = () => {
             只记关键行动即可。跟注金额会自动推导，不用你填
           </Text>
 
-          {STREET_ORDER.map((street) => {
+          {/*
+            爆炸底池没有翻前，整条街不渲染（连标题一起）：摆一条填不了的街，
+            用户会以为漏记了。翻牌之后的行动顺序不变 —— 爆炸底池翻后也是 SB 先说话
+          */}
+          {STREET_ORDER.filter((street) => !(form.bombPot && street === 'preflop')).map((street) => {
             const record = form.streets.find((s) => s.street === street);
             const step = pots.byStreet[street];
             // 河牌没发到时提示用户先选公共牌，避免记录了行动却没有牌面对应
@@ -598,6 +653,19 @@ const ReviewCreatePage: React.FC = () => {
         {/* 底部安全区由 PageLayout 的 bottom 容器统一处理，这里只留一点呼吸空间 */}
         <View className='bottom-space' />
       </PageLayout>
+
+      <ConfirmDialog
+        visible={bombPotWarnVisible}
+        title='改成爆炸底池'
+        content={`这手牌已经记了 ${preflopActionCount} 条翻前行动，改成爆炸底池会把它们删掉。确定吗？`}
+        // 按钮直说会发生什么（清空翻前），别写成"确定" —— 这一步是有损的
+        confirmText='清空翻前'
+        cancelText='不改了'
+        confirmType='warning'
+        onConfirm={confirmBombPot}
+        onCancel={() => setBombPotWarnVisible(false)}
+        onClose={() => setBombPotWarnVisible(false)}
+      />
 
       <ConfirmDialog
         visible={thoughtWarnVisible}

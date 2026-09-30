@@ -285,6 +285,17 @@ export function inputToBb(value: string): number {
 }
 
 /**
+ * 爆炸底池每人先投的额度（BB）。
+ *
+ * 写死是玩法本身的定义（"每人 5bb 直接看翻牌"），不是给用户填的字段。
+ *
+ * **落库的是这手牌自己的额度**（ReviewHand.bombPotBb），不是一个"是不是爆炸底池"的布尔 ——
+ * 将来玩法改成 10bb，历史手牌不会被重新解释成 10bb。所以改这个常量只影响之后新录的手牌，
+ * 后端也不写死它（它只读存下来的值）
+ */
+export const BOMB_POT_BB = 5;
+
+/**
  * 盲注与前注的额度（BB）。
  *
  * 三项全为 0 表示"这手牌没记录盲注"，此时底池估算与加这个功能之前完全一致。
@@ -295,6 +306,13 @@ export interface BlindConfig {
   smallBlindBb: number;
   bigBlindBb: number;
   anteBb: number;
+  /**
+   * 爆炸底池每人先投的额度（BB）。0 = 不是爆炸底池。
+   *
+   * > 0 时：没有翻前行动、不发盲注与前注，起始底池 = 它 × 人数。
+   * 与上面三个盲注字段互斥（后端校验层会拒收两者同时有值的提交）
+   */
+  bombPotBb: number;
   /** 前注按人数折算 */
   tableSize: number;
   /** 位置用来把大小盲认到具体行动者头上，见 postedBlinds */
@@ -340,8 +358,29 @@ export function blindsAreZero(blinds: BlindConfig): boolean {
   return blinds.smallBlindBb === 0 && blinds.bigBlindBb === 0 && blinds.anteBb === 0;
 }
 
-/** 翻前第一条行动之前的底池：小盲 + 大盲 + 前注 × 人数 */
+/**
+ * 这手是爆炸底池：没有翻前行动，每人先投 bombPotBb 直接看翻牌。
+ *
+ * 注意不能用 blindsAreZero 反推 —— 爆炸底池下那三个值确实是 0（它真的没发盲注），
+ * 但底池里有死钱，只是换了个来源
+ */
+export function isBombPot(blinds: BlindConfig): boolean {
+  return blinds.bombPotBb > 0;
+}
+
+/**
+ * 翻前第一条行动之前的底池。
+ *
+ * 常规牌局是 小盲 + 大盲 + 前注 × 人数；爆炸底池是 每人先投 × 人数
+ * （不含盲注与前注 —— 两者在录入页上互斥，校验层也会拒）
+ */
 export function preflopPotBb(blinds: BlindConfig): number {
+  if (isBombPot(blinds)) {
+    // 人数没记录时算不出总额，返回 0 而不是按 1 人折算
+    if (blinds.tableSize <= 0) return 0;
+    return blinds.bombPotBb * blinds.tableSize;
+  }
+
   let total = blinds.smallBlindBb + blinds.bigBlindBb;
   if (blinds.anteBb > 0 && blinds.tableSize > 0) {
     total += blinds.anteBb * blinds.tableSize;
@@ -365,6 +404,10 @@ export function preflopPotBb(blinds: BlindConfig): number {
  */
 function postedBlinds(blinds: BlindConfig): Record<string, number> {
   const posted: Record<string, number> = {};
+  // 爆炸底池没人下盲注，棋盘必须是空的：摆了就会把"某人已投入"记成盲注额，
+  // 翻前的跟注差额随之算错，而这份错误会静默地传到底池里
+  if (isBombPot(blinds)) return posted;
+
   const credit = (actor: string, position: Position | '') => {
     if (position === 'SB') posted[actor] = (posted[actor] || 0) + blinds.smallBlindBb;
     else if (position === 'BB') posted[actor] = (posted[actor] || 0) + blinds.bigBlindBb;
@@ -376,13 +419,54 @@ function postedBlinds(blinds: BlindConfig): Record<string, number> {
 }
 
 /**
- * 盲注的展示文案，如 "小盲 0.5 / 大盲 1 bb"。没记录时返回空串，调用方据此决定要不要渲染
+ * 爆炸底池里"每人先投"的那笔钱，按行动者键各记一份。
+ *
+ * 与 postedBlinds 的区别：盲注只记在 SB/BB 两个人头上（只有他们后续跟注要补差额），
+ * 爆炸底池是**所有人都投了同样的钱**，所以每个人都要记。这笔钱已经由 preflopPotBb
+ * 记进底池，这里记的是"各人自己掏了多少"，用来从每人的后手里扣掉。
+ *
+ * 认人方式与 postedBlinds 完全一致：hero + 各对手位置 + 老口径的 villain 兜底键。
+ * 非爆炸底池返回空表。
+ *
+ * 不导出：目前只有 contributionBeforeStreet 一个消费者，与 postedBlinds 一样是内部件
+ */
+function bombPotContribution(blinds: BlindConfig): Record<string, number> {
+  const contributed: Record<string, number> = {};
+  if (!isBombPot(blinds)) return contributed;
+
+  // 我必然在池中，头上一定有一份
+  contributed.hero = blinds.bombPotBb;
+  for (const position of blinds.villainPositions) {
+    contributed[position] = blinds.bombPotBb;
+  }
+  // 兜底键只在老手牌上存在。位置为空时不能挂账 —— 那会替一个不存在的人掏钱
+  if (blinds.legacyVillainPosition) {
+    contributed.villain = blinds.bombPotBb;
+  }
+  return contributed;
+}
+
+/**
+ * 盲注的展示文案，如 "小盲 0.5 / 大盲 1 bb"。没记录时返回空串，调用方据此决定要不要渲染。
+ *
+ * 爆炸底池这里同样返回空串（那手牌确实没发盲注），**所以调用方不能只看这个返回值
+ * 判断"没有死钱"** —— 爆炸底池的死钱在 bombPotLabel 里
  */
 export function blindsLabel(blinds: BlindConfig): string {
   if (blindsAreZero(blinds)) return '';
   const parts = [`小盲 ${formatBB(blinds.smallBlindBb)}`, `大盲 ${formatBB(blinds.bigBlindBb)}`];
   if (blinds.anteBb > 0) parts.push(`前注 ${formatBB(blinds.anteBb)}`);
   return `${parts.join(' / ')} bb`;
+}
+
+/**
+ * 爆炸底池的展示文案，如 "爆炸底池 每人 5bb（9 人共 45bb）"。不是爆炸底池时返回空串。
+ */
+export function bombPotLabel(blinds: BlindConfig): string {
+  if (!isBombPot(blinds)) return '';
+  const each = `爆炸底池 每人 ${formatBB(blinds.bombPotBb)}bb`;
+  if (blinds.tableSize <= 0) return each;
+  return `${each}（${blinds.tableSize} 人共 ${formatBB(preflopPotBb(blinds))}bb）`;
 }
 
 /** 一条街的底池推进 */
@@ -454,7 +538,12 @@ function walkStreetActions(
 /**
  * 每个行动者在本街**开始之前**已经投进底池的总额（BB）。
  *
- * 前注不在内 —— 它不参与"跟到多少"的抵消，与 computePots 同一口径
+ * 前注不在内 —— 它不参与"跟到多少"的抵消，与 computePots 同一口径。
+ *
+ * **爆炸底池的那笔"每人先投"在**，而且是有意与前者不同的：爆炸底池没有翻前行动，
+ * 不存在"抵消"这件事，那笔钱唯一的作用就是从每人的后手里扣掉（用户要的就是
+ * "筹码自动少 5bb"）。别为了跟前注对齐把它删掉 —— 删了后手会多算 5bb，
+ * 而"全下"按钮会照着一个虚高的后手填金额
  */
 export function contributionBeforeStreet(
   streets: StreetRecord[],
@@ -464,6 +553,15 @@ export function contributionBeforeStreet(
   const spent: Record<string, number> = {};
   const target = STREET_ORDER.indexOf(street);
   if (target <= 0) return spent;
+
+  // 爆炸底池每人先投的那笔钱要先记上。它不来自任何行动，而下面那段是靠
+  // "这一街有行动才处理"的 —— 爆炸底池的翻前恰恰没有行动，那条 continue
+  // 会把盲注的基线一起跳过，同一份道理在这儿也必须显式补一次
+  if (blinds) {
+    for (const [actor, amount] of Object.entries(bombPotContribution(blinds))) {
+      spent[actor] = amount;
+    }
+  }
 
   for (const earlier of STREET_ORDER.slice(0, target)) {
     const record = streets.find((s) => s.street === earlier);

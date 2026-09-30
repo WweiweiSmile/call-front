@@ -43,6 +43,13 @@ const ReviewHandCard: React.FC<ReviewHandCardProps> = ({ hand, onClick, testId }
         <View className='position-tag'>
           <Text className='position-text'>{positionLabel(hand.heroPosition, hand.tableSize)}</Text>
         </View>
+        {/* 爆炸底池要在列表上认得出：它没有翻前行动、底池是死钱，
+            与常规牌局的读法完全不同。只靠标题里那几个字是认不出来的 */}
+        {hand.bombPotBb > 0 && (
+          <View className='bomb-pot-tag'>
+            <Text className='bomb-pot-text'>爆炸底池</Text>
+          </View>
+        )}
         <CardList cards={hand.heroCards} size='sm' />
         {boardCount > 0 && (
           <>

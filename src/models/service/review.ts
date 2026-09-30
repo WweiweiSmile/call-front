@@ -38,6 +38,11 @@ export interface ReviewHandRequest {
   smallBlindBb?: number;
   bigBlindBb?: number;
   anteBb?: number;
+  /**
+   * 爆炸底池每人先投的额度（BB）。0 或不传 = 不是爆炸底池。
+   * > 0 时后端要求盲注三项都为 0（爆炸底池不发盲注与前注）
+   */
+  bombPotBb?: number;
   board?: string;
   villainCount?: number;
   villains?: VillainInfo[];
@@ -63,6 +68,8 @@ export interface ReviewHandResponse {
   smallBlindBb: number;
   bigBlindBb: number;
   anteBb: number;
+  /** 爆炸底池每人先投的额度(BB)，0 = 不是爆炸底池 */
+  bombPotBb: number;
   board: string;
   villainCount: number;
   villains: VillainInfo[];

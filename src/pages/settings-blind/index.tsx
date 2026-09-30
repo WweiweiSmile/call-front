@@ -88,11 +88,13 @@ const SettingsBlindPage: React.FC = () => {
   if (!isAuthenticated) return <View />;
   if (isFirstLoading) return <Loading fullPage text='加载设置' />;
 
-  // 前注要按牌桌人数折算，而人数是每手牌各自记的，这里只能拿默认人数举例说明
+  // 前注要按牌桌人数折算，而人数是每手牌各自记的，这里只能拿默认人数举例说明。
+  // bombPotBb 恒为 0：设置页管的是常规玩法的默认盲注，爆炸底池是手牌级的另一套口径
   const examplePot = preflopPotBb({
     smallBlindBb: inputToBb(smallBlindBb),
     bigBlindBb: inputToBb(bigBlindBb),
     anteBb: inputToBb(anteBb),
+    bombPotBb: 0,
     tableSize: DEFAULT_TABLE_SIZE,
     // 这里只是拿默认人数举例说明前注怎么折算，不涉及具体的人
     heroPosition: '',

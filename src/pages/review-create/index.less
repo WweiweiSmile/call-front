@@ -65,6 +65,30 @@
     min-width: 0;
   }
 
+  // 爆炸底池开关。单独一行并给个底色：它是"玩法"而不是一项额度，
+  // 与下面那三个盲注输入框混在一起会让人以为也是要填的数
+  .bomb-pot-row {
+    .flex-between();
+    margin-top: @spacing-md;
+    padding: 10px 12px;
+    background: @bg-tertiary;
+    border-radius: @radius-sm;
+
+    .bomb-pot-text {
+      flex: 1;
+      min-width: 0;
+      padding-right: @spacing-sm;
+
+      .field-label {
+        margin-bottom: 4px;
+      }
+
+      .field-note {
+        margin-top: 0;
+      }
+    }
+  }
+
   .field-label {
     display: block;
     margin-bottom: 6px;

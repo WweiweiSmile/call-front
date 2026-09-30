@@ -235,6 +235,9 @@ export function transformReviewHandFromApi(apiHand: ReviewHandResponse): Fronten
     smallBlindBb: apiHand.smallBlindBb || 0,
     bigBlindBb: apiHand.bigBlindBb || 0,
     anteBb: apiHand.anteBb || 0,
+    // 同上：旧后端不带这个字段，兜底成 0（不是爆炸底池）。
+    // 少这一行就是静默丢字段 —— 爆炸底池手牌打开后会被当成常规牌局
+    bombPotBb: apiHand.bombPotBb || 0,
     board: apiHand.board,
     villainCount: apiHand.villainCount,
     // 后端保证返回数组，这里再兜一层：老数据可能是 null

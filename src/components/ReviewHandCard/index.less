@@ -95,6 +95,20 @@
     }
   }
 
+  // 爆炸底池角标。用虚线边框与位置角标区分：它标的是玩法，不是位置
+  .bomb-pot-tag {
+    .flex-center();
+    padding: 2px 6px;
+    border: 1px dashed fade(@primary, 50%);
+    border-radius: 4px;
+    flex-shrink: 0;
+
+    .bomb-pot-text {
+      font-size: 11px;
+      color: @primary;
+    }
+  }
+
   .card-meta {
     display: flex;
     flex-direction: row;

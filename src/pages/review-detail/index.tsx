@@ -29,6 +29,7 @@ import {
   actorLabel,
   blindPositionsOf,
   blindsLabel,
+  bombPotLabel,
   computePots,
   formatBB,
   positionLabel,
@@ -110,17 +111,22 @@ const ReviewDetailPage: React.FC = () => {
     return count === 0 ? 0 : 5;
   }, [hand]);
 
-  // 盲注文案。没记盲注（含加这个功能之前的老手牌）时是空串，整行不渲染
+  // 盲注文案。没记盲注（含加这个功能之前的老手牌）时是空串，整行不渲染。
+  //
+  // 爆炸底池走另一个口径：它确实没发盲注（blindsLabel 会返回空串），
+  // 但死钱是"每人先投 × 人数"，这行必须显示出来，否则看不出底池里的钱是哪来的
   const blindText = useMemo(() => {
     if (!hand) return '';
-    return blindsLabel({
+    const config = {
       smallBlindBb: hand.smallBlindBb,
       bigBlindBb: hand.bigBlindBb,
       anteBb: hand.anteBb,
+      bombPotBb: hand.bombPotBb,
       tableSize: hand.tableSize,
       heroPosition: hand.heroPosition,
       ...blindPositionsOf(hand.villains || []),
-    });
+    };
+    return bombPotLabel(config) || blindsLabel(config);
   }, [hand]);
 
   /**
@@ -139,6 +145,7 @@ const ReviewDetailPage: React.FC = () => {
       smallBlindBb: hand.smallBlindBb,
       bigBlindBb: hand.bigBlindBb,
       anteBb: hand.anteBb,
+      bombPotBb: hand.bombPotBb,
       tableSize: hand.tableSize,
       heroPosition: hand.heroPosition,
       ...blindPositionsOf(hand.villains || []),

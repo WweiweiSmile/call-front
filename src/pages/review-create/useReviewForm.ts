@@ -4,6 +4,7 @@ import { useRequest } from 'ahooks';
 import { usePageData } from '../../hooks';
 import { gameApi, preferenceApi, reviewApi } from '../../services/api';
 import {
+  BOMB_POT_BB,
   DEFAULT_TABLE_SIZE,
   STREET_ORDER,
   actorsOutOfAction,
@@ -81,6 +82,13 @@ export interface ReviewFormState {
   smallBlindBb: string;
   bigBlindBb: string;
   anteBb: string;
+  /**
+   * 爆炸底池：没有翻前行动，每人先投 BOMB_POT_BB 直接看翻牌。
+   *
+   * 开着的时候上面三个盲注字段**不参与计算也不提交**（提交 0），但表单里保留用户
+   * 填过的值 —— 切回常规玩法时不用重填
+   */
+  bombPot: boolean;
   board: string;
   /** 本手牌的对手（M7.1 起是具名列表，不再是"一个关键对手 + 其他人"） */
   villains: VillainFormItem[];
@@ -104,6 +112,8 @@ export const emptyFormState: ReviewFormState = {
   smallBlindBb: '',
   bigBlindBb: '',
   anteBb: '',
+  // 默认是常规牌局。老草稿里没有这个字段，恢复时靠 {...emptyFormState, ...draft} 落到 false
+  bombPot: false,
   board: '',
   villains: [],
   streets: STREET_ORDER.map((street) => ({ street, actions: [] })),
@@ -188,6 +198,8 @@ export function useReviewForm(handId?: string) {
           smallBlindBb: bbToInput(hand.smallBlindBb),
           bigBlindBb: bbToInput(hand.bigBlindBb),
           anteBb: bbToInput(hand.anteBb),
+          // 存的是额度，0 表示不是爆炸底池。老手牌读回来是 0，与加这个玩法之前一致
+          bombPot: (hand.bombPotBb || 0) > 0,
           board: hand.board || '',
           // 老手牌的对手没有名字，这里原样带进来：一旦改写（比如补个默认名），
           // 内容指纹就变了，已有的 AI 分析会被判为"不对应当前内容"而白重算一次
@@ -362,6 +374,24 @@ export function useReviewForm(handId?: string) {
     );
   }, []);
 
+  /**
+   * 切换爆炸底池。
+   *
+   * 打开时翻前街必须清空：爆炸底池没有翻前行动，留着会被后端拒收。但清空是**有损**的，
+   * 所以清不清交给调用方定 —— 调用方发现翻前已有记录时先弹确认，用户点了才传 true。
+   * 关闭时不动任何街道：常规玩法的翻前该什么样还什么样
+   */
+  const setBombPot = useCallback((value: boolean, clearPreflop: boolean) => {
+    setForm((prev) => ({
+      ...prev,
+      bombPot: value,
+      streets:
+        value && clearPreflop
+          ? prev.streets.map((s) => (s.street === 'preflop' ? { ...s, actions: [] } : s))
+          : prev.streets,
+    }));
+  }, []);
+
   // ---------- 对手 ----------
   /** 已被占用的位置：我 + 其他对手。添加弹窗据此置灰 */
   const takenPositions = useMemo<Position[]>(() => {
@@ -501,17 +531,23 @@ export function useReviewForm(handId?: string) {
     return byStreet;
   }, [positionActors, outActors, form.tableSize]);
 
-  // ---------- 盲注 ----------
+  // ---------- 盲注 / 爆炸底池 ----------
   // 位置要一起带上：底池推算靠它把大小盲认到具体行动者头上，否则大盲跟注会被多算
+  //
+  // 爆炸底池是并列的另一套开局口径：不发盲注与前注，死钱 = 每人先投 × 人数。
+  // 所以这里把三个盲注值归零（后端校验层也要求两者互斥），但**不动表单里的输入框** ——
+  // 用户切回常规玩法时，原来填的盲注还在
   const blinds: BlindConfig = useMemo(() => ({
-    smallBlindBb: inputToBb(form.smallBlindBb),
-    bigBlindBb: inputToBb(form.bigBlindBb),
-    anteBb: inputToBb(form.anteBb),
+    smallBlindBb: form.bombPot ? 0 : inputToBb(form.smallBlindBb),
+    bigBlindBb: form.bombPot ? 0 : inputToBb(form.bigBlindBb),
+    anteBb: form.bombPot ? 0 : inputToBb(form.anteBb),
+    bombPotBb: form.bombPot ? BOMB_POT_BB : 0,
     tableSize: form.tableSize,
     heroPosition: form.heroPosition,
     // 有名字的对手按位置认人，没名字的老数据认在聚合角色上
     ...blindPositionsOf(form.villains),
   }), [
+    form.bombPot,
     form.smallBlindBb,
     form.bigBlindBb,
     form.anteBb,
@@ -642,6 +678,16 @@ export function useReviewForm(handId?: string) {
       return '小盲不能大于大盲';
     }
 
+    // 爆炸底池没有翻前行动。开关切换时页面会清空翻前，这里再兜一道：
+    // 提交一份后端必然拒收的数据不如在本地拦下，提示也更清楚。
+    // 与后端 ValidateReviewHand 是同一份口径
+    if (form.bombPot) {
+      const preflop = form.streets.find((s) => s.street === 'preflop');
+      if (preflop && preflop.actions.length > 0) {
+        return '爆炸底池没有翻前行动，请清空翻前记录';
+      }
+    }
+
     const cardError = validateCardString(form.heroCards);
     if (cardError) return `底牌：${cardError}`;
 
@@ -740,9 +786,11 @@ export function useReviewForm(handId?: string) {
       heroCards: form.heroCards,
       heroStackBb: form.heroStackBb ? Number(form.heroStackBb) : 0,
       stakes: form.stakes.trim(),
+      // 走 blinds（已按玩法归零/折算），不是 form 里的原始输入
       smallBlindBb: blinds.smallBlindBb,
       bigBlindBb: blinds.bigBlindBb,
       anteBb: blinds.anteBb,
+      bombPotBb: blinds.bombPotBb,
       board: form.board,
       villainCount: isLegacyVillains ? legacyVillainCountRef.current : villains.length,
       villains,
@@ -847,6 +895,7 @@ export function useReviewForm(handId?: string) {
     setTableSize,
     setStreetActions,
     toggleStreet,
+    setBombPot,
     handleBoardChange,
     addVillain,
     updateVillain,

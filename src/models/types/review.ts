@@ -257,6 +257,14 @@ export interface ReviewHand {
   bigBlindBb: number;
   /** 前注(BB)，每人一份，总额要乘人数 */
   anteBb: number;
+  /**
+   * 爆炸底池每人先投的额度(BB)，0 = 不是爆炸底池。
+   *
+   * > 0 时没有翻前行动、也不发盲注与前注，起始底池 = 它 × 人数。
+   * 存额度而不是存布尔：玩法改成 10bb 时历史手牌不会被重新解释。
+   * 老数据的响应里没有这个字段（后端带 omitempty），读回来是 undefined，按 0 处理
+   */
+  bombPotBb?: number;
   /** 按发牌顺序拼接如 Qs7h2d3c9s，长度 0/6/8/10 */
   board: string;
   villainCount: number;
@@ -302,6 +310,8 @@ export interface FrontendReviewHand {
   smallBlindBb: number;
   bigBlindBb: number;
   anteBb: number;
+  /** 爆炸底池每人先投的额度(BB)，0 = 不是爆炸底池 */
+  bombPotBb: number;
   board: string;
   villainCount: number;
   villains: VillainInfo[];
