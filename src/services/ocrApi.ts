@@ -76,7 +76,7 @@ export async function recognizeTable(): Promise<OcrTableResult> {
 
 async function uploadTable(filePath: string): Promise<OcrTableResult> {
   const res = await Taro.uploadFile({
-    url: `${OCR_BASE_URL}/table`,
+    url: `${OCR_BASE_URL}/ocr/table`,
     filePath,
     // 字段名必须与识别服务的 File(...) 一致
     name: 'file',
