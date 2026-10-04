@@ -2,3 +2,4 @@
 1.  每次信息回复，必须以weiweigod开头称呼我
 2.  遇到不确定的代码，必须询问我
 3.  后端项目地址 ~/codes/call-back
+4.  ocr项目地址 ~/codes/poker-ocr
