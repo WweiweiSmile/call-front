@@ -1,7 +1,7 @@
 /** 底部导航栏的四个 Tab */
 export type TabType = 'games' | 'reviews' | 'my' | 'profile';
 
-/** 默认 Tab（登录成功、无 redirectUri 兜底时进入） */
+/** 默认 Tab（登录回来没记住原页面时的兜底落地页） */
 export const DEFAULT_TAB: TabType = 'games';
 
 /** 各 Tab 对应的页面路径 */

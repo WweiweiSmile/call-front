@@ -85,10 +85,10 @@ const ProfilePage: React.FC = () => {
   const handleConfirmLogout = useCallback(() => {
     setVisible(false);
     clearMessages();
+    // logout 自己就会跳到认证中心做**全局退出**（吊销会话 + 删它的 cookie），
+    // 所以这里**不能再跟一个 Taro.redirectTo**：那会打断那次跳转，
+    // 把用户留在一个"本地清了、会话没退"的状态 —— 下次进来又被静默登回去
     logout();
-    Taro.redirectTo({
-      url: '/pages/login/index',
-    });
   }, [logout, clearMessages]);
 
   // 如果未认证，不渲染内容（会自动跳转）

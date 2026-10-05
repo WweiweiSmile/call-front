@@ -1,105 +1,70 @@
 import React, {useEffect} from 'react';
 import {View} from '@tarojs/components';
-import Taro, {useRouter} from '@tarojs/taro';
+import {useRouter} from '@tarojs/taro';
 import {useAuthStore} from '../store/auth';
-import {DEFAULT_ROUTE} from '../utils/tabs';
+import {CALLBACK_ROUTE, startSSO} from '../utils/sso';
+
+/**
+ * 不需要登录就能访问的页面。
+ *
+ * 回调页必须在里面 —— 它渲染的那一刻用户**恰恰还没有登录态**
+ *（令牌正是这个页面接下来要去换的东西）。不白名单的话，
+ * 守卫会在换票之前就把人再弹去 /sso，来回死循环
+ */
+const whitelist = [CALLBACK_ROUTE];
+
+/**
+ * Hook 版本，用于在页面组件中使用
+ */
+export function useRequireAuth() {
+  const router = useRouter();
+  const {isAuthenticated} = useAuthStore();
+
+  const currentPath = router.path;
+  const isWhitelisted = whitelist.includes(currentPath);
+
+  useEffect(() => {
+    if (isWhitelisted || isAuthenticated) {
+      return;
+    }
+    // 没登录 → 跳认证中心做 SSO。原来的页面路径由 startSSO 自己记下来，
+    // 登录完送回来（不用再手工拼 redirectUri）
+    startSSO();
+  }, [isAuthenticated, isWhitelisted, currentPath]);
+
+  return {
+    isAuthenticated: isAuthenticated,
+    isWhitelisted: isWhitelisted,
+  };
+}
 
 interface RequireAuthProps {
   children: React.ReactNode;
 }
 
-// Hook 版本，用于在页面组件中使用
-export function useRequireAuth() {
-  const router = useRouter();
-  const {isAuthenticated} = useAuthStore();
-
-  // 白名单页面，不需要登录就可以访问
-  const whitelist = ['/pages/login/index'];
-  const currentPath = router.path;
-
-  useEffect(() => {
-    // 如果在白名单中，不做任何处理
-    if (whitelist.includes(currentPath)) {
-      return;
-    }
-
-    // 如果没有登录，跳转到登录页面
-    if (!isAuthenticated) {
-      // 获取当前页面的完整路径作为 redirectUri
-      let redirectUri = '';
-      try {
-        if (typeof window !== 'undefined' && window.location) {
-          // 使用完整的 hash 路由作为 redirectUri
-          redirectUri = encodeURIComponent(window.location.hash.slice(1) || DEFAULT_ROUTE);
-        } else {
-          // 降级方案：使用当前路径
-          const params = new URLSearchParams(router.params as Record<string, string>).toString();
-          const queryString = params ? `?${params}` : '';
-          redirectUri = encodeURIComponent(`${currentPath}${queryString}`);
-        }
-      } catch (e) {
-        redirectUri = encodeURIComponent(DEFAULT_ROUTE);
-      }
-
-      // 跳转到登录页面，带上 redirectUri
-      Taro.redirectTo({
-        url: `/pages/login/index?redirectUri=${redirectUri}`,
-      });
-    }
-  }, [isAuthenticated, currentPath, router.params]);
-
-  return {
-    isAuthenticated: isAuthenticated,
-    isWhitelisted: whitelist.includes(currentPath),
-  };
-}
-
-// 组件版本
+/**
+ * 组件版本
+ */
 function RequireAuth({children}: RequireAuthProps) {
   const router = useRouter();
   const {isAuthenticated} = useAuthStore();
 
-  // 白名单页面，不需要登录就可以访问
-  const whitelist = ['/pages/login/index'];
   const currentPath = router.path;
+  const isWhitelisted = whitelist.includes(currentPath);
 
   useEffect(() => {
-    // 如果在白名单中，不做任何处理
-    if (whitelist.includes(currentPath)) {
+    if (isWhitelisted || isAuthenticated) {
       return;
     }
+    startSSO();
+  }, [isAuthenticated, isWhitelisted, currentPath]);
 
-    // 如果没有登录，跳转到登录页面
-    if (!isAuthenticated) {
-      // 获取当前页面的完整路径作为 redirectUri
-      let redirectUri = '';
-      try {
-        if (typeof window !== 'undefined' && window.location) {
-          // 使用完整的 hash 路由作为 redirectUri
-          redirectUri = encodeURIComponent(window.location.hash.slice(1) || DEFAULT_ROUTE);
-        } else {
-          // 降级方案：使用当前路径
-          const params = new URLSearchParams(router.params as Record<string, string>).toString();
-          const queryString = params ? `?${params}` : '';
-          redirectUri = encodeURIComponent(`${currentPath}${queryString}`);
-        }
-      } catch (e) {
-        redirectUri = encodeURIComponent(DEFAULT_ROUTE);
-      }
-
-      // 跳转到登录页面，带上 redirectUri
-      Taro.redirectTo({
-        url: `/pages/login/index?redirectUri=${redirectUri}`,
-      });
-    }
-  }, [isAuthenticated, currentPath, router.params]);
-
-  // 如果在白名单中，或者已经登录，渲染子组件
-  if (whitelist.includes(currentPath) || isAuthenticated) {
+  // 白名单页面或已登录，正常渲染
+  if (isWhitelisted || isAuthenticated) {
     return <>{children}</>;
   }
 
-  // 否则显示空页面（会自动跳转）
+  // 否则显示空页面（startSSO 已经把浏览器带走了）
   return <View/>;
 }
 

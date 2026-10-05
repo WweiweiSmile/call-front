@@ -1,6 +1,7 @@
 export default defineAppConfig({
   pages: [
-    'pages/login/index',
+    // SSO 回调页。登录页已经搬到认证中心（call-auth），不在本应用里了
+    'pages/auth/callback/index',
     'pages/games/index',
     'pages/my-games/index',
     'pages/game-detail/index',
@@ -29,7 +30,9 @@ export default defineAppConfig({
     'pages/settings-model/index',
     'pages/odds-drill/index',
   ],
-  entryPagePath: 'pages/login/index',
+  // 入口页就是默认落地页。以前这里是登录页，现在登录归认证中心 ——
+  // 未登录时由路由守卫（RequireAuth）跳 /sso，不需要一个专门的入口页
+  entryPagePath: 'pages/games/index',
   window: {
     backgroundTextStyle: 'dark',
     navigationBarBackgroundColor: '#F8F9FC',

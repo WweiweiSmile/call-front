@@ -22,6 +22,18 @@ export default {
           target: 'http://localhost:8000',
           changeOrigin: true,
           secure: false,
+        },
+        // 认证中心（~/codes/call-auth，:8020）。登录/注册/续期/登出都归它，
+        // call-back 已经不再提供这些接口。
+        //
+        // 注意是 `rewrite` 不是 `pathRewrite`：Taro H5 的 devServer 底层是 Vite，
+        // 用的是 Vite 的选项名。写成 http-proxy 那套 `pathRewrite` 不会报错，
+        // 只是静默不生效 —— 请求会带着 /authsvc 前缀打到认证中心，然后 404
+        '/authsvc': {
+          target: 'http://localhost:8020',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (p) => p.replace(/^\/authsvc/, ''),
         }
       }
     }

@@ -35,12 +35,28 @@ const PROBE_USER = {
   role: 'user',
 };
 
-/** 注入登录态。必须在应用脚本执行前写入，所以用 addInitScript */
+/**
+ * 注入登录态。必须在应用脚本执行前写入，所以用 addInitScript。
+ *
+ * 另外要把 `/auth/me` 挡下来：应用启动时会拿本地令牌去调它刷新用户信息
+ *（见 src/app.tsx 和 store 的 syncUser）。真实服务会拿这个假令牌判 401，
+ * 紧接着续期也失败（没有 refresh token），请求层就会清本地 + 跳 SSO ——
+ * 页面直接没了。这里返回一份和注入的 user 一致的假响应，语义正好对上：
+ * "本地有个有效登录态"
+ */
 async function signIn(page: Page): Promise<void> {
   await page.addInitScript((user) => {
     localStorage.setItem('token', JSON.stringify({ data: 'e2e-token' }));
     localStorage.setItem('user', JSON.stringify({ data: JSON.stringify(user) }));
   }, PROBE_USER);
+
+  await page.route('**/authsvc/api/v1/auth/me', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 0, message: 'success', data: PROBE_USER }),
+    }),
+  );
 }
 
 async function gotoDrill(page: Page, seed: number = SEED): Promise<void> {

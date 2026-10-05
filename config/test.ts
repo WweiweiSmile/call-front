@@ -22,6 +22,14 @@ export default {
           target: 'http://localhost:8000',
           changeOrigin: true,
           secure: false,
+        },
+        // 认证中心（~/codes/call-auth，:8020）。
+        // 是 `rewrite` 不是 `pathRewrite`，原因见 config/dev.ts 的说明
+        '/authsvc': {
+          target: 'http://localhost:8020',
+          changeOrigin: true,
+          secure: false,
+          rewrite: (p) => p.replace(/^\/authsvc/, ''),
         }
       }
     }
