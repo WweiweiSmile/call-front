@@ -117,9 +117,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 /**
  * 应用启动时调一次：拿本地令牌去服务端换一份最新的用户信息。
  *
- * 抽成独立函数是因为这个项目有**两个 app 入口文件**（app.ts 和 app.tsx），
- * 而 Taro 实际解析到哪一个不写在配置里（见 app.ts 的说明）。
- * 放在这里，两边各调一句就行，不怕哪天入口换了导致这段逻辑悄悄失效
+ * 抽成独立函数而不是写在入口组件的 effect 里：入口文件换过（原先生效的是
+ * app.ts，现在是 app.tsx），放在这里的话入口怎么换都不用动它
  */
 export function bootstrapAuth(): void {
   // 没有令牌就跳过：那是路由守卫的活儿（它会跳认证中心做 SSO）。
