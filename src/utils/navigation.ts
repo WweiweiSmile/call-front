@@ -36,25 +36,35 @@ export function isShareEntry(): boolean {
     // 拿不到路由信息就继续往下试 hash
   }
 
-  return hashHasShareFlag();
+  return locationHasShareFlag();
 }
 
 /**
- * H5 兜底：直接从 hash 里解析查询参数。
+ * H5 兜底：直接从地址上解析查询参数。
  *
  * 不依赖 Taro 的 router —— 它不一定在所有场景下都带上查询参数，
  * 而这里判断错了的后果是"返回"按钮把用户送到错误的页面，宁可多解析一次。
+ *
+ * 两个来源都要看：现在路由是 history 模式，参数在 search 里；hash 分支保留
+ * 是为了兼容老形态的分享链接 —— 用户手机上存着的那种 `#/pages/...` 链接
+ * 还是会被点开的
  */
-function hashHasShareFlag(): boolean {
+function locationHasShareFlag(): boolean {
   try {
     if (typeof window === 'undefined' || !window.location) return false;
 
+    const sources = [window.location.search];
     const hash = window.location.hash || '';
     const queryStart = hash.indexOf('?');
-    if (queryStart < 0) return false;
+    if (queryStart >= 0) sources.push(hash.slice(queryStart));
 
-    const query = new URLSearchParams(hash.slice(queryStart + 1));
-    return query.get(SHARE_ENTRY_PARAM) === SHARE_ENTRY_VALUE;
+    for (const source of sources) {
+      if (!source) continue;
+      if (new URLSearchParams(source).get(SHARE_ENTRY_PARAM) === SHARE_ENTRY_VALUE) {
+        return true;
+      }
+    }
+    return false;
   } catch {
     return false;
   }

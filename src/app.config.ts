@@ -1,7 +1,7 @@
 export default defineAppConfig({
   pages: [
-    // SSO 回调页。登录页已经搬到认证中心（call-auth），不在本应用里了
-    'pages/auth/callback/index',
+    // 没有 SSO 回调页：登录页在认证中心（call-auth），票据由入口处的
+    // TicketHandler 在**用户本来要去的那一页**上就地处理（见 src/app.ts）
     'pages/games/index',
     'pages/my-games/index',
     'pages/game-detail/index',

@@ -62,16 +62,20 @@ const GameDetailPage: React.FC = () => {
     // 分享出去的链接统一带上来源标识（见 utils/navigation）：
     // 从分享链接进来的人页面栈里没有上一页（经过登录跳转后甚至可能退到登录页），
     // 「返回」要据此直接回主页面
+    // history 模式（config/index.ts 的 h5.router.mode = 'browser'）：路径就是
+    // 真实路径，**不带 `#`**。以前是 `#/pages/...`，拼出来的链接在 history
+    // 模式下会打开一个空页面
     const sharePath = markShareLink(
-      `#/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`
+      `/pages/game-detail/index?gameId=${gameId}&inviteGameId=${gameId}`
     );
 
-    // 生成分享链接 - 使用 hash 路由格式。
-    // 只有 Web 环境能取到 origin，取不到就用 # 开头的相对形式
+    // 生成分享链接。只有 Web 环境能取到 origin，取不到就用相对形式
     let shareUrl = sharePath;
     try {
       if (typeof window !== 'undefined' && window.location) {
-        shareUrl = `${window.location.origin}${window.location.pathname}${sharePath}`;
+        // **不要**再拼 window.location.pathname：当前就在这一页上，
+        // 拼了会变成 `/pages/game-detail/index/pages/game-detail/index?...`
+        shareUrl = `${window.location.origin}${sharePath}`;
       }
     } catch (e) {
       // 取不到 window.location 时保持上面的降级形式

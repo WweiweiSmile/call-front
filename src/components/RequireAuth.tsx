@@ -2,39 +2,32 @@ import React, {useEffect} from 'react';
 import {View} from '@tarojs/components';
 import {useRouter} from '@tarojs/taro';
 import {useAuthStore} from '../store/auth';
-import {CALLBACK_ROUTE, startSSO} from '../utils/sso';
-
-/**
- * 不需要登录就能访问的页面。
- *
- * 回调页必须在里面 —— 它渲染的那一刻用户**恰恰还没有登录态**
- *（令牌正是这个页面接下来要去换的东西）。不白名单的话，
- * 守卫会在换票之前就把人再弹去 /sso，来回死循环
- */
-const whitelist = [CALLBACK_ROUTE];
+import {startSSO} from '../utils/sso';
 
 /**
  * Hook 版本，用于在页面组件中使用
+ *
+ * 没有白名单了：以前需要它是因为有个专门的回调页，而它渲染的那一刻用户
+ * 恰恰还没有登录态。现在票据由入口处的 TicketHandler 处理完才放行，
+ * 守卫跑到的时候要么已登录、要么真该跳登录，不需要给谁开例外
  */
 export function useRequireAuth() {
   const router = useRouter();
   const {isAuthenticated} = useAuthStore();
 
   const currentPath = router.path;
-  const isWhitelisted = whitelist.includes(currentPath);
 
   useEffect(() => {
-    if (isWhitelisted || isAuthenticated) {
+    if (isAuthenticated) {
       return;
     }
-    // 没登录 → 跳认证中心做 SSO。原来的页面路径由 startSSO 自己记下来，
-    // 登录完送回来（不用再手工拼 redirectUri）
+    // 没登录 → 跳认证中心做 SSO。**当前这一页就是落点**：
+    // startSSO 会把它拼成 redirect_uri 带上，登录完原样跳回来
     startSSO();
-  }, [isAuthenticated, isWhitelisted, currentPath]);
+  }, [isAuthenticated, currentPath]);
 
   return {
     isAuthenticated: isAuthenticated,
-    isWhitelisted: isWhitelisted,
   };
 }
 
@@ -50,17 +43,16 @@ function RequireAuth({children}: RequireAuthProps) {
   const {isAuthenticated} = useAuthStore();
 
   const currentPath = router.path;
-  const isWhitelisted = whitelist.includes(currentPath);
 
   useEffect(() => {
-    if (isWhitelisted || isAuthenticated) {
+    if (isAuthenticated) {
       return;
     }
     startSSO();
-  }, [isAuthenticated, isWhitelisted, currentPath]);
+  }, [isAuthenticated, currentPath]);
 
-  // 白名单页面或已登录，正常渲染
-  if (isWhitelisted || isAuthenticated) {
+  // 已登录，正常渲染
+  if (isAuthenticated) {
     return <>{children}</>;
   }
 

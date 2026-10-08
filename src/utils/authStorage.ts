@@ -17,17 +17,17 @@ const USER_KEY = 'user';
 /**
  * 跨应用登录（SSO）的流程状态。
  *
- * 用**一个键存 JSON** 而不是两个键：两个键会出现"只写成功一个"的中间状态，
- * 而这两个值必须成对出现才有意义
+ * 只剩一个字段了。以前还有一个 `returnTo`（记"用户原本在哪一页"），
+ * 现在**目标页面直接由认证中心跳回来时的地址决定** —— 前端把那一页作为
+ * `redirect_uri` 传过去，ticket 就拼在那一页的 URL 上（见 utils/sso.ts），
+ * 不需要再在本地记一份。少一份状态就少一处能对不上的地方
  */
 const SSO_FLOW_KEY = 'sso_flow';
 
-/** 跳去认证中心之前要记下的两件事 */
+/** 跳去认证中心之前要记下的事 */
 export interface SSOFlow {
   /** 防 CSRF：回程时与 URL 上的 state 比对，不一致就丢弃这次登录 */
   state: string;
-  /** 用户原本在哪一页，登录完送回那儿 */
-  returnTo: string;
 }
 
 function read(key: string): string {

@@ -1,4 +1,5 @@
-import { useEffect } from 'react'
+import { createElement, useEffect } from 'react'
+import TicketHandler from './components/TicketHandler'
 import { bootstrapAuth } from './store/auth'
 
 // ⚠️ 这个文件是 Taro H5 **实际使用的应用入口**，不是 src/app.tsx。
@@ -23,5 +24,11 @@ export default function App(props) {
     // 空依赖数组：只跑一次。没有第二个参数的话是"每次渲染都跑"
   }, [])
 
-  return props.children;
+  // 包一层票据处理：SSO 回来时地址上带着 ticket，要在页面（和它的路由守卫）
+  // 渲染之前就换掉令牌，见 TicketHandler 里的说明。
+  //
+  // 这里用 createElement 而不是 JSX：本文件是 `.ts`，不是 `.tsx` ——
+  // 写 JSX 会直接被 tsc 拒掉。**不要**为了写 JSX 把它改名成 app.tsx，
+  // 那会连带着激活 app.tsx 里那套全局样式，是另一个决定（见上面的说明）
+  return createElement(TicketHandler, null, props.children)
 }

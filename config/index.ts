@@ -64,6 +64,17 @@ export default defineConfig<'vite'>(async (merge, { command, mode }) => {
       publicPath: '/',
       staticDirectory: 'static',
 
+      // history 模式（Taro 默认是 hash）。改这个是为了让 SSO 的回调地址不带 `#`：
+      // 认证中心把 ticket 拼在真正的 query 上（`/pages/book/index?ticket=..`），
+      // 而不是拼进 fragment（`#/pages/book/index?ticket=..`）。
+      //
+      // ⚠️ **部署必须配合**：history 模式下 `/pages/book/index` 是真实路径，
+      // nginx 要加 `try_files $uri $uri/ /index.html;` 回落到 index.html，
+      // 否则刷新/直达会被 nginx 直接 404。publicPath 已经是 '/'，这是前提
+      router: {
+        mode: 'browser',
+      },
+
       miniCssExtractPluginOption: {
         ignoreOrder: true,
         filename: 'css/[name].[hash].css',
