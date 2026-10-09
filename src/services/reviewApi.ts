@@ -121,7 +121,7 @@ export const reviewApi = {
     return request<ReviewAnalysisListResponse>(`/reviews/hands/${id}/analyses`);
   },
 
-  // AI 是否可用、今日剩余额度
+  // AI 是否可用、剩余点数与各项价格
   getAIStatus: () => {
     return request<AIStatusResponse>('/reviews/ai-status');
   },

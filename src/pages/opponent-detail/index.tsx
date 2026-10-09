@@ -15,9 +15,10 @@ import {
 import { reviewApi } from '../../services/api';
 import { usePageData } from '../../hooks';
 import { formatCardsText } from '../../utils/cards';
-import { transformReviewHandFromApi } from '../../models';
+import { transformAIStatusFromApi, transformReviewHandFromApi } from '../../models';
 import type { OpponentDetailResponse, ReviewHandResponse } from '../../models/service';
 import type {
+  FrontendAIStatus,
   OpponentProfile,
   OpponentProfileConfidence,
   OpponentProfileRecord,
@@ -95,6 +96,16 @@ const OpponentDetailPage: React.FC = () => {
     }
   );
 
+  // AI 额度。生成一次对手画像要花点数，余额不够时禁用入口 ——
+  // 服务端也会拦，前端拦一道只是不让用户白点
+  const { data: aiStatus, refresh: refreshAIStatus } = useRequest(
+    async (): Promise<FrontendAIStatus> =>
+      transformAIStatusFromApi(await reviewApi.getAIStatus()),
+    { onError: () => {} }
+  );
+  // 还没拉到额度时**不禁**（保持原行为）：拉不到就不该挡着用户
+  const canGenerate = !aiStatus || aiStatus.remaining >= aiStatus.costs.opponentProfile;
+
   const { run: generate, loading: generating } = useRequest(
     () => reviewApi.generateOpponentProfile(opponentId),
     {
@@ -102,6 +113,8 @@ const OpponentDetailPage: React.FC = () => {
       onSuccess: (data) => {
         setProfile(normalizeProfile(data.profile));
         setCurrentHands(data.currentHands);
+        // 扣点已经在服务端发生了，把余额重新拉一遍
+        refreshAIStatus();
       },
       onError: (e) =>
         Taro.showToast({ title: e?.message || '生成失败', icon: 'none', duration: 2500 }),
@@ -197,8 +210,11 @@ const OpponentDetailPage: React.FC = () => {
               <View className='section-head'>
                 <Text className='section-title'>对手画像</Text>
                 {profile?.summary && !isRunning && (
-                  <Text className='refresh-link' onClick={handleStartGenerate}>
-                    重新生成
+                  <Text
+                    className='refresh-link'
+                    onClick={canGenerate ? handleStartGenerate : undefined}
+                  >
+                    {canGenerate ? '重新生成' : '点数不足'}
                   </Text>
                 )}
               </View>
@@ -212,11 +228,11 @@ const OpponentDetailPage: React.FC = () => {
                     type='primary'
                     block
                     loading={generating}
-                    disabled={generating}
+                    disabled={generating || !canGenerate}
                     onClick={handleStartGenerate}
                     data-testid='btn-generate-profile'
                   >
-                    {generating ? '提交中…' : '生成画像'}
+                    {generating ? '提交中…' : canGenerate ? '生成画像' : '点数不足'}
                   </Button>
                   {stats && stats.hands < 5 && (
                     <Text className='warn-text'>
@@ -231,7 +247,7 @@ const OpponentDetailPage: React.FC = () => {
                 <View className='profile-running' data-testid='profile-running'>
                   <Text className='running-text'>正在生成…</Text>
                   <Text className='running-hint'>
-                    会把你与他的全部交手记录一起发给你配置的模型，通常要几分钟。
+                    会把你与他的全部交手记录一起发给 AI 模型，通常要几分钟。
                     离开这页也不要紧，回来还在
                   </Text>
                 </View>
@@ -240,8 +256,11 @@ const OpponentDetailPage: React.FC = () => {
               {profile?.status === 'failed' && (
                 <View className='profile-failed'>
                   <Text className='failed-text'>生成失败：{profile.error || '未知原因'}</Text>
-                  <Text className='failed-hint' onClick={handleStartGenerate}>
-                    点这里重试
+                  <Text
+                    className='failed-hint'
+                    onClick={canGenerate ? handleStartGenerate : undefined}
+                  >
+                    {canGenerate ? '点这里重试' : '点数不足，暂时重试不了'}
                   </Text>
                 </View>
               )}
@@ -463,7 +482,9 @@ const OpponentDetailPage: React.FC = () => {
       <ConfirmDialog
         visible={confirmVisible}
         title='重新生成画像'
-        content='会用最新的交手记录重新生成一遍，覆盖现有画像，并消耗一次 AI 调用额度。确定吗？'
+        content={`会用最新的交手记录重新生成一遍，覆盖现有画像，并消耗 ${
+          aiStatus?.costs.opponentProfile ?? 0
+        } 点额度。确定吗？`}
         confirmText='重新生成'
         loading={generating}
         onConfirm={() => {

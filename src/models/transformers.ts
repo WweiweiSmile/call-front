@@ -317,9 +317,13 @@ export function transformAnalysisListFromApi(apiList: ReviewAnalysisResponse[]):
 export function transformAIStatusFromApi(api: AIStatusResponse): FrontendAIStatus {
   return {
     enabled: api.enabled,
-    dailyLimit: api.dailyLimit,
-    usedToday: api.usedToday,
     remaining: api.remaining,
+    costs: {
+      analysis: api.costs.analysis,
+      opponentProfile: api.costs.opponentProfile,
+      profileSummary: api.costs.profileSummary,
+      chat: api.costs.chat,
+    },
   };
 }
 

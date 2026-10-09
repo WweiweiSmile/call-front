@@ -15,6 +15,7 @@ import {
   useRequireAuth,
 } from '../../components';
 import { useAnalysis } from './useAnalysis';
+import { useAuthStore } from '../../store/auth';
 import { usePageData, useRefreshOnShow } from '../../hooks';
 import { reviewApi } from '../../services/api';
 import { transformReviewHandFromApi } from '../../models';
@@ -44,6 +45,9 @@ const ReviewDetailPage: React.FC = () => {
   const handId = router.params?.id as string | undefined;
 
   const [deleteVisible, setDeleteVisible] = useState(false);
+  // 模型设置页自 2026-10 起只对管理员开放 —— 普通用户走服务端 Key，不需要配任何东西
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
 
   const { analysis, aiStatus, tagNameByCode, triggering, trigger, reload } = useAnalysis(handId);
 
@@ -63,14 +67,15 @@ const ReviewDetailPage: React.FC = () => {
   // 单独注册一次，因为 usePageData 只管它自己那份数据
   useRefreshOnShow(reload);
 
-  // 触发分析前先确认：这会消耗一次额度，用户应当知情
+  // 触发分析前先确认：这会消耗点数，用户应当知情
   const handleAnalyze = useCallback(async () => {
     if (triggering) return;
     const remaining = aiStatus?.remaining ?? 0;
+    const cost = aiStatus?.costs.analysis ?? 0;
     try {
       const res = await Taro.showModal({
         title: '开始 AI 分析',
-        content: `会让模型逐街点评这手牌，约需 20~60 秒。今日剩余 ${remaining} 次。`,
+        content: `会让模型逐街点评这手牌，约需 20~60 秒。本次消耗 ${cost} 点，剩余 ${remaining} 点。`,
         confirmText: '开始',
         cancelText: '再想想',
       });
@@ -345,8 +350,13 @@ const ReviewDetailPage: React.FC = () => {
             tagNameByCode={tagNameByCode}
             onAnalyze={handleAnalyze}
             triggering={triggering}
-            // 直达模型设置页而不是先回设置入口：用户意图很明确，少一跳
-            onConfigureModel={() => Taro.navigateTo({ url: '/pages/settings-model/index' })}
+            // 只有管理员才给"去配置"入口：普通用户走服务端 Key，没有可配的东西。
+            // 传 undefined 时 AnalysisPanel 不渲染那个按钮
+            onConfigureModel={
+              isAdmin
+                ? () => Taro.navigateTo({ url: '/pages/settings-model/index' })
+                : undefined
+            }
           />
         </View>
 
@@ -355,6 +365,7 @@ const ReviewDetailPage: React.FC = () => {
           <ReviewChatPanel
             analysisId={analysis?.id ?? ''}
             enabled={!!analysis && analysis.status === 'done'}
+            aiStatus={aiStatus}
             testId='review-chat-panel'
           />
         </View>

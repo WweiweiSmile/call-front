@@ -5,7 +5,11 @@ import { useRequest } from 'ahooks';
 import { Button } from '@nutui/nutui-react-taro';
 import { reviewApi } from '../../services/api';
 import { transformReviewMessageFromApi, transformReviewMessageListFromApi } from '../../models';
-import type { AnalysisStatus, FrontendReviewMessage } from '../../models/types/review';
+import type {
+  AnalysisStatus,
+  FrontendAIStatus,
+  FrontendReviewMessage,
+} from '../../models/types/review';
 import './index.less';
 
 interface ReviewChatPanelProps {
@@ -14,6 +18,11 @@ interface ReviewChatPanelProps {
   analysisId: string;
   /** 是否已经有分析结论。没有结论就没有可追问的对象 */
   enabled: boolean;
+  /**
+   * AI 额度。传了就在点数不够时禁掉发送；不传则不做这道门控
+   *（追问本身要花 1 点，服务端也会拦，前端拦一道是为了不让用户白点）
+   */
+  aiStatus?: FrontendAIStatus | null;
   /** 测试用 id */
   testId?: string;
 }
@@ -49,7 +58,14 @@ function bubbleText(msg: FrontendReviewMessage): string {
   return msg.content;
 }
 
-const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({ analysisId, enabled, testId }) => {
+const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({
+  analysisId,
+  enabled,
+  aiStatus,
+  testId,
+}) => {
+  // 没传 aiStatus 就不门控（保持向后兼容）；传了就按每轮追问的价格判够不够
+  const canChat = aiStatus ? aiStatus.remaining >= aiStatus.costs.chat : true;
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<FrontendReviewMessage[]>([]);
   /** 轮询开关。ahooks 靠 useUpdateEffect 监听 pollingInterval 变假值来停表，
@@ -238,7 +254,7 @@ const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({ analysisId, enabled, 
               type='primary'
               size='small'
               loading={sending}
-              disabled={sending || waiting}
+              disabled={sending || waiting || !canChat}
               onClick={handleSend}
               data-testid='btn-chat-send'
             >
@@ -246,7 +262,11 @@ const ReviewChatPanel: React.FC<ReviewChatPanelProps> = ({ analysisId, enabled, 
             </Button>
           </View>
           <Text className='chat-note'>
-            追问会真实调用模型，但不占用每日的分析次数
+            {aiStatus
+              ? canChat
+                ? `每轮追问消耗 ${aiStatus.costs.chat} 点，剩余 ${aiStatus.remaining} 点`
+                : `点数不足（每轮需 ${aiStatus.costs.chat} 点），暂时问不了`
+              : '追问会真实调用模型'}
           </Text>
         </>
       )}

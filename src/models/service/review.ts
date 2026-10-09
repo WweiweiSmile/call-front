@@ -182,12 +182,29 @@ export interface RequestAnalysisResponse {
   reused: boolean;
 }
 
-/** AI 可用状态响应 */
+/** 各项功能的点数价格 */
+export interface AIPointCostsResponse {
+  /** 一次复盘分析消耗的点数 */
+  analysis: number;
+  /** 一次对手画像生成消耗的点数 */
+  opponentProfile: number;
+  /** 一次**手动**画像总结重写消耗的点数（分析后自动跑的那次不扣） */
+  profileSummary: number;
+  /** 一轮追问消耗的点数 */
+  chat: number;
+}
+
+/**
+ * AI 可用状态响应。
+ *
+ * 额度自 2026-10 起是**每人累计点数**，不按天重置，且运营可以手工充值 ——
+ * 所以刻意没有"总量 / 已用"两个数：充值后 remaining 可能大于初始值，那两个数会自相矛盾。
+ * 各功能的单价由服务端在 costs 里给出，前端不要硬编码"3 点"
+ */
 export interface AIStatusResponse {
   enabled: boolean;
-  dailyLimit: number;
-  usedToday: number;
   remaining: number;
+  costs: AIPointCostsResponse;
 }
 
 // ============================================

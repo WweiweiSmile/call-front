@@ -3,6 +3,7 @@ import { View } from '@tarojs/components';
 import { Cell } from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
 import { PageHeader, PageLayout, useRequireAuth } from '../../components';
+import { useAuthStore } from '../../store/auth';
 import './index.less';
 
 /**
@@ -14,6 +15,10 @@ import './index.less';
  */
 const SettingsPage: React.FC = () => {
   const { isAuthenticated } = useRequireAuth();
+  // 模型设置（BYOK）自 2026-10 起只对管理员开放：普通用户走服务端 Key，
+  // 没有可配的东西，给它一个入口只会让人困惑
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
 
   if (!isAuthenticated) return <View />;
 
@@ -38,13 +43,15 @@ const SettingsPage: React.FC = () => {
           onClick={() => Taro.navigateTo({ url: '/pages/settings-blind/index' })}
           data-testid='btn-settings-blind'
         />
-        <Cell
-          title='🤖 模型设置'
-          description='用自己的 API Key 接入 AI 模型'
-          clickable
-          onClick={() => Taro.navigateTo({ url: '/pages/settings-model/index' })}
-          data-testid='btn-settings-model'
-        />
+        {isAdmin && (
+          <Cell
+            title='🤖 模型设置'
+            description='管理员专用：配置自己的 API Key，留空则用服务端模型'
+            clickable
+            onClick={() => Taro.navigateTo({ url: '/pages/settings-model/index' })}
+            data-testid='btn-settings-model'
+          />
+        )}
       </View>
 
       <View className='bottom-space' />

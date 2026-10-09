@@ -264,8 +264,8 @@ const ReviewProfilePage: React.FC = () => {
               {refreshingSummary || isSummaryRunning ? '生成中…' : '重新生成总结'}
             </Button>
             <Text className='section-hint'>
-              重新生成会调用一次模型，但不会占用你每日的分析次数。
-              需要先在「设置 → 模型设置」里配好你自己的模型
+              手动重新生成会消耗点数；分析后自动跑的那次不额外扣点。
+              点数用完可以联系管理员
             </Text>
           </View>
 

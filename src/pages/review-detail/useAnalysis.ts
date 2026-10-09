@@ -61,7 +61,7 @@ export function useAnalysis(handId?: string) {
     }
   );
 
-  // ---------- 今日剩余额度 ----------
+  // ---------- 剩余点数（累计额度，不按天重置）----------
   const { data: aiStatus, refresh: refreshAIStatus } = useRequest(
     async (): Promise<FrontendAIStatus> => transformAIStatusFromApi(await reviewApi.getAIStatus()),
     { onError: () => {} }

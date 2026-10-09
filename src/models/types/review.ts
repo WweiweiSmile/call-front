@@ -486,12 +486,19 @@ export interface FrontendAnalysis {
   updatedAt: string;
 }
 
-/** AI 可用状态 */
+/** 各项功能的点数价格 */
+export interface AIPointCosts {
+  analysis: number;
+  opponentProfile: number;
+  profileSummary: number;
+  chat: number;
+}
+
+/** AI 可用状态。额度是每人累计点数，不按天重置 */
 export interface FrontendAIStatus {
   enabled: boolean;
-  dailyLimit: number;
-  usedToday: number;
   remaining: number;
+  costs: AIPointCosts;
 }
 
 // ============================================

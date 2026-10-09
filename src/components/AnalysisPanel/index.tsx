@@ -83,6 +83,10 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   const result = analysis?.result;
   const running = status === 'pending' || status === 'running';
 
+  // 分析一次够不够。aiStatus 还没拉到时按"不可点"处理（与改动前一致）：
+  // 余额未知就不该让用户点下去。价格由服务端给，前端不硬编码
+  const canAnalyze = !!aiStatus && aiStatus.remaining >= aiStatus.costs.analysis;
+
   // 拿标签中文名。字典还没加载出来时退回 code，总比显示空白强
   const leakName = (item: LeakItem) => tagNameByCode[item.tagCode] || item.tagCode;
 
@@ -125,21 +129,19 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
       <View className='panel-head'>
         <Text className='panel-title'>AI 分析</Text>
         {aiStatus && aiStatus.enabled && (
-          <Text className='quota-hint'>
-            今日剩余 {aiStatus.remaining}/{aiStatus.dailyLimit} 次
-          </Text>
+          <Text className='quota-hint'>剩余 {aiStatus.remaining} 点</Text>
         )}
       </View>
 
-      {/* ---------- 未配置模型 ---------- */}
+      {/* ---------- AI 总体不可用 ---------- */}
       {/*
-        自 BYOK 起模型是自己的 Key 撑起来的，所以这里必须给一条能走的路：
-        光说"不可用"用户不知道该去哪儿。这也是升级后老用户唯一的发现路径
+        2026-10 起 AI 走服务端 Key，普通用户不需要配任何东西。走到这里说明
+        **连服务端都没配** —— 那是运维问题，用户能做的只有反馈，再让他"去设置页填 Key"
+        是把他引到一条走不通的路上。管理员仍可用自己的 Key（"去配置"按钮只传给他）
       */}
       {aiStatus && !aiStatus.enabled && (
         <View className='empty-state'>
-          <Text className='state-text'>还没配置 AI 模型，配置后就能分析这手牌</Text>
-          <Text className='cost-hint'>用自己的 API Key 接入，每日最多 30 次</Text>
+          <Text className='state-text'>AI 分析暂不可用，请联系管理员</Text>
           {onConfigureModel && (
             <Button
               type='primary'
@@ -160,16 +162,16 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
             让 AI 逐街点评这手牌，指出关键错误并给出替代线路。
           </Text>
           <Text className='cost-hint'>
-            会结合你写下的想法来评估你的判断，一次分析约需 20~60 秒
+            会结合你写下的想法来评估你的判断，本次消耗 {aiStatus.costs.analysis} 点
           </Text>
           <Button
             type='primary'
             size='small'
             loading={triggering}
-            disabled={triggering || (aiStatus?.remaining ?? 0) <= 0}
+            disabled={triggering || !canAnalyze}
             onClick={onAnalyze}
           >
-            {(aiStatus?.remaining ?? 0) <= 0 ? '今日次数已用完' : '开始分析'}
+            {canAnalyze ? '开始分析' : '点数不足'}
           </Button>
         </View>
       )}
@@ -401,7 +403,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
               type='default'
               size='mini'
               loading={triggering}
-              disabled={triggering || (aiStatus?.remaining ?? 0) <= 0}
+              disabled={triggering || !canAnalyze}
               onClick={onAnalyze}
             >
               重新分析

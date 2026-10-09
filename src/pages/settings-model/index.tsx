@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Input, Text, View } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import Taro from '@tarojs/taro';
@@ -11,6 +11,7 @@ import {
   useRequireAuth,
 } from '../../components';
 import { usePageData } from '../../hooks';
+import { useAuthStore } from '../../store/auth';
 import { preferenceApi } from '../../services/api';
 import {
   AI_MODEL_MAX_LENGTH,
@@ -52,6 +53,16 @@ const matchPresetKey = (
  */
 const SettingsModelPage: React.FC = () => {
   const { isAuthenticated } = useRequireAuth();
+  // 本页配的是**管理员自己的** Key（BYOK 优先于服务端 Key）。普通用户走服务端 Key，
+  // 没有可配的东西。入口页已隐藏这条 Cell，这里再兜一道防深链
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (isAuthenticated && !isAdmin) {
+      Taro.redirectTo({ url: '/pages/settings/index' });
+    }
+  }, [isAuthenticated, isAdmin]);
 
   const [loaded, setLoaded] = useState(false);
   const [presets, setPresets] = useState<AIModelPreset[]>([]);
@@ -190,6 +201,7 @@ const SettingsModelPage: React.FC = () => {
   }, [baseUrl, model, notify, save]);
 
   if (!isAuthenticated) return <View />;
+  if (!isAdmin) return <View />;
   if (isFirstLoading) return <Loading fullPage text='加载模型设置' />;
 
   return (
@@ -228,13 +240,13 @@ const SettingsModelPage: React.FC = () => {
       <View className='section'>
         <Text className='section-title'>我的模型</Text>
         <Text className='section-hint'>
-          AI 分析用你自己的 API Key 调用模型，不再走服务端的公共额度。
-          每日最多 30 次分析，与使用哪家模型无关
+          管理员专用。填了自己的 API Key 就优先用它；留空则用服务端的公共模型。
+          普通用户不需要配置任何东西，额度按点数计
         </Text>
 
         <View className={`key-status ${hasApiKey ? 'ok' : 'warn'}`} data-testid='ai-key-status'>
           <Text className={`key-status-text ${hasApiKey ? 'ok' : 'warn'}`}>
-            {hasApiKey ? `当前已配置：${apiKeyHint}` : '还没有配置 API Key，AI 分析不可用'}
+            {hasApiKey ? `当前已配置：${apiKeyHint}` : '还没有配置自己的 Key，将使用服务端模型'}
           </Text>
         </View>
       </View>
@@ -341,7 +353,7 @@ const SettingsModelPage: React.FC = () => {
       <ConfirmDialog
         visible={clearVisible}
         title='清除 API Key'
-        content='清除后 AI 分析不可用，需要重新填写。确定要清除吗？'
+        content='清除后将改用服务端的公共模型。确定要清除吗？'
         confirmText='清除'
         confirmType='danger'
         loading={saving}
