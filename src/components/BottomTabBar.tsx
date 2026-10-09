@@ -11,8 +11,8 @@ interface BottomTabBarProps {
 }
 
 const TABS: { key: TabType; label: string; icon: string }[] = [
-  { key: 'games', label: '游戏', icon: '🎮' },
   { key: 'reviews', label: '复盘', icon: '🃏' },
+  { key: 'games', label: '游戏', icon: '🎮' },
   { key: 'my', label: '已参与', icon: '🎯' },
   { key: 'profile', label: '我', icon: '👤' },
 ];

@@ -31,11 +31,11 @@ export default defineAppConfig({
   ],
   // 入口页就是默认落地页。以前这里是登录页，现在登录归认证中心 ——
   // 未登录时由路由守卫（RequireAuth）跳 /sso，不需要一个专门的入口页
-  entryPagePath: 'pages/games/index',
+  entryPagePath: 'pages/reviews/index',
   window: {
     backgroundTextStyle: 'dark',
     navigationBarBackgroundColor: '#F8F9FC',
-    navigationBarTitleText: 'Call游戏管理',
+    navigationBarTitleText: '德州复盘',
     navigationBarTextStyle: 'black',
   },
 });
