@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>翻前全下决策器 · 4 人桌 8BB</title>
+<style>
+  :root {
+    --bg: #12151c;
+    --panel: #1b1f2a;
+    --panel-2: #232836;
+    --line: #303747;
+    --text: #e8ecf4;
+    --dim: #98a1b3;
+    --accent: #f0b429;
+    --green: #34d399;
+    --red: #f2555a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }   /* 一屏解决：整页不许滚动 */
+  body {
+    margin: 0;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.4 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .app {
+    height: 100vh; height: 100dvh;                   /* dvh 处理手机地址栏收起 */
+    max-width: 640px; margin: 0 auto;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  header { display: flex; align-items: baseline; gap: 8px; flex: 0 0 auto; }
+  header b { font-size: 15px; }
+  header .tag { font-size: 11px; color: var(--dim); flex: 1 1 auto; }
+  header button { padding: 3px 8px; font-size: 11px; }
+
+  /* ---------- 位置 / 对手 ---------- */
+  .bar { display: flex; gap: 6px; flex: 0 0 auto; }
+  .bar.hide { display: none; }
+  .seat, .chip {
+    flex: 1 1 0; min-width: 0; padding: 6px 2px; text-align: center;
+    border-radius: 8px; cursor: pointer; user-select: none;
+    background: var(--panel-2); border: 1px solid var(--line);
+  }
+  .seat b, .chip b { display: block; font-size: 13px; }
+  .seat span, .chip span { font-size: 10px; color: var(--dim); white-space: nowrap; }
+  .seat.on { background: var(--accent); border-color: var(--accent); color: #201800; }
+  .seat.on span { color: #4a3a05; }
+  .seat.done { opacity: .5; }                        /* 比我早行动的座位 */
+  .chip { border-style: dashed; }
+  .chip.on { background: #3a1e22; border: 1px solid var(--red); }
+  .chip.on b { color: #ff9ea1; }
+
+  /* ---------- 手牌网格（既是选择器，也是范围图） ---------- */
+  .stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .grid {
+    display: grid; gap: 2px;
+    grid-template-columns: repeat(13, minmax(0, 1fr));
+    grid-template-rows: repeat(13, minmax(0, 1fr));
+  }
+  .cell {
+    border-radius: 3px; background: var(--panel-2); color: #cfd6e4;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; border: 1px solid transparent; user-select: none; overflow: hidden;
+  }
+  .cell .n { display: none; font-size: 9px; opacity: .85; }
+  .grid.roomy .cell .n { display: block; }            /* 格子够大时补上频率数字 */
+  .cell.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; font-weight: 700; }
+  .legend {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--dim);
+  }
+  .legend.hide { visibility: hidden; }
+  .legend .bar { flex: 1 1 auto; height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, rgba(52,211,153,.08), rgba(52,211,153,1)); }
+
+  /* ---------- 结论 ---------- */
+  .panel {
+    flex: 0 0 auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px; display: flex; gap: 10px; align-items: center;
+  }
+  .vbig {
+    flex: 0 0 96px; text-align: center; padding: 8px 4px; border-radius: 10px;
+    font-size: 20px; font-weight: 700; line-height: 1.15;
+  }
+  .vbig small { display: block; font-size: 10px; font-weight: 400; margin-top: 2px; opacity: .85; }
+  .v1 { background: #143728; color: var(--green); border: 1px solid #24614a; }
+  .v0 { background: #331b1d; color: var(--red); border: 1px solid #632f33; }
+  .vmix { background: #3a2f11; color: var(--accent); border: 1px solid #6b551c; }
+  .vnone { background: var(--panel-2); color: var(--dim); border: 1px solid var(--line); font-size: 13px; }
+  .vinfo { flex: 1 1 auto; min-width: 0; }
+  .vinfo .line { font-size: 12px; color: var(--dim); }
+  .vinfo .line b { color: var(--text); font-size: 13px; }
+  .kpi { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .kpi div { background: var(--panel-2); border-radius: 6px; padding: 3px 7px; font-size: 10px; color: var(--dim); }
+  .kpi div b { color: var(--text); font-size: 12px; }
+  .caution { color: #ffce7a; font-size: 11px; margin-top: 4px; }
+  .rollbar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .rollbar.hide { display: none; }
+  .rollbar span { font-size: 11px; color: var(--dim); }
+  button {
+    font: inherit; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text); padding: 5px 10px; cursor: pointer;
+  }
+  button:active { transform: scale(.97); }
+  .rollbar button { border-color: #6b551c; color: var(--accent); }
+
+  /* ---------- 模型说明浮层 ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(8,10,14,.94);
+    padding: 16px; overflow: auto; display: none; z-index: 9;
+  }
+  .overlay.on { display: block; }
+  .overlay h3 { font-size: 14px; margin: 0 0 10px; }
+  .overlay p { font-size: 12px; color: var(--dim); line-height: 1.7; }
+  .overlay .meta { font-size: 11px; color: var(--dim); margin-top: 14px; }
+  .overlay code { background: var(--panel-2); padding: 1px 4px; border-radius: 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <b>翻前全下决策器</b>
+    <span class="tag">4 人桌 · 等筹码 8BB</span>
+    <button id="infoBtn">模型说明</button>
+  </header>
+
+  <div class="bar" id="seatBar"></div>
+  <div class="bar hide" id="oppBar"></div>
+
+  <div class="stage" id="stage">
+    <div class="grid" id="handGrid"></div>
+  </div>
+  <div class="legend hide" id="legend">
+    <span>弃牌</span><span class="bar"></span><span>全下</span>
+  </div>
+
+  <div class="panel">
+    <div class="vbig" id="vbig"></div>
+    <div class="vinfo">
+      <div class="line" id="ctxLine"></div>
+      <div class="line" id="noteLine" style="margin-top:2px;"></div>
+      <div class="kpi" id="kpiRow"></div>
+      <div class="caution" id="cautionLine"></div>
+      <div class="rollbar hide" id="rollBar">
+        <button id="reroll">再掷一次</button>
+        <span id="counter"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <h3>这份表怎么来的</h3>
+  <p id="metaLine"></p>
+  <p>
+    1. 只有「全下 8BB」和「弃牌」两个选择，<b>没有翻后</b>；四人等筹码，所以只有一个主池，不涉及边池。<br>
+    2. 位置顺序即翻前行动顺序：UTG → BTN → SB → BB。你之前的人全下后，你的「全下」在牌桌上就是<b>跟注</b>。<br>
+    3. 概率来自虚构对局（fictitious play）的历史平均策略，不是解析解。<b>边界附近的牌（20%~80%）是混合策略，不是误差</b>；但绝对值在几个百分点内的抖动属于数值噪声，别把它当精确刻度。<br>
+    4. 对手的范围是均衡里「因为你会跟注才成立」的范围。如果你知道他实际推得比 GTO 宽或紧，这份表就不该照抄。<br>
+    5. 盲注 0.5/1，「弃牌价值」= 你已经投进去的盲注：UTG/BTN 为 0，SB 为 -0.5，BB 为 -1。<br>
+    6. 「数值稳定性 ±X pp」= 换个随机种子把整份表重跑一遍，同一手牌的全下频率最多变了多少个百分点。它衡量的是「这份表自己可不可信」，跟牌的强弱无关。8pp 以上的局面页面会直接警告。
+  </p>
+  <p><b>这是练习工具，不是查表就能照抄的答案。</b>对手推得比这里宽或紧，你的跟注范围就该跟着改。</p>
+  <button id="closeBtn" style="margin-top:10px;">关闭</button>
+</div>
+
+<script>
+const S = __STRATEGY_JSON__;
+</script>
+<script>
+(function () {
+  'use strict';
+
+  var RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+  var SEATS = S.meta.seats;                              // ['UTG','BTN','SB','BB']
+  var CLASS_IDX = {};
+  S.classes.forEach(function (k, i) { CLASS_IDX[k] = i; });
+  var NODE = {};                                          // seat*16+mask -> node
+  S.nodes.forEach(function (n) { NODE[n.seat * 16 + n.mask] = n; });
+
+  function combosOf(key) {
+    if (key.length === 2) return 6;                       // 对子
+    return key.charAt(2) === 's' ? 4 : 12;
+  }
+  /** 13×13 格子的坐标 -> 手牌类 key。row/col 都是 0=A 的 RANKS 下标 */
+  function keyAt(row, col) {
+    if (row === col) return RANKS[row] + RANKS[col];
+    var hi = Math.min(row, col), lo = Math.max(row, col);
+    return RANKS[hi] + RANKS[lo] + (row < col ? 's' : 'o');   // 右上半区 = 同花
+  }
+
+  var state = { hand: 'AA', seat: 0, mask: 0, roll: null, tries: [] };
+  var byId = function (id) { return document.getElementById(id); };
+
+  // ---------- 手牌网格 ----------
+  var gridEl = byId('handGrid');
+  var cellEls = {};
+  var numEls = {};                                        // 每个格子里显示频率数字的那一行
+  for (var r = 0; r < 13; r += 1) {
+    for (var c = 0; c < 13; c += 1) {
+      var key = keyAt(r, c);
+      var el = document.createElement('div');
+      var kEl = document.createElement('span');
+      var nEl = document.createElement('span');
+      el.className = 'cell';
+      el.dataset.key = key;
+      kEl.className = 'k';
+      kEl.textContent = key;
+      nEl.className = 'n';
+      el.appendChild(kEl);
+      el.appendChild(nEl);
+      el.addEventListener('click', (function (k) {
+        return function () { state.hand = k; render(); };
+      })(key));
+      gridEl.appendChild(el);
+      cellEls[key] = el;
+      numEls[key] = nEl;
+    }
+  }
+
+  /** 网格尺寸跟着可用高度走：永远正方形、永远放得下一屏 */
+  function fitGrid() {
+    var stage = byId('stage');
+    var w = stage.clientWidth, h = stage.clientHeight;
+    var size = Math.max(140, Math.min(w, h));
+    gridEl.style.width = size + 'px';
+    gridEl.style.height = size + 'px';
+    gridEl.style.fontSize = Math.max(8, Math.min(14, size / 13 * 0.45)) + 'px';
+    gridEl.classList.toggle('roomy', size / 13 >= 34);
+  }
+  if (typeof ResizeObserver === 'function') new ResizeObserver(fitGrid).observe(byId('stage'));
+  window.addEventListener('resize', fitGrid);
+  window.addEventListener('orientationchange', fitGrid);
+
+  // ---------- 位置 ----------
+  var seatBar = byId('seatBar');
+  SEATS.forEach(function (name, i) {
+    var el = document.createElement('div');
+    el.className = 'seat';
+    el.innerHTML = '<b>' + name + '</b><span>' + (i === 0 ? '第 1 个行动' : '第 ' + (i + 1) + ' 个') + '</span>';
+    el.addEventListener('click', function () {
+      state.seat = i;
+      state.mask = 0;                                     // 换位置后前面的人不一样了，清空勾选
+      render();
+    });
+    seatBar.appendChild(el);
+  });
+
+  // ---------- 对手 ----------
+  var oppBar = byId('oppBar');
+  function buildOpponents() {
+    oppBar.innerHTML = '';
+    if (state.seat === 0) {                               // UTG 第一个行动，前面没人
+      oppBar.className = 'bar hide';
+      return;
+    }
+    oppBar.className = 'bar';
+    for (var s = 0; s < state.seat; s += 1) {
+      var node = NODE[s * 16 + (state.mask & ((1 << s) - 1))];
+      var el = document.createElement('div');
+      el.className = 'chip' + (state.mask & (1 << s) ? ' on' : '');
+      el.innerHTML = '<b>' + SEATS[s] + '</b><span>' +
+        (node ? '全下 ' + node.shovePct.toFixed(0) + '%' : '—') + '</span>';
+      el.addEventListener('click', (function (bit) {
+        return function () { state.mask ^= (1 << bit); render(); };
+      })(s));
+      oppBar.appendChild(el);
+    }
+  }
+
+  /** 当前局面查表。null = 这个局面没有决策（BB 无人全下） */
+  function lookup() {
+    var n = NODE[state.seat * 16 + state.mask];
+    if (!n) return null;
+    var i = CLASS_IDX[state.hand];
+    return { node: n, p: i === undefined ? null : n.probs[i] };
+  }
+  function shovers() {
+    var out = [];
+    for (var s = 0; s < 4; s += 1) if (state.mask & (1 << s)) out.push(SEATS[s]);
+    return out;
+  }
+
+  // ---------- 渲染 ----------
+  function render() {
+    for (var i = 0; i < SEATS.length; i += 1) {
+      var el = seatBar.children[i];
+      el.className = 'seat' + (i === state.seat ? ' on' : (i < state.seat ? ' done' : ''));
+    }
+    buildOpponents();
+    var hit = lookup();
+    paintGrid(hit ? hit.node : null);
+    renderVerdict(hit);
+    fitGrid();
+  }
+
+  /** 网格上色 = 该局面的全下频率。同时它就是选择器，选中的格子加黄框 */
+  function paintGrid(node) {
+    for (var r = 0; r < 13; r += 1) {
+      for (var c = 0; c < 13; c += 1) {
+        var key = keyAt(r, c);
+        var el = cellEls[key];
+        var p = node ? node.probs[CLASS_IDX[key]] : 0;
+        el.style.background = 'rgba(52,211,153,' + (node ? (0.08 + 0.92 * p).toFixed(3) : 0) + ')';
+        el.style.color = p > 0.5 ? '#08221a' : '#cfd6e4';
+        el.className = 'cell' + (key === state.hand ? ' sel' : '');
+        numEls[key].textContent = node && p >= 0.005 ? (p * 100).toFixed(0) : '';
+      }
+    }
+    byId('legend').className = node ? 'legend' : 'legend hide';
+  }
+
+  function renderVerdict(hit) {
+    var vbig = byId('vbig'), ctx = byId('ctxLine'), note = byId('noteLine');
+    var kpi = byId('kpiRow'), caution = byId('cautionLine'), rollBar = byId('rollBar');
+    state.tries = [];                                     // 换局面 = 重新开始统计
+    state.roll = null;
+    caution.textContent = '';
+
+    if (!hit) {                                           // BB，前面都弃牌
+      vbig.className = 'vbig vnone';
+      vbig.innerHTML = '无需决策';
+      ctx.innerHTML = '你是 <b>BB</b>，前面都弃牌，<b>直接收下盲注</b>，这手结束。';
+      note.textContent = '勾上对手 = 该位置已经全下，才会出现决策。';
+      kpi.innerHTML = '';
+      rollBar.className = 'rollbar hide';
+      return;
+    }
+
+    var p = hit.p;
+    var isCall = state.mask !== 0;                        // 有人全下过 = 跟注决定
+    var act = isCall ? '跟注全下' : '全下';
+    var foldVal = hit.node.foldValueBb;
+
+    ctx.innerHTML = '<b>' + state.hand + '</b>（' +
+      (state.hand.length === 2 ? '对子' : (state.hand.charAt(2) === 's' ? '同花' : '非同花')) +
+      '，' + combosOf(state.hand) + ' 组合） @ <b>' + SEATS[state.seat] + '</b> · ' +
+      (isCall ? '面对 ' + shovers().join('+') + ' 的全下' : '前面无人全下');
+
+    var noise = hit.node.noiseMaxPP;
+    kpi.innerHTML =
+      '<div>弃牌价值 <b>' + (foldVal === 0 ? '0' : foldVal.toFixed(1)) + ' bb</b></div>' +
+      '<div>该局面均衡全下 <b>' + hit.node.shovePct.toFixed(1) + '%</b></div>' +
+      '<div>全下 <b>8 bb</b></div>' +
+      (noise === undefined ? '' : '<div>数值稳定性 <b>±' + noise.toFixed(1) + ' pp</b></div>');
+    if (noise >= 8) {
+      caution.textContent = '⚠ 这个局面数值不稳（换种子重跑单手牌最多动 ' + noise.toFixed(1) +
+        ' pp）：前面几个人都全下才到达，样本最少，均衡在跟与不跟之间来回摆。当「大致这么宽」用，别当刻度。';
+    }
+
+    if (p === null) {
+      vbig.className = 'vbig vnone';
+      vbig.innerHTML = '无数据';
+      note.textContent = '';
+      rollBar.className = 'rollbar hide';
+      return;
+    }
+
+    if (p >= 0.995 || p <= 0.005) {                       // 纯策略：不用掷骰
+      vbig.className = 'vbig ' + (p >= 0.995 ? 'v1' : 'v0');
+      vbig.innerHTML = (p >= 0.995 ? act : '弃牌') +
+        '<small>' + (p >= 0.995 ? '100%' : '0%') + '</small>';
+      note.textContent = '纯策略：均衡里这手牌 ' + (p >= 0.995 ? '100% ' + act : '100% 弃牌') + '。';
+      rollBar.className = 'rollbar hide';
+      return;
+    }
+
+    // 混合策略：进来就自动掷一次，不用点
+    vbig.className = 'vbig vmix';
+    note.textContent = '混合策略：' + (p * 100).toFixed(1) + '% 的频率' + act + '，其余弃牌。' +
+      (p < 0.05 ? ' 这个频率已贴着 0，实战当纯弃牌处理就好。'
+        : p > 0.95 ? ' 这个频率已贴着 1，实战当纯' + act + '处理就好。' : '');
+    rollBar.className = 'rollbar';
+    roll(true);
+  }
+
+  /** 掷骰：按 p 跑一次随机数。auto=true 表示是局面变化后自动跑的第一次 */
+  function roll(auto) {
+    var hit = lookup();
+    if (!hit || hit.p === null || hit.p >= 0.995 || hit.p <= 0.005) return;
+    var p = hit.p;
+    var isCall = state.mask !== 0;
+    state.roll = Math.random() < p ? 1 : 0;
+    state.tries.push(state.roll);
+    var yes = state.tries.filter(function (v) { return v === 1; }).length;
+    var vbig = byId('vbig');
+    vbig.className = 'vbig ' + (state.roll ? 'v1' : 'v0');
+    vbig.innerHTML = (state.roll ? (isCall ? '跟注' : '全下') : '弃牌') +
+      '<small>本次 · 概率 ' + (p * 100).toFixed(1) + '%</small>';
+    byId('counter').textContent = auto
+      ? '自动掷了一次随机数'
+      : '已掷 ' + state.tries.length + ' 次：' + (isCall ? '跟注' : '全下') + ' ' + yes +
+        ' 次（' + (yes / state.tries.length * 100).toFixed(0) + '%）';
+  }
+  byId('reroll').addEventListener('click', function () { roll(false); });
+
+  // ---------- 模型说明浮层 ----------
+  byId('infoBtn').addEventListener('click', function () { byId('overlay').className = 'overlay on'; });
+  byId('closeBtn').addEventListener('click', function () { byId('overlay').className = 'overlay'; });
+
+  byId('metaLine').innerHTML =
+    '求解器 <code>' + S.meta.source + '</code>，' + S.meta.game + '，每轮 ' +
+    S.meta.deals + ' 组发牌 × ' + S.meta.iters + ' 轮（' +
+    (S.meta.averaging === 'linear' ? '线性平均' : '调和平均') + '，种子 ' + S.meta.seed +
+    '，用时 ' + S.meta.seconds + 's），共 ' + S.nodes.length + ' 个决策节点 / ' +
+    S.classes.length + ' 个手牌类。数值稳定性对照种子 ' + (S.meta.noiseSeed === undefined ? '—' : S.meta.noiseSeed) +
+    '。生成于 ' + S.meta.generatedAt + '。';
+
+  render();
+  fitGrid();
+})();
+</script>
+</body>
+</html>

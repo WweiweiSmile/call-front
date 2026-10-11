@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>翻前全下决策器 · 4 人桌 8BB</title>
+<style>
+  :root {
+    --bg: #12151c;
+    --panel: #1b1f2a;
+    --panel-2: #232836;
+    --line: #303747;
+    --text: #e8ecf4;
+    --dim: #98a1b3;
+    --accent: #f0b429;
+    --green: #34d399;
+    --red: #f2555a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }   /* 一屏解决：整页不许滚动 */
+  body {
+    margin: 0;
+    background: var(--bg); color: var(--text);
+    font: 13px/1.4 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  .app {
+    height: 100vh; height: 100dvh;                   /* dvh 处理手机地址栏收起 */
+    max-width: 640px; margin: 0 auto;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  header { display: flex; align-items: baseline; gap: 8px; flex: 0 0 auto; }
+  header b { font-size: 15px; }
+  header .tag { font-size: 11px; color: var(--dim); flex: 1 1 auto; }
+  header button { padding: 3px 8px; font-size: 11px; }
+
+  /* ---------- 位置 / 对手 ---------- */
+  .bar { display: flex; gap: 6px; flex: 0 0 auto; }
+  .bar.hide { display: none; }
+  .seat, .chip {
+    flex: 1 1 0; min-width: 0; padding: 6px 2px; text-align: center;
+    border-radius: 8px; cursor: pointer; user-select: none;
+    background: var(--panel-2); border: 1px solid var(--line);
+  }
+  .seat b, .chip b { display: block; font-size: 13px; }
+  .seat span, .chip span { font-size: 10px; color: var(--dim); white-space: nowrap; }
+  .seat.on { background: var(--accent); border-color: var(--accent); color: #201800; }
+  .seat.on span { color: #4a3a05; }
+  .seat.done { opacity: .5; }                        /* 比我早行动的座位 */
+  .chip { border-style: dashed; }
+  .chip.on { background: #3a1e22; border: 1px solid var(--red); }
+  .chip.on b { color: #ff9ea1; }
+
+  /* ---------- 手牌网格（既是选择器，也是范围图） ---------- */
+  .stage { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .grid {
+    display: grid; gap: 2px;
+    grid-template-columns: repeat(13, minmax(0, 1fr));
+    grid-template-rows: repeat(13, minmax(0, 1fr));
+  }
+  .cell {
+    border-radius: 3px; background: var(--panel-2); color: #cfd6e4;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; border: 1px solid transparent; user-select: none; overflow: hidden;
+  }
+  .cell .n { display: none; font-size: 9px; opacity: .85; }
+  .grid.roomy .cell .n { display: block; }            /* 格子够大时补上频率数字 */
+  .cell.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; font-weight: 700; }
+  .legend {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+    font-size: 10px; color: var(--dim);
+  }
+  .legend.hide { visibility: hidden; }
+  .legend .bar { flex: 1 1 auto; height: 6px; border-radius: 3px;
+    background: linear-gradient(90deg, rgba(52,211,153,.08), rgba(52,211,153,1)); }
+
+  /* ---------- 结论 ---------- */
+  .panel {
+    flex: 0 0 auto; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px; display: flex; gap: 10px; align-items: center;
+  }
+  .vbig {
+    flex: 0 0 96px; text-align: center; padding: 8px 4px; border-radius: 10px;
+    font-size: 20px; font-weight: 700; line-height: 1.15;
+  }
+  .vbig small { display: block; font-size: 10px; font-weight: 400; margin-top: 2px; opacity: .85; }
+  .v1 { background: #143728; color: var(--green); border: 1px solid #24614a; }
+  .v0 { background: #331b1d; color: var(--red); border: 1px solid #632f33; }
+  .vmix { background: #3a2f11; color: var(--accent); border: 1px solid #6b551c; }
+  .vnone { background: var(--panel-2); color: var(--dim); border: 1px solid var(--line); font-size: 13px; }
+  .vinfo { flex: 1 1 auto; min-width: 0; }
+  .vinfo .line { font-size: 12px; color: var(--dim); }
+  .vinfo .line b { color: var(--text); font-size: 13px; }
+  .kpi { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 5px; }
+  .kpi div { background: var(--panel-2); border-radius: 6px; padding: 3px 7px; font-size: 10px; color: var(--dim); }
+  .kpi div b { color: var(--text); font-size: 12px; }
+  .caution { color: #ffce7a; font-size: 11px; margin-top: 4px; }
+  .rollbar { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .rollbar.hide { display: none; }
+  .rollbar span { font-size: 11px; color: var(--dim); }
+  button {
+    font: inherit; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--text); padding: 5px 10px; cursor: pointer;
+  }
+  button:active { transform: scale(.97); }
+  .rollbar button { border-color: #6b551c; color: var(--accent); }
+
+  /* ---------- 模型说明浮层 ---------- */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(8,10,14,.94);
+    padding: 16px; overflow: auto; display: none; z-index: 9;
+  }
+  .overlay.on { display: block; }
+  .overlay h3 { font-size: 14px; margin: 0 0 10px; }
+  .overlay p { font-size: 12px; color: var(--dim); line-height: 1.7; }
+  .overlay .meta { font-size: 11px; color: var(--dim); margin-top: 14px; }
+  .overlay code { background: var(--panel-2); padding: 1px 4px; border-radius: 4px; font-size: 11px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <b>翻前全下决策器</b>
+    <span class="tag">4 人桌 · 等筹码 8BB</span>
+    <button id="infoBtn">模型说明</button>
+  </header>
+
+  <div class="bar" id="seatBar"></div>
+  <div class="bar hide" id="oppBar"></div>
+
+  <div class="stage" id="stage">
+    <div class="grid" id="handGrid"></div>
+  </div>
+  <div class="legend hide" id="legend">
+    <span>弃牌</span><span class="bar"></span><span>全下</span>
+  </div>
+
+  <div class="panel">
+    <div class="vbig" id="vbig"></div>
+    <div class="vinfo">
+      <div class="line" id="ctxLine"></div>
+      <div class="line" id="noteLine" style="margin-top:2px;"></div>
+      <div class="kpi" id="kpiRow"></div>
+      <div class="caution" id="cautionLine"></div>
+      <div class="rollbar hide" id="rollBar">
+        <button id="reroll">再掷一次</button>
+        <span id="counter"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay">
+  <h3>这份表怎么来的</h3>
+  <p id="metaLine"></p>
+  <p>
+    1. 只有「全下 8BB」和「弃牌」两个选择，<b>没有翻后</b>；四人等筹码，所以只有一个主池，不涉及边池。<br>
+    2. 位置顺序即翻前行动顺序：UTG → BTN → SB → BB。你之前的人全下后，你的「全下」在牌桌上就是<b>跟注</b>。<br>
+    3. 概率来自虚构对局（fictitious play）的历史平均策略，不是解析解。<b>边界附近的牌（20%~80%）是混合策略，不是误差</b>；但绝对值在几个百分点内的抖动属于数值噪声，别把它当精确刻度。<br>
+    4. 对手的范围是均衡里「因为你会跟注才成立」的范围。如果你知道他实际推得比 GTO 宽或紧，这份表就不该照抄。<br>
+    5. 盲注 0.5/1，「弃牌价值」= 你已经投进去的盲注：UTG/BTN 为 0，SB 为 -0.5，BB 为 -1。<br>
+    6. 「数值稳定性 ±X pp」= 换个随机种子把整份表重跑一遍，同一手牌的全下频率最多变了多少个百分点。它衡量的是「这份表自己可不可信」，跟牌的强弱无关。8pp 以上的局面页面会直接警告。
+  </p>
+  <p><b>这是练习工具，不是查表就能照抄的答案。</b>对手推得比这里宽或紧，你的跟注范围就该跟着改。</p>
+  <button id="closeBtn" style="margin-top:10px;">关闭</button>
+</div>
+
+<script>
+const S = {"meta":{"source":"tools/open-size-ev/allin-nash.ts","game":"4 人桌 push/fold 纳什均衡（等筹码，无翻后）","seats":["UTG","BTN","SB","BB"],"blinds":{"sb":0.5,"bb":1},"stackBb":8,"deals":2000,"iters":600,"averaging":"linear","seed":1,"seconds":193.7,"generatedAt":"2026-10-10","noiseSeed":3,"noiseWorst":{"node":"3:7","nodeLabel":"BB 跟注 UTG+BTN+SB 的全下","maxPP":10.5}},"classes":["AA","AKs","AKo","AQs","AQo","AJs","AJo","ATs","ATo","A9s","A9o","A8s","A8o","A7s","A7o","A6s","A6o","A5s","A5o","A4s","A4o","A3s","A3o","A2s","A2o","KK","KQs","KQo","KJs","KJo","KTs","KTo","K9s","K9o","K8s","K8o","K7s","K7o","K6s","K6o","K5s","K5o","K4s","K4o","K3s","K3o","K2s","K2o","QQ","QJs","QJo","QTs","QTo","Q9s","Q9o","Q8s","Q8o","Q7s","Q7o","Q6s","Q6o","Q5s","Q5o","Q4s","Q4o","Q3s","Q3o","Q2s","Q2o","JJ","JTs","JTo","J9s","J9o","J8s","J8o","J7s","J7o","J6s","J6o","J5s","J5o","J4s","J4o","J3s","J3o","J2s","J2o","TT","T9s","T9o","T8s","T8o","T7s","T7o","T6s","T6o","T5s","T5o","T4s","T4o","T3s","T3o","T2s","T2o","99","98s","98o","97s","97o","96s","96o","95s","95o","94s","94o","93s","93o","92s","92o","88","87s","87o","86s","86o","85s","85o","84s","84o","83s","83o","82s","82o","77","76s","76o","75s","75o","74s","74o","73s","73o","72s","72o","66","65s","65o","64s","64o","63s","63o","62s","62o","55","54s","54o","53s","53o","52s","52o","44","43s","43o","42s","42o","33","32s","32o","22"],"nodes":[{"seat":0,"mask":0,"label":"开池(无人全下)","foldValueBb":0,"shovePct":28.71,"sampled":1640000,"probs":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.9906,1,0.8527,1,0.9009,1,0.7364,0.9979,0.5858,0.9831,0.398,1,1,1,1,0.9876,1,0.8611,0.9222,0.2123,0.6607,0.0207,0.5732,0.0197,0.4652,0.0088,0.3433,0,0.1936,0,0.0947,0,0.0665,0,1,0.9978,0.8276,0.9773,0.5181,0.8131,0.0886,0.4703,0.0096,0.1488,0,0.1596,0,0.0893,0,0.0341,0,0.0207,0,0.0087,0,1,0.9939,0.5172,0.8051,0.0862,0.4889,0.01,0.175,0,0.0361,0,0.0201,0,0.0049,0,0.0011,0,0,0,1,0.8631,0.1036,0.551,0.0091,0.2242,0.0038,0.0448,0,0.0057,0,0.0025,0,0,0,0,0,1,0.6365,0.0291,0.3064,0.001,0.0992,0,0.0066,0,0,0,0,0,0,0,1,0.398,0.0041,0.1525,0,0.0144,0,0.0052,0,0,0,0,0,1,0.2477,0.0043,0.074,0,0.0056,0,0,0,0,0,1,0.1647,0.0017,0.0232,0,0.0021,0,0,0,1,0.0806,0,0.0038,0,0.0025,0,1,0.0023,0,0,0,0.9739,0,0,0.927],"noiseMaxPP":9,"noiseMeanPP":0.66},{"seat":1,"mask":0,"label":"开池(无人全下)","foldValueBb":0,"shovePct":34.87,"sampled":1156200,"probs":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.9976,1,1,1,0.9982,1,0.9919,1,0.962,1,1,1,1,1,1,0.9951,0.9923,0.7447,0.9051,0.3071,0.8466,0.2263,0.7667,0.1435,0.6777,0.065,0.523,0.0301,0.4011,0.0098,0.3239,0.0135,1,0.9978,0.9458,0.9949,0.8163,0.9027,0.3232,0.6849,0.0863,0.3627,0.0079,0.3419,0.0119,0.2371,0.0023,0.1341,0.0001,0.1015,0.0001,0.0611,0.0001,1,0.996,0.7551,0.8861,0.2758,0.6747,0.0706,0.3674,0.0121,0.1156,0.0018,0.0895,0.0001,0.0618,0.0001,0.0463,0.0001,0.0091,0.0001,1,0.9112,0.3114,0.714,0.1116,0.3948,0.0156,0.2128,0.0027,0.043,0.0001,0.0286,0.0001,0.0155,0.0001,0.009,0.0001,1,0.7196,0.1367,0.4981,0.0222,0.2186,0.0126,0.0492,0.0001,0.0018,0.0001,0.004,0.0001,0.0006,0.0001,1,0.5742,0.0506,0.3402,0.0106,0.1009,0.0001,0.0173,0.0001,0.0001,0.0001,0.0071,0.0001,1,0.4436,0.0193,0.176,0.0009,0.033,0.0001,0.0021,0.0001,0.0001,0.0001,1,0.2821,0.0058,0.0834,0.0001,0.0191,0.0001,0.0018,0.0001,1,0.1685,0.0032,0.0332,0.0001,0.0043,0.0001,1,0.0144,0.0001,0.0012,0.0001,0.9999,0.0001,0.0001,0.9864],"noiseMaxPP":6.5,"noiseMeanPP":0.65},{"seat":1,"mask":1,"label":"跟注 UTG 的全下","foldValueBb":0,"shovePct":14.9,"sampled":483800,"probs":[1,1,1,1,1,1,1,1,0.9985,0.9936,0.7902,0.938,0.4625,0.7522,0.1258,0.4533,0.0229,0.4979,0.0337,0.2907,0.0084,0.2003,0.0049,0.1086,0.0019,1,0.9896,0.7962,0.9275,0.4395,0.6884,0.1193,0.2099,0.009,0.0262,0,0.0199,0,0.0078,0,0.0039,0,0.0019,0,0.0001,0,0,0,1,0.5668,0.1235,0.3359,0.0226,0.0895,0.0011,0.0086,0,0,0,0,0,0.0022,0,0,0,0,0,0,0,1,0.2535,0.0109,0.0355,0,0.003,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0.0528,0,0.0107,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0.0087,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0.0051,0,0,0,0,0,0,0,0,0,0,0,1,0.0019,0,0,0,0,0,0,0,0,0,0.9836,0,0,0,0,0,0,0,0,0.8782,0,0,0,0,0,0,0.526,0,0,0,0,0.2185,0,0,0.0459],"noiseMaxPP":5.2,"noiseMeanPP":0.51},{"seat":2,"mask":0,"label":"开池(无人全下)","foldValueBb":-0.5,"shovePct":60.41,"sampled":757680,"probs":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.9998,0.9991,0.9901,1,0.9658,0.9972,0.9575,1,0.9339,1,1,1,1,1,1,0.9982,0.9989,0.9437,0.9789,0.7948,0.9659,0.6787,0.9365,0.6059,0.8856,0.4688,0.858,0.3374,0.8281,0.3059,1,1,0.9988,1,0.9581,0.9731,0.7935,0.9066,0.5029,0.7891,0.2587,0.755,0.1995,0.6187,0.1574,0.5965,0.1067,0.5085,0.0634,1,0.9945,0.9441,0.969,0.7279,0.8869,0.4773,0.7679,0.3047,0.5673,0.1032,0.4946,0.0617,0.3876,0.0295,0.3589,0.0329,1,0.9724,0.7389,0.9097,0.4886,0.7759,0.2696,0.5822,0.0784,0.3416,0.0271,0.2787,0.0142,0.2396,0.0053,1,0.9332,0.554,0.8276,0.3626,0.6545,0.1293,0.4073,0.0464,0.1588,0.0057,0.1759,0.0124,1,0.8873,0.391,0.7148,0.1868,0.4603,0.0375,0.2277,0.011,0.1012,0.0063,1,0.8087,0.2799,0.5785,0.0989,0.3225,0.0224,0.1646,0.005,1,0.7124,0.1699,0.4634,0.0435,0.2368,0.0139,1,0.3506,0.0324,0.1595,0.0026,1,0.0802,0.0015,1],"noiseMaxPP":7.4,"noiseMeanPP":1.2},{"seat":2,"mask":1,"label":"跟注 UTG 的全下","foldValueBb":-0.5,"shovePct":18.87,"sampled":419020,"probs":[1,1,1,1,1,1,1,1,1,1,0.9875,0.9875,0.8423,0.9585,0.5864,0.8062,0.259,0.8036,0.2851,0.6752,0.1365,0.5627,0.0767,0.4173,0.032,1,0.9979,0.913,0.9795,0.6975,0.8224,0.3593,0.4123,0.0468,0.1341,0.0032,0.0853,0.0024,0.0533,0.0011,0.0461,0,0.0211,0,0.0076,0,0.001,0,1,0.7318,0.2716,0.5401,0.0884,0.1905,0.0092,0.0447,0.0001,0.0076,0,0.0075,0,0.0041,0,0.0022,0,0,0,0,0,1,0.3808,0.0403,0.1092,0.0036,0.019,0,0.0026,0,0,0,0,0,0,0,0,0,0,0,1,0.11,0.0055,0.036,0,0.0001,0,0,0,0,0,0,0,0,0,0,0,1,0.0404,0,0.0025,0,0.0002,0,0,0,0,0,0,0,0,0,1,0.0163,0,0.0088,0,0.0001,0,0,0,0,0,0,0,1,0.0077,0.0019,0.0046,0,0,0,0,0,0,0,1,0.005,0,0,0,0,0,0,0,0.9794,0,0,0,0,0,0,0.8985,0,0,0,0,0.5662,0,0,0.2723],"noiseMaxPP":5,"noiseMeanPP":0.54},{"seat":2,"mask":2,"label":"跟注 BTN 的全下","foldValueBb":-0.5,"shovePct":23.01,"sampled":398520,"probs":[1,1,1,1,1,1,1,1,1,1,0.997,0.9997,0.9846,0.9965,0.8872,0.9764,0.6334,0.9531,0.6069,0.9214,0.3814,0.8467,0.2649,0.7656,0.1772,1,1,0.9908,0.9986,0.9287,0.9777,0.7515,0.7602,0.1845,0.3802,0.0363,0.2884,0.0104,0.1817,0.0018,0.1039,0.0003,0.0497,0.0002,0.0347,0.0002,0.018,0.0001,1,0.9017,0.5485,0.7489,0.2542,0.3281,0.018,0.1457,0.004,0.0325,0.0001,0.0283,0.0001,0.0079,0.0001,0.0005,0.0001,0.0001,0.0001,0.003,0,1,0.6011,0.1425,0.2254,0.0113,0.0633,0.0002,0.0116,0.0001,0.0047,0.0001,0.0024,0.0001,0.0001,0.0001,0.0001,0,0.0001,0,1,0.1922,0.0034,0.0508,0.0011,0.0119,0.0023,0.0001,0,0,0,0,0,0.0001,0,0,0,1,0.0751,0.0018,0.0138,0.0001,0.0015,0,0,0,0,0,0,0,0,0,1,0.0246,0,0.0018,0,0.0024,0,0,0,0,0,0,0,1,0.0169,0,0.0014,0,0,0,0,0,0,0,0.9979,0.0156,0,0,0,0,0,0,0,0.9966,0.0051,0,0.0003,0,0,0,0.9101,0,0,0,0,0.7013,0,0,0.4118],"noiseMaxPP":6.5,"noiseMeanPP":0.52},{"seat":2,"mask":3,"label":"跟注 UTG+BTN 的全下","foldValueBb":-0.5,"shovePct":19.59,"sampled":64780,"probs":[1,0.9845,0.9733,0.9599,0.8658,0.8922,0.6831,0.7716,0.4718,0.4403,0.1675,0.3847,0.0988,0.2837,0.0829,0.2166,0.0371,0.272,0.0527,0.2257,0.0523,0.2111,0.0408,0.1722,0.019,1,0.7931,0.5308,0.6616,0.3938,0.5865,0.3251,0.4192,0.1658,0.321,0.1042,0.2886,0.0753,0.2821,0.0587,0.2438,0.0574,0.2453,0.0447,0.166,0.0305,0.1292,0.015,1,0.6419,0.374,0.5277,0.268,0.418,0.1762,0.3315,0.0778,0.2642,0.0692,0.2147,0.0434,0.2072,0.0432,0.168,0.0324,0.1418,0.0186,0.1305,0.0206,0.9954,0.586,0.3128,0.4402,0.1884,0.335,0.1358,0.2576,0.0732,0.1763,0.0298,0.1449,0.0176,0.1231,0.023,0.1012,0.0093,0.0997,0.007,0.991,0.503,0.2594,0.3891,0.1309,0.3039,0.0853,0.2066,0.045,0.1303,0.0228,0.1187,0.0211,0.0954,0.0047,0.0696,0.0028,0.9492,0.416,0.1824,0.322,0.1074,0.2537,0.0614,0.1638,0.0267,0.0571,0.0115,0.0677,0.0081,0.0637,0.0022,0.8923,0.4128,0.17,0.3118,0.1017,0.2586,0.0601,0.1565,0.0191,0.0692,0.0042,0.0507,0,0.8066,0.3547,0.1394,0.2861,0.0859,0.191,0.0377,0.0976,0.0109,0.0433,0.0018,0.6881,0.338,0.1404,0.2308,0.0565,0.147,0.0132,0.0746,0.0113,0.5835,0.2738,0.0897,0.1825,0.0455,0.1132,0.0189,0.432,0.1557,0.0196,0.0835,0.0108,0.3223,0.054,0.0009,0.218],"noiseMaxPP":8.6,"noiseMeanPP":1.77},{"seat":3,"mask":1,"label":"跟注 UTG 的全下","foldValueBb":-1,"shovePct":24.59,"sampled":349320,"probs":[1,1,1,1,1,1,1,1,1,1,0.9981,1,0.9879,0.997,0.938,0.9758,0.7605,0.9821,0.7413,0.9294,0.6082,0.8764,0.5122,0.807,0.3878,1,1,0.9875,0.9931,0.8992,0.9361,0.6836,0.6533,0.2058,0.3804,0.0698,0.3218,0.0451,0.2224,0.0141,0.156,0.0097,0.1167,0.0139,0.0801,0.002,0.046,0.0001,1,0.8719,0.4837,0.7346,0.2777,0.4043,0.07,0.1356,0.0141,0.0608,0.0001,0.0527,0.0001,0.0355,0.0001,0.0279,0,0.0066,0,0.0133,0,1,0.5951,0.1479,0.2899,0.0266,0.0987,0.002,0.0356,0.0026,0.0085,0,0.0079,0,0.0042,0,0.0004,0,0.0015,0,1,0.2756,0.0294,0.0998,0.0082,0.0426,0.0001,0.0121,0.0001,0.0001,0,0.0044,0,0.0028,0,0.0001,0,1,0.1244,0.01,0.0489,0,0.0084,0,0.0017,0,0,0,0,0,0.001,0,1,0.065,0.0033,0.0253,0,0.0001,0,0.0032,0,0,0,0,0,1,0.0594,0.0019,0.0257,0,0,0,0,0,0,0,1,0.0152,0.0017,0.0069,0,0,0,0,0,0.998,0.0046,0,0.002,0,0,0,0.9857,0,0,0,0,0.9233,0,0,0.7619],"noiseMaxPP":5.1,"noiseMeanPP":0.63},{"seat":3,"mask":2,"label":"跟注 BTN 的全下","foldValueBb":-1,"shovePct":29.41,"sampled":310780,"probs":[1,1,1,1,1,1,1,1,1,1,1,1,0.9997,1,0.9944,1,0.9715,0.9962,0.9669,0.9876,0.9146,0.9908,0.8668,0.9747,0.7797,1,1,0.9979,1,0.9937,0.9965,0.9497,0.9195,0.5952,0.7257,0.2448,0.6185,0.1374,0.4579,0.0924,0.3718,0.048,0.2672,0.0231,0.1945,0.0128,0.1555,0.0089,1,0.9652,0.7899,0.9021,0.5701,0.574,0.1592,0.3726,0.0374,0.1852,0.0029,0.1557,0.004,0.0869,0.0013,0.06,0.0002,0.0295,0.0019,0.0195,0.0001,1,0.8288,0.3834,0.4569,0.0748,0.2264,0.0161,0.0966,0.0042,0.0302,0.0001,0.0157,0.0001,0.0119,0.0001,0.0079,0.0001,0.0002,0.0001,1,0.3639,0.063,0.1981,0.0152,0.0975,0.0009,0.0336,0.0023,0.0026,0.0001,0.0042,0,0.0023,0,0.0014,0,1,0.1866,0.0172,0.0686,0.0102,0.0361,0.0034,0.0036,0,0.0001,0,0.0012,0,0,0,1,0.1109,0.0145,0.0358,0.0025,0.0106,0,0.0013,0,0,0,0.0003,0,1,0.0721,0,0.0104,0,0.0049,0,0,0,0,0,1,0.048,0,0.0064,0,0.0033,0,0,0,1,0.0147,0,0.006,0,0.001,0,0.9843,0.0012,0,0,0,0.9633,0,0,0.829],"noiseMaxPP":6.5,"noiseMeanPP":0.65},{"seat":3,"mask":3,"label":"跟注 UTG+BTN 的全下","foldValueBb":-1,"shovePct":24.53,"sampled":48380,"probs":[1,0.9896,0.9831,0.9644,0.9091,0.9227,0.7996,0.8065,0.5879,0.5313,0.2702,0.4491,0.1646,0.3567,0.1187,0.326,0.093,0.3392,0.1226,0.3365,0.1122,0.2827,0.0784,0.2571,0.0551,1,0.8029,0.6158,0.6914,0.4313,0.629,0.3811,0.4553,0.2167,0.3856,0.1657,0.3587,0.1208,0.3699,0.1211,0.33,0.1145,0.2767,0.0943,0.2517,0.0747,0.2005,0.043,1,0.6866,0.466,0.557,0.3345,0.4637,0.2323,0.3981,0.1581,0.3164,0.1169,0.2785,0.086,0.2841,0.0958,0.2385,0.0678,0.2161,0.0493,0.1825,0.0463,0.9954,0.625,0.4079,0.4529,0.2534,0.3937,0.1751,0.3294,0.127,0.2449,0.0789,0.2376,0.0656,0.1957,0.0557,0.1668,0.042,0.1408,0.0265,0.9875,0.5132,0.3007,0.4431,0.2262,0.3729,0.1536,0.2842,0.0982,0.1922,0.0589,0.1793,0.0441,0.1516,0.0547,0.1329,0.0172,0.9461,0.4773,0.2413,0.3661,0.1557,0.3024,0.1215,0.2159,0.0813,0.1246,0.0223,0.1296,0.0246,0.1015,0.0088,0.9032,0.4755,0.229,0.371,0.1591,0.3212,0.0985,0.1999,0.0572,0.1129,0.018,0.0965,0.0151,0.8347,0.4089,0.198,0.3392,0.1518,0.2361,0.0712,0.1484,0.0246,0.0662,0.0069,0.7651,0.4022,0.2018,0.3049,0.0903,0.2011,0.0453,0.1304,0.0254,0.6733,0.3756,0.1523,0.2427,0.0904,0.1794,0.0433,0.5416,0.2065,0.0676,0.1324,0.0162,0.4776,0.0951,0.0139,0.3554],"noiseMaxPP":9.2,"noiseMeanPP":2.01},{"seat":3,"mask":4,"label":"跟注 SB 的全下","foldValueBb":-1,"shovePct":43.05,"sampled":471500,"probs":[0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9972,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9999,0.9978,0.9999,0.9824,0.9918,0.9399,0.9915,0.8511,0.9651,0.7231,0.953,0.5692,0.8922,0.4956,0.9999,0.9999,0.9999,0.9999,0.9986,0.9981,0.9608,0.9756,0.7293,0.8667,0.368,0.7708,0.2002,0.6099,0.1177,0.5006,0.0528,0.3472,0.0279,0.266,0.018,0.9999,0.9999,0.938,0.9743,0.6637,0.8188,0.3126,0.5068,0.0795,0.2063,0.0119,0.155,0.0042,0.0867,0.0035,0.0539,0.0002,0.023,0.0008,0.9999,0.8879,0.4362,0.6235,0.1626,0.3067,0.0317,0.1248,0.0035,0.0321,0.0001,0.0325,0.0001,0.0099,0.0001,0.002,0,0.9999,0.476,0.065,0.2211,0.0077,0.0667,0.0002,0.0145,0,0.0031,0,0.0001,0,0,0,0.9999,0.1385,0.0015,0.046,0,0.0078,0,0,0,0,0,0,0,0.9999,0.0344,0,0.0082,0,0.0001,0,0,0,0,0,0.9999,0.0112,0,0.0057,0,0,0,0,0,0.9999,0.0049,0,0,0,0,0,0.9999,0,0,0,0,0.9975,0,0,0.9703],"noiseMaxPP":5.6,"noiseMeanPP":0.64},{"seat":3,"mask":5,"label":"跟注 UTG+SB 的全下","foldValueBb":-1,"shovePct":23.33,"sampled":69700,"probs":[1,0.9953,0.99,0.9906,0.945,0.9605,0.861,0.8431,0.6977,0.6688,0.3702,0.5227,0.238,0.4184,0.1431,0.3212,0.0912,0.3657,0.1289,0.2632,0.0861,0.2326,0.0629,0.2313,0.043,1,0.8589,0.6702,0.7516,0.5185,0.6579,0.3946,0.4698,0.2161,0.3414,0.1306,0.3423,0.1005,0.2966,0.1057,0.303,0.0906,0.2443,0.0458,0.1804,0.0422,0.1947,0.0282,1,0.7139,0.479,0.6,0.3413,0.4576,0.1846,0.3418,0.114,0.2492,0.0674,0.2714,0.0674,0.226,0.0467,0.2,0.0268,0.1692,0.0367,0.1409,0.0157,1,0.6164,0.3723,0.4853,0.2269,0.3967,0.1633,0.3075,0.1087,0.2008,0.0534,0.2123,0.0454,0.1631,0.0287,0.1389,0.0249,0.1255,0.0125,0.9982,0.5302,0.2732,0.4113,0.1955,0.3334,0.1076,0.2262,0.0827,0.1587,0.0392,0.1077,0.019,0.1123,0.0267,0.0781,0.0152,0.9853,0.4603,0.1929,0.3582,0.1476,0.3181,0.0792,0.1892,0.0386,0.1111,0.0164,0.0886,0.0116,0.0761,0.0103,0.952,0.4179,0.199,0.3327,0.134,0.2433,0.0562,0.1355,0.0212,0.0675,0.0114,0.0676,0.0057,0.9283,0.4138,0.1478,0.2981,0.122,0.2013,0.0413,0.1094,0.0165,0.0594,0.0027,0.8163,0.3674,0.1533,0.2624,0.07,0.1697,0.0319,0.0918,0.0077,0.7247,0.3141,0.1144,0.2178,0.0596,0.1205,0.0327,0.5807,0.1513,0.0444,0.0933,0.0257,0.4449,0.0846,0.0041,0.3403],"noiseMaxPP":8.4,"noiseMeanPP":1.97},{"seat":3,"mask":6,"label":"跟注 BTN+SB 的全下","foldValueBb":-1,"shovePct":24.79,"sampled":87740,"probs":[0.9999,0.9999,0.9999,0.9975,0.9824,0.9875,0.9517,0.9664,0.8463,0.8684,0.5803,0.7432,0.4299,0.6199,0.2539,0.483,0.1294,0.5428,0.1776,0.4351,0.1182,0.3873,0.1065,0.332,0.0645,0.9999,0.9307,0.774,0.826,0.5977,0.7369,0.4321,0.558,0.2396,0.3767,0.1184,0.3557,0.1001,0.3435,0.0925,0.2865,0.0649,0.2378,0.0397,0.1785,0.0273,0.1985,0.0244,0.9999,0.783,0.5094,0.685,0.379,0.548,0.216,0.437,0.1366,0.2961,0.0564,0.2867,0.0565,0.2244,0.0427,0.192,0.0222,0.1597,0.0237,0.1561,0.0114,0.9999,0.6889,0.3778,0.5358,0.262,0.4096,0.1511,0.332,0.0721,0.1787,0.0391,0.195,0.0239,0.1463,0.0129,0.1214,0.0168,0.0982,0.01,0.9999,0.5814,0.2818,0.4718,0.1642,0.3323,0.0681,0.2321,0.0566,0.1398,0.0188,0.1385,0.0273,0.1384,0.0078,0.0923,0.0078,0.9972,0.5195,0.1955,0.3926,0.1422,0.2848,0.0896,0.1631,0.0242,0.0864,0.0148,0.0889,0.0071,0.0617,0.0097,0.9647,0.46,0.1656,0.35,0.0836,0.202,0.0346,0.1323,0.0107,0.0687,0.0036,0.073,0.0087,0.9676,0.4307,0.1615,0.2928,0.066,0.197,0.0344,0.0958,0.0109,0.0431,0,0.8581,0.3725,0.1046,0.2516,0.0726,0.1478,0.0189,0.085,0.0028,0.8198,0.2997,0.0813,0.1803,0.0416,0.1014,0.004,0.6615,0.1301,0.0082,0.0876,0.0033,0.4947,0.0709,0.0019,0.3648],"noiseMaxPP":9,"noiseMeanPP":1.85},{"seat":3,"mask":7,"label":"跟注 UTG+BTN+SB 的全下","foldValueBb":-1,"shovePct":35.39,"sampled":16400,"probs":[0.9901,0.7861,0.7245,0.7281,0.6173,0.6262,0.5172,0.6035,0.4393,0.4989,0.3629,0.4632,0.3071,0.438,0.2841,0.397,0.2354,0.4247,0.2962,0.3998,0.2267,0.384,0.2325,0.3587,0.2095,0.9701,0.6645,0.5118,0.5872,0.4538,0.5347,0.379,0.4889,0.3643,0.4743,0.3065,0.4566,0.306,0.4472,0.3047,0.437,0.2821,0.4238,0.2424,0.3491,0.2127,0.3758,0.2281,0.9344,0.5342,0.4415,0.5378,0.3969,0.5116,0.3762,0.4576,0.3095,0.4132,0.2833,0.4041,0.2614,0.382,0.244,0.3774,0.2322,0.3259,0.1896,0.3468,0.1717,0.8611,0.5237,0.3857,0.4876,0.3814,0.4775,0.3395,0.4618,0.321,0.3937,0.2394,0.3759,0.2343,0.3569,0.24,0.3191,0.1763,0.3294,0.1973,0.7898,0.5199,0.3955,0.5002,0.3619,0.5009,0.3399,0.3924,0.2338,0.3288,0.2094,0.3702,0.2193,0.3259,0.1839,0.3129,0.1624,0.7412,0.494,0.3733,0.5195,0.3419,0.4312,0.2838,0.4009,0.2507,0.3364,0.2106,0.3388,0.1777,0.2844,0.165,0.6759,0.4808,0.3651,0.5026,0.3608,0.3925,0.278,0.3812,0.2475,0.3368,0.165,0.327,0.1744,0.6022,0.4873,0.3806,0.4917,0.3519,0.4733,0.3166,0.382,0.1971,0.315,0.1526,0.5924,0.4607,0.3948,0.4786,0.3058,0.4348,0.277,0.3425,0.2194,0.534,0.4517,0.357,0.4292,0.306,0.395,0.2505,0.5004,0.4223,0.2972,0.4003,0.2336,0.4965,0.2994,0.1862,0.3994],"noiseMaxPP":10.5,"noiseMeanPP":2.82}]};
+</script>
+<script>
+(function () {
+  'use strict';
+
+  var RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+  var SEATS = S.meta.seats;                              // ['UTG','BTN','SB','BB']
+  var CLASS_IDX = {};
+  S.classes.forEach(function (k, i) { CLASS_IDX[k] = i; });
+  var NODE = {};                                          // seat*16+mask -> node
+  S.nodes.forEach(function (n) { NODE[n.seat * 16 + n.mask] = n; });
+
+  function combosOf(key) {
+    if (key.length === 2) return 6;                       // 对子
+    return key.charAt(2) === 's' ? 4 : 12;
+  }
+  /** 13×13 格子的坐标 -> 手牌类 key。row/col 都是 0=A 的 RANKS 下标 */
+  function keyAt(row, col) {
+    if (row === col) return RANKS[row] + RANKS[col];
+    var hi = Math.min(row, col), lo = Math.max(row, col);
+    return RANKS[hi] + RANKS[lo] + (row < col ? 's' : 'o');   // 右上半区 = 同花
+  }
+
+  var state = { hand: 'AA', seat: 0, mask: 0, roll: null, tries: [] };
+  var byId = function (id) { return document.getElementById(id); };
+
+  // ---------- 手牌网格 ----------
+  var gridEl = byId('handGrid');
+  var cellEls = {};
+  var numEls = {};                                        // 每个格子里显示频率数字的那一行
+  for (var r = 0; r < 13; r += 1) {
+    for (var c = 0; c < 13; c += 1) {
+      var key = keyAt(r, c);
+      var el = document.createElement('div');
+      var kEl = document.createElement('span');
+      var nEl = document.createElement('span');
+      el.className = 'cell';
+      el.dataset.key = key;
+      kEl.className = 'k';
+      kEl.textContent = key;
+      nEl.className = 'n';
+      el.appendChild(kEl);
+      el.appendChild(nEl);
+      el.addEventListener('click', (function (k) {
+        return function () { state.hand = k; render(); };
+      })(key));
+      gridEl.appendChild(el);
+      cellEls[key] = el;
+      numEls[key] = nEl;
+    }
+  }
+
+  /** 网格尺寸跟着可用高度走：永远正方形、永远放得下一屏 */
+  function fitGrid() {
+    var stage = byId('stage');
+    var w = stage.clientWidth, h = stage.clientHeight;
+    var size = Math.max(140, Math.min(w, h));
+    gridEl.style.width = size + 'px';
+    gridEl.style.height = size + 'px';
+    gridEl.style.fontSize = Math.max(8, Math.min(14, size / 13 * 0.45)) + 'px';
+    gridEl.classList.toggle('roomy', size / 13 >= 34);
+  }
+  if (typeof ResizeObserver === 'function') new ResizeObserver(fitGrid).observe(byId('stage'));
+  window.addEventListener('resize', fitGrid);
+  window.addEventListener('orientationchange', fitGrid);
+
+  // ---------- 位置 ----------
+  var seatBar = byId('seatBar');
+  SEATS.forEach(function (name, i) {
+    var el = document.createElement('div');
+    el.className = 'seat';
+    el.innerHTML = '<b>' + name + '</b><span>' + (i === 0 ? '第 1 个行动' : '第 ' + (i + 1) + ' 个') + '</span>';
+    el.addEventListener('click', function () {
+      state.seat = i;
+      state.mask = 0;                                     // 换位置后前面的人不一样了，清空勾选
+      render();
+    });
+    seatBar.appendChild(el);
+  });
+
+  // ---------- 对手 ----------
+  var oppBar = byId('oppBar');
+  function buildOpponents() {
+    oppBar.innerHTML = '';
+    if (state.seat === 0) {                               // UTG 第一个行动，前面没人
+      oppBar.className = 'bar hide';
+      return;
+    }
+    oppBar.className = 'bar';
+    for (var s = 0; s < state.seat; s += 1) {
+      var node = NODE[s * 16 + (state.mask & ((1 << s) - 1))];
+      var el = document.createElement('div');
+      el.className = 'chip' + (state.mask & (1 << s) ? ' on' : '');
+      el.innerHTML = '<b>' + SEATS[s] + '</b><span>' +
+        (node ? '全下 ' + node.shovePct.toFixed(0) + '%' : '—') + '</span>';
+      el.addEventListener('click', (function (bit) {
+        return function () { state.mask ^= (1 << bit); render(); };
+      })(s));
+      oppBar.appendChild(el);
+    }
+  }
+
+  /** 当前局面查表。null = 这个局面没有决策（BB 无人全下） */
+  function lookup() {
+    var n = NODE[state.seat * 16 + state.mask];
+    if (!n) return null;
+    var i = CLASS_IDX[state.hand];
+    return { node: n, p: i === undefined ? null : n.probs[i] };
+  }
+  function shovers() {
+    var out = [];
+    for (var s = 0; s < 4; s += 1) if (state.mask & (1 << s)) out.push(SEATS[s]);
+    return out;
+  }
+
+  // ---------- 渲染 ----------
+  function render() {
+    for (var i = 0; i < SEATS.length; i += 1) {
+      var el = seatBar.children[i];
+      el.className = 'seat' + (i === state.seat ? ' on' : (i < state.seat ? ' done' : ''));
+    }
+    buildOpponents();
+    var hit = lookup();
+    paintGrid(hit ? hit.node : null);
+    renderVerdict(hit);
+    fitGrid();
+  }
+
+  /** 网格上色 = 该局面的全下频率。同时它就是选择器，选中的格子加黄框 */
+  function paintGrid(node) {
+    for (var r = 0; r < 13; r += 1) {
+      for (var c = 0; c < 13; c += 1) {
+        var key = keyAt(r, c);
+        var el = cellEls[key];
+        var p = node ? node.probs[CLASS_IDX[key]] : 0;
+        el.style.background = 'rgba(52,211,153,' + (node ? (0.08 + 0.92 * p).toFixed(3) : 0) + ')';
+        el.style.color = p > 0.5 ? '#08221a' : '#cfd6e4';
+        el.className = 'cell' + (key === state.hand ? ' sel' : '');
+        numEls[key].textContent = node && p >= 0.005 ? (p * 100).toFixed(0) : '';
+      }
+    }
+    byId('legend').className = node ? 'legend' : 'legend hide';
+  }
+
+  function renderVerdict(hit) {
+    var vbig = byId('vbig'), ctx = byId('ctxLine'), note = byId('noteLine');
+    var kpi = byId('kpiRow'), caution = byId('cautionLine'), rollBar = byId('rollBar');
+    state.tries = [];                                     // 换局面 = 重新开始统计
+    state.roll = null;
+    caution.textContent = '';
+
+    if (!hit) {                                           // BB，前面都弃牌
+      vbig.className = 'vbig vnone';
+      vbig.innerHTML = '无需决策';
+      ctx.innerHTML = '你是 <b>BB</b>，前面都弃牌，<b>直接收下盲注</b>，这手结束。';
+      note.textContent = '勾上对手 = 该位置已经全下，才会出现决策。';
+      kpi.innerHTML = '';
+      rollBar.className = 'rollbar hide';
+      return;
+    }
+
+    var p = hit.p;
+    var isCall = state.mask !== 0;                        // 有人全下过 = 跟注决定
+    var act = isCall ? '跟注全下' : '全下';
+    var foldVal = hit.node.foldValueBb;
+
+    ctx.innerHTML = '<b>' + state.hand + '</b>（' +
+      (state.hand.length === 2 ? '对子' : (state.hand.charAt(2) === 's' ? '同花' : '非同花')) +
+      '，' + combosOf(state.hand) + ' 组合） @ <b>' + SEATS[state.seat] + '</b> · ' +
+      (isCall ? '面对 ' + shovers().join('+') + ' 的全下' : '前面无人全下');
+
+    var noise = hit.node.noiseMaxPP;
+    kpi.innerHTML =
+      '<div>弃牌价值 <b>' + (foldVal === 0 ? '0' : foldVal.toFixed(1)) + ' bb</b></div>' +
+      '<div>该局面均衡全下 <b>' + hit.node.shovePct.toFixed(1) + '%</b></div>' +
+      '<div>全下 <b>8 bb</b></div>' +
+      (noise === undefined ? '' : '<div>数值稳定性 <b>±' + noise.toFixed(1) + ' pp</b></div>');
+    if (noise >= 8) {
+      caution.textContent = '⚠ 这个局面数值不稳（换种子重跑单手牌最多动 ' + noise.toFixed(1) +
+        ' pp）：前面几个人都全下才到达，样本最少，均衡在跟与不跟之间来回摆。当「大致这么宽」用，别当刻度。';
+    }
+
+    if (p === null) {
+      vbig.className = 'vbig vnone';
+      vbig.innerHTML = '无数据';
+      note.textContent = '';
+      rollBar.className = 'rollbar hide';
+      return;
+    }
+
+    if (p >= 0.995 || p <= 0.005) {                       // 纯策略：不用掷骰
+      vbig.className = 'vbig ' + (p >= 0.995 ? 'v1' : 'v0');
+      vbig.innerHTML = (p >= 0.995 ? act : '弃牌') +
+        '<small>' + (p >= 0.995 ? '100%' : '0%') + '</small>';
+      note.textContent = '纯策略：均衡里这手牌 ' + (p >= 0.995 ? '100% ' + act : '100% 弃牌') + '。';
+      rollBar.className = 'rollbar hide';
+      return;
+    }
+
+    // 混合策略：进来就自动掷一次，不用点
+    vbig.className = 'vbig vmix';
+    note.textContent = '混合策略：' + (p * 100).toFixed(1) + '% 的频率' + act + '，其余弃牌。' +
+      (p < 0.05 ? ' 这个频率已贴着 0，实战当纯弃牌处理就好。'
+        : p > 0.95 ? ' 这个频率已贴着 1，实战当纯' + act + '处理就好。' : '');
+    rollBar.className = 'rollbar';
+    roll(true);
+  }
+
+  /** 掷骰：按 p 跑一次随机数。auto=true 表示是局面变化后自动跑的第一次 */
+  function roll(auto) {
+    var hit = lookup();
+    if (!hit || hit.p === null || hit.p >= 0.995 || hit.p <= 0.005) return;
+    var p = hit.p;
+    var isCall = state.mask !== 0;
+    state.roll = Math.random() < p ? 1 : 0;
+    state.tries.push(state.roll);
+    var yes = state.tries.filter(function (v) { return v === 1; }).length;
+    var vbig = byId('vbig');
+    vbig.className = 'vbig ' + (state.roll ? 'v1' : 'v0');
+    vbig.innerHTML = (state.roll ? (isCall ? '跟注' : '全下') : '弃牌') +
+      '<small>本次 · 概率 ' + (p * 100).toFixed(1) + '%</small>';
+    byId('counter').textContent = auto
+      ? '自动掷了一次随机数'
+      : '已掷 ' + state.tries.length + ' 次：' + (isCall ? '跟注' : '全下') + ' ' + yes +
+        ' 次（' + (yes / state.tries.length * 100).toFixed(0) + '%）';
+  }
+  byId('reroll').addEventListener('click', function () { roll(false); });
+
+  // ---------- 模型说明浮层 ----------
+  byId('infoBtn').addEventListener('click', function () { byId('overlay').className = 'overlay on'; });
+  byId('closeBtn').addEventListener('click', function () { byId('overlay').className = 'overlay'; });
+
+  byId('metaLine').innerHTML =
+    '求解器 <code>' + S.meta.source + '</code>，' + S.meta.game + '，每轮 ' +
+    S.meta.deals + ' 组发牌 × ' + S.meta.iters + ' 轮（' +
+    (S.meta.averaging === 'linear' ? '线性平均' : '调和平均') + '，种子 ' + S.meta.seed +
+    '，用时 ' + S.meta.seconds + 's），共 ' + S.nodes.length + ' 个决策节点 / ' +
+    S.classes.length + ' 个手牌类。数值稳定性对照种子 ' + (S.meta.noiseSeed === undefined ? '—' : S.meta.noiseSeed) +
+    '。生成于 ' + S.meta.generatedAt + '。';
+
+  render();
+  fitGrid();
+})();
+</script>
+</body>
+</html>
