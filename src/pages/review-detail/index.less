@@ -129,13 +129,15 @@
     }
   }
 
+  // 单局信息自成一块，铺在底牌那一行下方 —— 不再挤在底牌右边的窄列里
   .hero-meta {
     .flex-column();
-    gap: 2px;
-    margin-left: 4px;
+    gap: 4px;
+    margin-top: @spacing-md;
 
     .meta-line {
       font-size: 12px;
+      line-height: 1.5;
       color: @text-secondary;
     }
 

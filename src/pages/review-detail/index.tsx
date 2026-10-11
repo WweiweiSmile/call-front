@@ -27,7 +27,7 @@ import {
   RESULT_LABEL,
   STREET_LABEL,
   STREET_ORDER,
-  actorLabel,
+  actorLabelWithPosition,
   blindPositionsOf,
   blindsLabel,
   bombPotLabel,
@@ -201,33 +201,35 @@ const ReviewDetailPage: React.FC = () => {
               <Text className='position-text'>{positionLabel(hand.heroPosition, hand.tableSize)}</Text>
             </View>
             <CardList cards={hand.heroCards} size='lg' />
-            <View className='hero-meta'>
-              <Text className='meta-line'>
-                {formatBB(hand.heroStackBb)} bb
-                {hand.stakes ? ` · ${hand.stakes}` : ''}
+          </View>
+
+          {/* 单局信息整块铺在底牌下方：塞在底牌右边的窄列里会挤成一条 */}
+          <View className='hero-meta'>
+            <Text className='meta-line'>
+              {formatBB(hand.heroStackBb)} bb
+              {hand.stakes ? ` · ${hand.stakes}` : ''}
+            </Text>
+            <Text className='meta-line'>
+              {tableSizeLabel(hand.tableSize)} · {POT_TYPE_LABEL[hand.potType]} · {hand.villainCount} 个对手
+            </Text>
+            {blindText && <Text className='meta-line'>{blindText}</Text>}
+            {/* 记了名字的对手逐个列出：老手牌的对手没有名字，那时这一行会退化成位置 */}
+            {hand.villains.length > 0 && (
+              <Text className='meta-line villain-line'>
+                对手：
+                {hand.villains
+                  .map((villain) => {
+                    const label = villain.name || villain.position || '未记录';
+                    const position = villain.name && villain.position ? `(${villain.position})` : '';
+                    const stack = villain.stackBb !== undefined ? ` ${formatBB(villain.stackBb)}bb` : '';
+                    const key = villain.isKey ? ' · 关键' : '';
+                    // 底牌只在摊牌/亮牌时才有，没记就不显示这一段
+                    const cards = villain.cards ? ` · 底牌 ${formatCardsText(villain.cards)}` : '';
+                    return `${label}${position}${stack}${key}${cards}`;
+                  })
+                  .join('，')}
               </Text>
-              <Text className='meta-line'>
-                {tableSizeLabel(hand.tableSize)} · {POT_TYPE_LABEL[hand.potType]} · {hand.villainCount} 个对手
-              </Text>
-              {blindText && <Text className='meta-line'>{blindText}</Text>}
-              {/* 记了名字的对手逐个列出：老手牌的对手没有名字，那时这一行会退化成位置 */}
-              {hand.villains.length > 0 && (
-                <Text className='meta-line villain-line'>
-                  对手：
-                  {hand.villains
-                    .map((villain) => {
-                      const label = villain.name || villain.position || '未记录';
-                      const position = villain.name && villain.position ? `(${villain.position})` : '';
-                      const stack = villain.stackBb !== undefined ? ` ${formatBB(villain.stackBb)}bb` : '';
-                      const key = villain.isKey ? ' · 关键' : '';
-                      // 底牌只在摊牌/亮牌时才有，没记就不显示这一段
-                      const cards = villain.cards ? ` · 底牌 ${formatCardsText(villain.cards)}` : '';
-                      return `${label}${position}${stack}${key}${cards}`;
-                    })
-                    .join('，')}
-                </Text>
-              )}
-            </View>
+            )}
           </View>
 
           <View className='board-line'>
@@ -298,7 +300,12 @@ const ReviewDetailPage: React.FC = () => {
                   {record.actions.map((action, index) => (
                     <View key={index} className='action-line'>
                       <Text className={`actor-tag ${action.actor}`}>
-                        {actorLabel(action.actor, hand.villains)}
+                        {actorLabelWithPosition(
+                          action.actor,
+                          hand.villains,
+                          hand.tableSize,
+                          hand.heroPosition
+                        )}
                       </Text>
                       <Text className='action-text'>{ACTION_LABEL[action.action]}</Text>
                       {ACTION_NEEDS_AMOUNT.indexOf(action.action) >= 0 && action.amountBb ? (

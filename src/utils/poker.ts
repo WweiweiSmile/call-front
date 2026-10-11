@@ -63,6 +63,33 @@ export function actorLabel(actor: ActorType | string, villains: VillainInfo[] = 
   return LEGACY_ACTOR_LABEL[actor] || actor;
 }
 
+/**
+ * 带位置的展示名：「我 (BTN)」「老王 (CO)」，供行动回放显示。
+ *
+ * 补位置是为了让回放一眼看清谁坐哪 —— 光看名字认不出位置。
+ * 规则：
+ * - 我：位置取本手牌自己的 heroPosition（没选位置时退回"我"）
+ * - 对手：位置就是他坐的位置。**没名字的对手本来只显示位置**
+ *   （actorLabel 的返回值就是位置），再拼一次会变成「CO (CO)」，所以只在有名字时补
+ * - villain / other 是 M7.1 之前的聚合角色，没有具体座位，保持原样
+ */
+export function actorLabelWithPosition(
+  actor: ActorType | string,
+  villains: VillainInfo[],
+  tableSize: number,
+  heroPosition: Position | '' = ''
+): string {
+  const base = actorLabel(actor, villains);
+  if (actor === 'hero') {
+    return heroPosition ? `${base} (${positionLabel(heroPosition, tableSize)})` : base;
+  }
+  const villain = villains.find((v) => v.position === actor);
+  if (villain?.name) {
+    return `${base} (${positionLabel(villain.position, tableSize)})`;
+  }
+  return base;
+}
+
 /** 老手牌里没有名字、也没有位置的对手：界面上只能显示成"对手" */
 export const UNNAMED_VILLAIN_LABEL = '对手';
 

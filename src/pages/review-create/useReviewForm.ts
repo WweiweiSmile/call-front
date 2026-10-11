@@ -46,14 +46,6 @@ export const DRAFT_STORAGE_KEY = 'review_hand_draft';
 export { OPPONENT_NAME_MAX_LENGTH };
 
 /**
- * 我自己这个行动者。
- *
- * 不写成字面量散在各处：它在 actorOptions 里的**位置不固定** —— 要按 heroPosition
- * 坐进牌桌顺序里，否则自动轮转会把"下一个该谁"算错
- */
-const HERO_ACTOR: ActorOption = { value: 'hero', label: '我' };
-
-/**
  * 表单里的一个对手。
  *
  * name 为空有三种来路：M7.1 之前的老手牌（那时对手没有名字）、从老草稿迁移过来的
@@ -486,12 +478,22 @@ export function useReviewForm(handId?: string) {
    * 的先后，跟牌桌上的实际顺序无关，没法拿来轮转
    */
   const actorOptions = useMemo<ActorOption[]>(() => {
+    // 我：名字后面补上自己的位置，与行动回放的显示口径一致
+    const heroActor: ActorOption = {
+      value: 'hero',
+      label: form.heroPosition
+        ? `我 (${positionLabel(form.heroPosition, form.tableSize)})`
+        : '我',
+    };
+
     const villainByPosition = new Map<Position, ActorOption>();
     for (const villain of form.villains) {
       if (!villain.position) continue;
+      const position = positionLabel(villain.position, form.tableSize);
       villainByPosition.set(villain.position, {
         value: villain.position,
-        label: villain.name || positionLabel(villain.position, form.tableSize),
+        // 有名字时补位置；没名字时位置本身就是标签，再拼会变成「CO (CO)」
+        label: villain.name ? `${villain.name} (${position})` : position,
       });
     }
 
@@ -499,7 +501,7 @@ export function useReviewForm(handId?: string) {
     let heroPlaced = false;
     for (const position of positionsForTableSize(form.tableSize)) {
       if (position === form.heroPosition) {
-        ordered.push(HERO_ACTOR);
+        ordered.push(heroActor);
         heroPlaced = true;
         continue;
       }
@@ -508,7 +510,7 @@ export function useReviewForm(handId?: string) {
     }
 
     // 还没选自己的位置时也要能记我的行动，顶在最前面（此时顺序无从谈起）
-    return heroPlaced ? ordered : [HERO_ACTOR, ...ordered];
+    return heroPlaced ? ordered : [heroActor, ...ordered];
   }, [form.villains, form.tableSize, form.heroPosition]);
 
   /**
