@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Text, View } from '@tarojs/components';
 import { Button } from '@nutui/nutui-react-taro';
 import { STREET_LABEL } from '../../utils/poker';
@@ -71,6 +71,49 @@ const ADVICE_ACTION_LABEL: Record<AdviceAction, string> = {
   fold: '弃牌',
 };
 
+/**
+ * 分析一般多久。用户实测一轮 1~5 分钟（慢模型如 K3 更久）。
+ *
+ * 这个数字要如实：写小了（早先写的是「20~60 秒」）用户等到 1 分钟没结果
+ * 就会当卡死，反复退出重进 —— 反而更慢。
+ */
+const ANALYSIS_TYPICAL_TEXT = '通常需要 1~5 分钟';
+
+/** 超过这个时长就换一句安抚文案。取的是上面那个经验上限 */
+const ANALYSIS_OVERDUE_SEC = 5 * 60;
+
+/**
+ * 分析进行中的"已等待秒数"。
+ *
+ * 用后端给的 createdAt（= 那条分析被创建的瞬间），不是组件挂载时刻：
+ * 用户中途刷新页面或从别的入口回来时，计时不会从零重来，读数始终是真实等待时长。
+ * 设备时钟若慢于服务器会算出负数，所以 clamp 到 0。
+ *
+ * 每秒 tick 一次，running 期间这个面板只渲染那几行等待文案，代价可以接受
+ */
+function useWaitingSeconds(createdAt: string | undefined, active: boolean): number {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (!active || !createdAt) return;
+    const startedAt = Date.parse(createdAt);
+    if (Number.isNaN(startedAt)) return;
+
+    const tick = () => setSeconds(Math.max(0, Math.floor((Date.now() - startedAt) / 1000)));
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [createdAt, active]);
+  return seconds;
+}
+
+/** 秒数转人话。过一分钟改用「X 分 Y 秒」，免得用户去读「已等待 320 秒」 */
+function formatWaiting(seconds: number): string {
+  if (seconds < 60) return `已等待 ${seconds} 秒`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return rest > 0 ? `已等待 ${minutes} 分 ${rest} 秒` : `已等待 ${minutes} 分钟`;
+}
+
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   analysis,
   aiStatus,
@@ -82,6 +125,10 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   const status = analysis?.status;
   const result = analysis?.result;
   const running = status === 'pending' || status === 'running';
+
+  // 已等待时长：用后端创建的瞬间起算（见 useWaitingSeconds）
+  const waitingSeconds = useWaitingSeconds(analysis?.createdAt, running);
+  const overdue = waitingSeconds >= ANALYSIS_OVERDUE_SEC;
 
   // 分析一次够不够。aiStatus 还没拉到时按"不可点"处理（与改动前一致）：
   // 余额未知就不该让用户点下去。价格由服务端给，前端不硬编码
@@ -180,8 +227,13 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
       {running && (
         <View className='running-state'>
           <View className='pulse-dot' />
-          <Text className='state-text'>正在分析，通常需要 20~60 秒…</Text>
-          <Text className='cost-hint'>可以先退出，结果会保留下来</Text>
+          <Text className='state-text'>教练正在逐街分析这手牌…</Text>
+          <Text className='elapsed-text'>{formatWaiting(waitingSeconds)}</Text>
+          <Text className='cost-hint'>
+            {overdue
+              ? '比平时久一些，模型仍在推理 —— 可以先退出，结果会保留下来'
+              : `${ANALYSIS_TYPICAL_TEXT}，可以先退出，结果会保留下来`}
+          </Text>
         </View>
       )}
 

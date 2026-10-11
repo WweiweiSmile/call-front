@@ -60,6 +60,15 @@
       margin-bottom: @spacing-sm;
       animation: analysis-pulse 1.2s ease-in-out infinite;
     }
+
+    // 已等待时长：比主文案重一点，让用户一眼看到它在走、没卡死
+    .elapsed-text {
+      display: block;
+      margin-top: 2px;
+      font-size: 13px;
+      font-weight: 600;
+      color: @primary-dark;
+    }
   }
 
   @keyframes analysis-pulse {
